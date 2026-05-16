@@ -1,28 +1,30 @@
 // MapDisplay.tsx
-import { Navigation2 } from 'lucide-react'
+import { Navigation2, WifiOff } from 'lucide-react'
+import { GEO_ERROR_MSG, type GeoErrorCode } from './useGeolocation'
 import type { Coordinates } from './types'
 
 interface Props {
   path: Coordinates[]
   currentPosition: Coordinates | null
   isRiding: boolean
+  geoError: GeoErrorCode | null
+  geoLoading: boolean
 }
 
 const W = 375
 const H = 700
 
 function toSvg(c: Coordinates, center: Coordinates) {
-  const SCALE_LAT = 3200
-  const SCALE_LNG = 3200 * Math.cos((center.lat * Math.PI) / 180)
+  const SCALE = 3200
+  const scaleLng = SCALE * Math.cos((center.lat * Math.PI) / 180)
   return {
-    x: W / 2 + (c.lng - center.lng) * SCALE_LNG,
-    y: H / 2 - (c.lat - center.lat) * SCALE_LAT,
+    x: W / 2 + (c.lng - center.lng) * scaleLng,
+    y: H / 2 - (c.lat - center.lat) * SCALE,
   }
 }
 
-export default function MapDisplay({ path, currentPosition, isRiding }: Props) {
+export default function MapDisplay({ path, currentPosition, isRiding, geoError, geoLoading }: Props) {
   const center: Coordinates = currentPosition ?? { lat: 37.5665, lng: 126.978, timestamp: 0 }
-
   const pts = path.map((c) => toSvg(c, center))
   const routeD =
     pts.length > 1
@@ -38,6 +40,7 @@ export default function MapDisplay({ path, currentPosition, isRiding }: Props) {
           linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)
         `,
         backgroundSize: '40px 40px',
+        touchAction: 'pan-x pan-y pinch-zoom',
       }}
     >
       <svg
@@ -50,15 +53,15 @@ export default function MapDisplay({ path, currentPosition, isRiding }: Props) {
         <defs>
           <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
             <stop offset="0%" stopColor="transparent" />
-            <stop offset="100%" stopColor="#0b1120" stopOpacity="0.65" />
+            <stop offset="100%" stopColor="#0b1120" stopOpacity="0.6" />
           </radialGradient>
-          <filter id="glow-pos">
+          <filter id="glow-fx">
             <feGaussianBlur stdDeviation="3" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
         </defs>
 
-        {/* 도로 배경 레이어 */}
+        {/* 배경 도로 레이어 */}
         <g stroke="rgba(148,163,184,0.07)" strokeWidth="7" fill="none" strokeLinecap="round">
           <path d="M 0 340 Q 110 300 210 335 T 375 315" />
           <path d="M 82 0 L 92 700" />
@@ -67,7 +70,7 @@ export default function MapDisplay({ path, currentPosition, isRiding }: Props) {
           <path d="M 0 478 Q 205 460 375 488" />
           <path d="M 142 0 Q 122 350 162 700" />
         </g>
-        <g stroke="rgba(148,163,184,0.035)" strokeWidth="2" fill="none" strokeLinecap="round">
+        <g stroke="rgba(148,163,184,0.03)" strokeWidth="2" fill="none" strokeLinecap="round">
           <path d="M 0 340 Q 110 300 210 335 T 375 315" />
           <path d="M 82 0 L 92 700" />
           <path d="M 255 0 L 265 700" />
@@ -79,31 +82,33 @@ export default function MapDisplay({ path, currentPosition, isRiding }: Props) {
         {/* GPX 경로 */}
         {routeD && (
           <>
-            <path d={routeD} fill="none" stroke="#2DD4BF" strokeOpacity="0.2"
-              strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" />
+            <path d={routeD} fill="none" stroke="#2DD4BF" strokeOpacity="0.18"
+              strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
             <path d={routeD} fill="none" stroke="#2DD4BF" strokeWidth="2.5"
-              strokeLinecap="round" strokeLinejoin="round" filter="url(#glow-pos)" />
+              strokeLinecap="round" strokeLinejoin="round" filter="url(#glow-fx)" />
           </>
         )}
 
         {/* 출발 마커 */}
         {pts.length > 0 && (
           <circle cx={pts[0].x} cy={pts[0].y} r="5"
-            fill="#2DD4BF" fillOpacity="0.45" stroke="#2DD4BF" strokeWidth="1.5" />
+            fill="#2DD4BF" fillOpacity="0.4" stroke="#2DD4BF" strokeWidth="1.5" />
         )}
 
         {/* 현재 위치 */}
-        <g>
-          {isRiding && (
-            <circle cx={W / 2} cy={H / 2} r="18" fill="#2DD4BF" fillOpacity="0.07">
-              <animate attributeName="r" values="14;26;14" dur="2.2s" repeatCount="indefinite" />
-              <animate attributeName="fill-opacity" values="0.09;0;0.09" dur="2.2s" repeatCount="indefinite" />
-            </circle>
-          )}
-          <circle cx={W / 2} cy={H / 2} r="8" fill="#2DD4BF" fillOpacity="0.18" />
-          <circle cx={W / 2} cy={H / 2} r="6" fill="#2DD4BF" filter="url(#glow-pos)" />
-          <circle cx={W / 2} cy={H / 2} r="3.5" fill="white" />
-        </g>
+        {!geoError && (
+          <g>
+            {isRiding && (
+              <circle cx={W / 2} cy={H / 2} r="18" fill="#2DD4BF" fillOpacity="0.07">
+                <animate attributeName="r" values="14;28;14" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="fill-opacity" values="0.09;0;0.09" dur="2s" repeatCount="indefinite" />
+              </circle>
+            )}
+            <circle cx={W / 2} cy={H / 2} r="9" fill="#2DD4BF" fillOpacity="0.2" />
+            <circle cx={W / 2} cy={H / 2} r="6.5" fill="#2DD4BF" filter="url(#glow-fx)" />
+            <circle cx={W / 2} cy={H / 2} r="3.5" fill="white" />
+          </g>
+        )}
 
         <rect x="0" y="0" width={W} height={H} fill="url(#vignette)" />
       </svg>
@@ -113,18 +118,25 @@ export default function MapDisplay({ path, currentPosition, isRiding }: Props) {
         <Navigation2 size={16} strokeWidth={1.5} className="text-teal-400" />
       </div>
 
-      {/* GPS 탐색 중 */}
-      {!currentPosition && (
-        <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-[#161B26]/80 px-3 py-1.5 backdrop-blur-md">
-          <span className="text-[10px] font-light text-white/40">GPS 신호 탐색 중...</span>
-        </div>
-      )}
-
       {/* 스케일 */}
       <div className="absolute bottom-4 left-4">
         <div className="h-px w-12 bg-white/25" />
         <span className="text-[9px] font-light text-white/25">≈ 1 km</span>
       </div>
+
+      {/* GPS 오류 오버레이 */}
+      {(geoError || geoLoading) && (
+        <div className="absolute left-1/2 top-5 -translate-x-1/2">
+          <div className="flex items-start gap-2.5 rounded-2xl bg-[#161B26]/90 px-4 py-3 backdrop-blur-xl">
+            <WifiOff size={14} strokeWidth={1.5} className="mt-0.5 shrink-0 text-rose-400" />
+            <p className="text-xs font-light leading-relaxed text-white/60" style={{ whiteSpace: 'pre-line' }}>
+              {geoLoading
+                ? 'GPS 신호 탐색 중...'
+                : GEO_ERROR_MSG[geoError!]}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
