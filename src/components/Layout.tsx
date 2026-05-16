@@ -21,31 +21,36 @@ export default function Layout() {
     console.log('[Layout] 알림 버튼 클릭')
   }
 
+  const isMapPage = pathname === '/map'
+
   return (
     <div className="relative flex min-h-svh flex-col bg-slate-950">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-slate-950/80 px-5 py-4 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <Navigation size={18} strokeWidth={1.5} className="text-teal-400" />
-          <span className="text-sm font-bold tracking-wider text-white">MOTO LOG</span>
-        </div>
+      {!isMapPage && (
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-white/5 bg-slate-950/80 px-5 py-4 backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Navigation size={18} strokeWidth={1.5} className="text-teal-400" />
+            <span className="text-sm font-bold tracking-wider text-white">MOTO LOG</span>
+          </div>
 
-        <button
-          onClick={handleNotification}
-          className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/5 bg-white/5"
-        >
-          <Bell size={16} strokeWidth={1.5} className="text-white/60" />
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-teal-400" />
-        </button>
-      </header>
+          <button
+            onClick={handleNotification}
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/5 bg-white/5"
+          >
+            <Bell size={16} strokeWidth={1.5} className="text-white/60" />
+            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-teal-400" />
+          </button>
+        </header>
+      )}
 
-      <main className="flex-1 pb-28">
+      <main className={isMapPage ? 'contents' : 'flex-1 pb-28'}>
         <Outlet />
       </main>
 
       <FuelConfirmPopup />
       <FuelCompleteSheet />
 
-      <nav className="fixed bottom-6 left-1/2 z-20 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2">
+      {/* z-30: 항상 지도·컨트롤러 위에 떠 있는 탭 바 */}
+      <nav className="fixed bottom-6 left-1/2 z-30 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2">
         <div className="flex items-center justify-around rounded-3xl border border-white/5 bg-slate-900/80 px-2 py-3 shadow-lg shadow-black/40 backdrop-blur-md">
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
             const isActive = pathname === path

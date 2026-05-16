@@ -159,13 +159,16 @@ export default function MapPage() {
   }, [])
 
   return (
-    /* 전체 화면 컨테이너 — 스크롤/바운스 완전 차단 */
+    /*
+     * fixed inset-0: Layout의 flex 흐름을 이탈해 뷰포트 전체 점유
+     * z-0: Layout nav(z-30)가 항상 위에 뜨도록 최하위 레이어
+     */
     <div
-      className="relative h-screen w-screen overflow-hidden touch-none"
+      className="fixed inset-0 z-0 overflow-hidden touch-none bg-[#0B0F19]"
       style={{ overscrollBehavior: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
-      {/* z-0: 지도 배경 */}
-      <div className="absolute inset-0 z-0">
+      {/* 지도 배경 — 전체 채움 */}
+      <div className="absolute inset-0">
         <MapDisplay
           path={path}
           currentPosition={position}
@@ -174,14 +177,14 @@ export default function MapPage() {
         />
       </div>
 
-      {/* z-10: 상단 타이틀 */}
+      {/* 상단 타이틀 pill */}
       <div className="absolute left-0 right-0 top-0 z-10 flex justify-center pt-4">
         <div className="rounded-full bg-[#161B26]/70 px-4 py-1.5 backdrop-blur-md">
           <span className="text-[11px] font-bold tracking-[0.2em] text-white/50">MOTO LOG</span>
         </div>
       </div>
 
-      {/* z-20: 하단 컨트롤러 (ErgonomicController 내부에서 z-20 사용) */}
+      {/* 하단 컨트롤러 — ErgonomicController 내부: absolute bottom-28 z-20 */}
       <ErgonomicController
         status={status}
         naviType={naviType}
