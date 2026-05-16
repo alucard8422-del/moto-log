@@ -1,4 +1,77 @@
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
+import { Flag, Route, Timer, Gauge } from 'lucide-react'
 import CourseCard, { type Course } from '../components/CourseCard'
+import type { RideSession } from './map/types'
+
+function fmtDur(s: number): string {
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  return h > 0 ? `${h}시간 ${m}분` : `${m}분`
+}
+
+function SessionSheet({ session, onClose }: { session: RideSession; onClose: () => void }) {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setOpen(true), 16)
+    return () => clearTimeout(t)
+  }, [])
+
+  const dismiss = () => {
+    setOpen(false)
+    setTimeout(onClose, 300)
+  }
+
+  const avg = session.duration > 0 ? session.distance / (session.duration / 3600) : 0
+  const dateLabel = new Date(session.startTime).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+
+  return (
+    <>
+      <div
+        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+        onClick={dismiss}
+      />
+      <div
+        className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div className="mx-auto max-w-sm rounded-t-3xl border-t border-white/10 bg-[#111622]/95 px-5 pt-4 pb-10 backdrop-blur-xl">
+          <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-white/20" />
+
+          <div className="mb-5 flex items-center gap-2">
+            <Flag size={14} strokeWidth={1.5} className="text-teal-400" />
+            <span className="flex-1 text-sm font-bold text-white">주행 완료</span>
+            <span className="text-[10px] font-light text-white/30">{dateLabel}</span>
+          </div>
+
+          <div className="mb-5 grid grid-cols-3 gap-2">
+            {[
+              { icon: <Route size={13} strokeWidth={1.5} className="text-teal-400" />, value: session.distance.toFixed(2), unit: 'km', label: '주행거리' },
+              { icon: <Timer size={13} strokeWidth={1.5} className="text-teal-400" />, value: fmtDur(session.duration), unit: '', label: '주행시간' },
+              { icon: <Gauge size={13} strokeWidth={1.5} className="text-teal-400" />, value: avg.toFixed(0), unit: 'km/h', label: '평균속도' },
+            ].map(({ icon, value, unit, label }) => (
+              <div key={label} className="flex flex-col items-center gap-1 rounded-2xl bg-white/5 py-4">
+                {icon}
+                <span className="mt-1 text-base font-bold text-white">
+                  {value}
+                  {unit && <span className="ml-0.5 text-[10px] font-light text-white/40">{unit}</span>}
+                </span>
+                <span className="text-[9px] font-light text-white/35">{label}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={dismiss}
+            className="flex h-12 w-full items-center justify-center rounded-2xl bg-white/5 text-sm font-light text-white/50 transition-opacity active:opacity-60"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
 
 const MOCK_COURSES: Course[] = [
   {
@@ -42,8 +115,14 @@ const MOCK_COURSES: Course[] = [
 const FILTER_TAGS = ['전체', '초급', '중급', '고급', '북마크'] as const
 
 export default function CoursesPage() {
+  const { state } = useLocation()
+  const [session, setSession] = useState<RideSession | null>(
+    (state as { completedSession?: RideSession })?.completedSession ?? null
+  )
+
   return (
     <div className="flex flex-col gap-5 p-4">
+      {session && <SessionSheet session={session} onClose={() => setSession(null)} />}
       {/* 헤더 */}
       <div>
         <p className="text-xs font-light text-white/40">총 {MOCK_COURSES.length}개 코스</p>

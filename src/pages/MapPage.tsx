@@ -38,7 +38,6 @@ import MapDisplay from './map/MapDisplay'
 import ErgonomicController from './map/ErgonomicController'
 import {
   NAVI_STORAGE_KEY,
-  type GpsStatus,
   type Location,
   type NavigationType,
   type RideSession,
@@ -83,7 +82,7 @@ function launchNavi(type: NavigationType) {
 
 export default function MapPage() {
   const navigate = useNavigate()
-  const { position, errorCode, loading } = useGeolocation()
+  const { position } = useGeolocation()
 
   const [status, setStatus] = useState<RideStatus>('idle')
   const [path, setPath] = useState<Location[]>([])
@@ -97,9 +96,6 @@ export default function MapPage() {
   const prevPosRef = useRef<Location | null>(null)
   const distanceRef = useRef(0)
   const mapRef = useRef<LeafletMap | null>(null)
-
-  const gpsStatus: GpsStatus =
-    !loading && position !== null && errorCode === null ? 'connected' : 'disconnected'
 
   // 웹뷰 바운스/오버스크롤 방지
   useEffect(() => {
@@ -204,7 +200,6 @@ export default function MapPage() {
           path={path}
           currentPosition={position}
           isRiding={status === 'riding'}
-          gpsStatus={gpsStatus}
           mapRef={mapRef}
         />
       </div>
@@ -234,7 +229,6 @@ export default function MapPage() {
        */}
       <ErgonomicController
         status={status}
-        naviType={naviType}
         duration={duration}
         distance={distance}
         onStart={handleStart}

@@ -5,7 +5,7 @@ import type { Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Navigation } from 'lucide-react'
 import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
-import type { Location, GpsStatus } from './types'
+import type { Location } from './types'
 
 function useHeading(): number {
   const [heading, setHeading] = useState(0)
@@ -31,7 +31,6 @@ interface Props {
   path: Location[]
   currentPosition: Location | null
   isRiding: boolean
-  gpsStatus: GpsStatus
   mapRef?: React.MutableRefObject<LeafletMap | null>
 }
 
@@ -56,7 +55,7 @@ function CameraFollower({ position }: { position: Location | null }) {
   return null
 }
 
-export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus, mapRef }: Props) {
+export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: Props) {
   const ridePath = path.map((c) => [c.lat, c.lng] as [number, number])
   const heading = useHeading()
 
