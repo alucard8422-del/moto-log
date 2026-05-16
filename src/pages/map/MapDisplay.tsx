@@ -1,140 +1,196 @@
 // MapDisplay.tsx
+// 필수: .env 파일에 VITE_MAPBOX_TOKEN=pk.xxx 추가
+import { useEffect, useRef } from 'react'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { Navigation2, WifiOff } from 'lucide-react'
-import { GEO_ERROR_MSG, type GeoErrorCode } from './useGeolocation'
-import type { Coordinates } from './types'
+import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
+import { GEO_ERROR_MSG } from './useGeolocation'
+import type { Location, GeoErrorCode } from './types'
+
+const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 
 interface Props {
-  path: Coordinates[]
-  currentPosition: Coordinates | null
+  path: Location[]
+  currentPosition: Location | null
   isRiding: boolean
   geoError: GeoErrorCode | null
   geoLoading: boolean
 }
 
-const W = 375
-const H = 700
-
-function toSvg(c: Coordinates, center: Coordinates) {
-  const SCALE = 3200
-  const scaleLng = SCALE * Math.cos((center.lat * Math.PI) / 180)
-  return {
-    x: W / 2 + (c.lng - center.lng) * scaleLng,
-    y: H / 2 - (c.lat - center.lat) * SCALE,
-  }
+function injectPulseCSS() {
+  if (document.getElementById('mb-pulse')) return
+  const style = document.createElement('style')
+  style.id = 'mb-pulse'
+  style.textContent = `
+    .mb-pos-dot { width:18px; height:18px; border-radius:50%; background:#2DD4BF;
+      border:2.5px solid #fff; box-shadow:0 0 14px rgba(45,212,191,0.65); position:relative; }
+    .mb-pos-ring { position:absolute; inset:-9px; border-radius:50%;
+      border:2px solid rgba(45,212,191,0.45);
+      animation: mbPulse 2s ease-out infinite; }
+    @keyframes mbPulse {
+      0%   { transform:scale(0.6); opacity:0.8; }
+      100% { transform:scale(2.2); opacity:0; }
+    }
+  `
+  document.head.appendChild(style)
 }
 
 export default function MapDisplay({ path, currentPosition, isRiding, geoError, geoLoading }: Props) {
-  const center: Coordinates = currentPosition ?? { lat: 37.5665, lng: 126.978, timestamp: 0 }
-  const pts = path.map((c) => toSvg(c, center))
-  const routeD =
-    pts.length > 1
-      ? pts.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ')
-      : ''
+  const containerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const markerRef = useRef<mapboxgl.Marker | null>(null)
+  const loadedRef = useRef(false)
+
+  // 지도 초기화
+  useEffect(() => {
+    if (!TOKEN || !containerRef.current || mapRef.current) return
+
+    mapboxgl.accessToken = TOKEN
+    injectPulseCSS()
+
+    const center: [number, number] = currentPosition
+      ? [currentPosition.lng, currentPosition.lat]
+      : MOCK_CENTER
+
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center,
+      zoom: MOCK_ZOOM,
+      attributionControl: false,
+      logoPosition: 'bottom-right',
+      dragRotate: false,
+      pitchWithRotate: false,
+    })
+
+    map.on('load', () => {
+      // 샘플 GPX 경로 (배경 참조용)
+      map.addSource('mock-src', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: MOCK_ROUTE_COORDS },
+          properties: {},
+        },
+      })
+      map.addLayer({
+        id: 'mock-route',
+        type: 'line',
+        source: 'mock-src',
+        paint: {
+          'line-color': '#2DD4BF',
+          'line-width': 2,
+          'line-opacity': 0.22,
+          'line-dasharray': [2, 3],
+        },
+      })
+
+      // 실시간 GPS 경로
+      map.addSource('ride-src', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
+      })
+      map.addLayer({
+        id: 'ride-glow',
+        type: 'line',
+        source: 'ride-src',
+        paint: { 'line-color': '#2DD4BF', 'line-width': 12, 'line-opacity': 0.12, 'line-blur': 6 },
+      })
+      map.addLayer({
+        id: 'ride-line',
+        type: 'line',
+        source: 'ride-src',
+        paint: { 'line-color': '#2DD4BF', 'line-width': 3, 'line-opacity': 0.9 },
+      })
+
+      loadedRef.current = true
+    })
+
+    // 현재 위치 마커 (pulsing)
+    const el = document.createElement('div')
+    el.innerHTML = '<div class="mb-pos-dot"><div class="mb-pos-ring"></div></div>'
+
+    const marker = new mapboxgl.Marker({ element: el.firstElementChild as HTMLElement, anchor: 'center' })
+      .setLngLat(center)
+      .addTo(map)
+
+    markerRef.current = marker
+    mapRef.current = map
+
+    return () => {
+      map.remove()
+      mapRef.current = null
+      loadedRef.current = false
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 현재 위치 마커 업데이트
+  useEffect(() => {
+    if (!currentPosition || !mapRef.current || !markerRef.current) return
+    const ll: [number, number] = [currentPosition.lng, currentPosition.lat]
+    markerRef.current.setLngLat(ll)
+    mapRef.current.easeTo({ center: ll, duration: 800, essential: true })
+  }, [currentPosition])
+
+  // 라이딩 GPX 경로 업데이트
+  useEffect(() => {
+    if (!loadedRef.current || !mapRef.current) return
+    const src = mapRef.current.getSource('ride-src') as mapboxgl.GeoJSONSource | undefined
+    src?.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: path.map((c) => [c.lng, c.lat]) },
+      properties: {},
+    })
+  }, [path])
+
+  // Mapbox 토큰 없음 → 폴백 플레이스홀더
+  if (!TOKEN) {
+    return (
+      <div
+        className="relative h-full w-full overflow-hidden bg-[#0b1120]"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }}
+      >
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+          <p className="text-xs font-light text-white/25">
+            .env 파일에 VITE_MAPBOX_TOKEN을<br />추가하면 실제 지도가 표시돼요
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div
-      className="relative h-full w-full overflow-hidden bg-[#0b1120]"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
-        touchAction: 'pan-x pan-y pinch-zoom',
-      }}
-    >
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        height="100%"
-        preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-0"
-      >
-        <defs>
-          <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-            <stop offset="0%" stopColor="transparent" />
-            <stop offset="100%" stopColor="#0b1120" stopOpacity="0.6" />
-          </radialGradient>
-          <filter id="glow-fx">
-            <feGaussianBlur stdDeviation="3" result="b" />
-            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-
-        {/* 배경 도로 레이어 */}
-        <g stroke="rgba(148,163,184,0.07)" strokeWidth="7" fill="none" strokeLinecap="round">
-          <path d="M 0 340 Q 110 300 210 335 T 375 315" />
-          <path d="M 82 0 L 92 700" />
-          <path d="M 255 0 L 265 700" />
-          <path d="M 0 195 Q 155 185 375 208" />
-          <path d="M 0 478 Q 205 460 375 488" />
-          <path d="M 142 0 Q 122 350 162 700" />
-        </g>
-        <g stroke="rgba(148,163,184,0.03)" strokeWidth="2" fill="none" strokeLinecap="round">
-          <path d="M 0 340 Q 110 300 210 335 T 375 315" />
-          <path d="M 82 0 L 92 700" />
-          <path d="M 255 0 L 265 700" />
-          <path d="M 0 195 Q 155 185 375 208" />
-          <path d="M 0 478 Q 205 460 375 488" />
-          <path d="M 142 0 Q 122 350 162 700" />
-        </g>
-
-        {/* GPX 경로 */}
-        {routeD && (
-          <>
-            <path d={routeD} fill="none" stroke="#2DD4BF" strokeOpacity="0.18"
-              strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-            <path d={routeD} fill="none" stroke="#2DD4BF" strokeWidth="2.5"
-              strokeLinecap="round" strokeLinejoin="round" filter="url(#glow-fx)" />
-          </>
-        )}
-
-        {/* 출발 마커 */}
-        {pts.length > 0 && (
-          <circle cx={pts[0].x} cy={pts[0].y} r="5"
-            fill="#2DD4BF" fillOpacity="0.4" stroke="#2DD4BF" strokeWidth="1.5" />
-        )}
-
-        {/* 현재 위치 */}
-        {!geoError && (
-          <g>
-            {isRiding && (
-              <circle cx={W / 2} cy={H / 2} r="18" fill="#2DD4BF" fillOpacity="0.07">
-                <animate attributeName="r" values="14;28;14" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="fill-opacity" values="0.09;0;0.09" dur="2s" repeatCount="indefinite" />
-              </circle>
-            )}
-            <circle cx={W / 2} cy={H / 2} r="9" fill="#2DD4BF" fillOpacity="0.2" />
-            <circle cx={W / 2} cy={H / 2} r="6.5" fill="#2DD4BF" filter="url(#glow-fx)" />
-            <circle cx={W / 2} cy={H / 2} r="3.5" fill="white" />
-          </g>
-        )}
-
-        <rect x="0" y="0" width={W} height={H} fill="url(#vignette)" />
-      </svg>
+    <div className="relative h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+      <div ref={containerRef} className="h-full w-full" />
 
       {/* 나침반 */}
       <div className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#161B26]/80 backdrop-blur-md">
         <Navigation2 size={16} strokeWidth={1.5} className="text-teal-400" />
       </div>
 
-      {/* 스케일 */}
-      <div className="absolute bottom-4 left-4">
-        <div className="h-px w-12 bg-white/25" />
-        <span className="text-[9px] font-light text-white/25">≈ 1 km</span>
-      </div>
-
-      {/* GPS 오류 오버레이 */}
+      {/* GPS 오류/로딩 오버레이 */}
       {(geoError || geoLoading) && (
         <div className="absolute left-1/2 top-5 -translate-x-1/2">
-          <div className="flex items-start gap-2.5 rounded-2xl bg-[#161B26]/90 px-4 py-3 backdrop-blur-xl">
-            <WifiOff size={14} strokeWidth={1.5} className="mt-0.5 shrink-0 text-rose-400" />
-            <p className="text-xs font-light leading-relaxed text-white/60" style={{ whiteSpace: 'pre-line' }}>
-              {geoLoading
-                ? 'GPS 신호 탐색 중...'
-                : GEO_ERROR_MSG[geoError!]}
+          <div className="flex items-center gap-2 rounded-2xl bg-[#161B26]/90 px-4 py-3 backdrop-blur-xl">
+            <WifiOff size={12} strokeWidth={1.5} className={geoError ? 'text-rose-400' : 'text-white/40'} />
+            <p className="whitespace-pre-line text-[11px] font-light leading-relaxed text-white/55">
+              {geoLoading ? 'GPS 신호 탐색 중...' : GEO_ERROR_MSG[geoError!]}
             </p>
           </div>
+        </div>
+      )}
+
+      {/* 주행 중 인디케이터 */}
+      {isRiding && (
+        <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-1.5 backdrop-blur-md">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+          <span className="text-[10px] font-bold text-rose-400">REC</span>
         </div>
       )}
     </div>

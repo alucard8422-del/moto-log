@@ -7,13 +7,13 @@ import ErgonomicController from './map/ErgonomicController'
 import {
   NAVI_OPTIONS,
   NAVI_STORAGE_KEY,
-  type Coordinates,
+  type Location,
   type NavigationType,
   type RideSession,
   type RideStatus,
 } from './map/types'
 
-function haversine(a: Coordinates, b: Coordinates): number {
+function haversine(a: Location, b: Location): number {
   const R = 6371
   const dLat = ((b.lat - a.lat) * Math.PI) / 180
   const dLon = ((b.lng - a.lng) * Math.PI) / 180
@@ -42,7 +42,7 @@ export default function MapPage() {
 
   const [naviType, setNaviType] = useState<NavigationType>(loadNaviPref)
   const [status, setStatus] = useState<RideStatus>('idle')
-  const [path, setPath] = useState<Coordinates[]>([])
+  const [path, setPath] = useState<Location[]>([])
   const [duration, setDuration] = useState(0)
   const [distance, setDistance] = useState(0)
   const [session, setSession] = useState<RideSession | null>(null)
@@ -50,25 +50,27 @@ export default function MapPage() {
   const rideWatchRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const startTimeRef = useRef<Date | null>(null)
-  const prevPosRef = useRef<Coordinates | null>(null)
+  const prevPosRef = useRef<Location | null>(null)
   const distanceRef = useRef(0)
 
-  // 바운스/스크롤 방지 (APK 환경)
+  // 오버스크롤/바운스 방지 (APK 환경)
   useEffect(() => {
-    const prev = {
+    const saved = {
       overflow: document.body.style.overflow,
       overscroll: document.body.style.overscrollBehavior,
       touchAction: document.body.style.touchAction,
       position: document.body.style.position,
+      width: document.body.style.width,
     }
-    document.body.style.overflow = 'hidden'
-    document.body.style.overscrollBehavior = 'none'
-    document.body.style.touchAction = 'none'
-    document.body.style.position = 'fixed'
-    document.body.style.width = '100%'
+    Object.assign(document.body.style, {
+      overflow: 'hidden',
+      overscrollBehavior: 'none',
+      touchAction: 'none',
+      position: 'fixed',
+      width: '100%',
+    })
     return () => {
-      Object.assign(document.body.style, prev)
-      document.body.style.width = ''
+      Object.assign(document.body.style, saved)
     }
   }, [])
 
@@ -85,31 +87,29 @@ export default function MapPage() {
 
     rideWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const coord: Coordinates = {
+        const loc: Location = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           timestamp: pos.timestamp,
         }
         const prev = prevPosRef.current
         if (prev) {
-          const delta = haversine(prev, coord)
+          const delta = haversine(prev, loc)
           if (delta > 0.005) {
             distanceRef.current += delta
             setDistance(distanceRef.current)
-            setPath((p) => [...p, coord])
+            setPath((p) => [...p, loc])
           }
         } else {
-          setPath([coord])
+          setPath([loc])
         }
-        prevPosRef.current = coord
+        prevPosRef.current = loc
       },
       () => {},
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
     )
 
-    timerRef.current = setInterval(() => {
-      setDuration((d) => d + 1)
-    }, 1000)
+    timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
   }
 
   const handleStop = () => {
@@ -146,9 +146,9 @@ export default function MapPage() {
 
   return (
     <div
-      className="relative w-full overflow-hidden bg-[#0b0f19]"
+      className="relative w-screen overflow-hidden"
       style={{
-        height: 'calc(100svh - 64px)',
+        height: '100svh',
         touchAction: 'none',
         overscrollBehavior: 'none',
         userSelect: 'none',

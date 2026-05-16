@@ -1,30 +1,18 @@
 // useGeolocation.ts
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { Coordinates } from './types'
-
-export type GeoErrorCode =
-  | 'NOT_SUPPORTED'
-  | 'PERMISSION_DENIED'
-  | 'POSITION_UNAVAILABLE'
-  | 'TIMEOUT'
+import type { Location, GeoErrorCode } from './types'
 
 export const GEO_ERROR_MSG: Record<GeoErrorCode, string> = {
   NOT_SUPPORTED: 'GPS를 지원하지 않는 기기예요',
   PERMISSION_DENIED: 'GPS 권한이 필요해요\n설정 → 앱 → 위치 접근 허용',
   POSITION_UNAVAILABLE: 'GPS 신호를 찾을 수 없어요\n야외로 이동 후 다시 시도해 주세요',
-  TIMEOUT: 'GPS 응답 시간이 초과됐어요\n잠시 후 자동으로 재시도합니다',
+  TIMEOUT: 'GPS 응답 시간이 초과됐어요',
 }
 
 interface UseGeolocationReturn {
-  position: Coordinates | null
+  position: Location | null
   errorCode: GeoErrorCode | null
   loading: boolean
-}
-
-const GEO_OPTS: PositionOptions = {
-  enableHighAccuracy: true,
-  timeout: 15000,
-  maximumAge: 3000,
 }
 
 export function useGeolocation(): UseGeolocationReturn {
@@ -65,14 +53,13 @@ export function useGeolocation(): UseGeolocationReturn {
       setState({ position: null, errorCode: 'NOT_SUPPORTED', loading: false })
       return
     }
-
-    watchRef.current = navigator.geolocation.watchPosition(onSuccess, onError, GEO_OPTS)
-
+    watchRef.current = navigator.geolocation.watchPosition(onSuccess, onError, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 3000,
+    })
     return () => {
-      if (watchRef.current !== null) {
-        navigator.geolocation.clearWatch(watchRef.current)
-        watchRef.current = null
-      }
+      if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current)
     }
   }, [onSuccess, onError])
 

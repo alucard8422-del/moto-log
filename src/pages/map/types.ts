@@ -3,11 +3,19 @@ export type NavigationType = 'tmap' | 'kakao' | 'atlan'
 
 export type RideStatus = 'idle' | 'riding' | 'finished'
 
-export interface Coordinates {
+export type GeoErrorCode =
+  | 'NOT_SUPPORTED'
+  | 'PERMISSION_DENIED'
+  | 'POSITION_UNAVAILABLE'
+  | 'TIMEOUT'
+
+export interface Location {
   lat: number
   lng: number
   timestamp: number
 }
+
+export type Coordinates = Location
 
 export interface RideSession {
   id: string
@@ -15,7 +23,7 @@ export interface RideSession {
   endTime: Date
   distance: number
   duration: number
-  path: Coordinates[]
+  path: Location[]
 }
 
 export interface NaviOption {
@@ -48,7 +56,7 @@ export const NAVI_OPTIONS: NaviOption[] = [
     type: 'atlan',
     label: '아틀란',
     badge: 'A',
-    description: '만도 · 오프라인 전용 내비',
+    description: '만도 · 오프라인 내비',
     scheme: 'atlan://',
     fallback: 'https://atlan.com',
   },
