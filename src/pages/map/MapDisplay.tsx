@@ -1,10 +1,30 @@
 // MapDisplay.tsx
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Bike, Satellite } from 'lucide-react'
+import { Navigation, Satellite } from 'lucide-react'
 import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
 import type { Location, GpsStatus } from './types'
+
+function useHeading(): number {
+  const [heading, setHeading] = useState(0)
+  useEffect(() => {
+    const handler = (e: DeviceOrientationEvent) => {
+      // iOS: webkitCompassHeading (0=North, 시계방향 증가)
+      // Android: alpha (0=North 기준 반시계, 반전 필요)
+      const h =
+        typeof (e as any).webkitCompassHeading === 'number'
+          ? (e as any).webkitCompassHeading
+          : e.alpha !== null
+          ? (360 - e.alpha) % 360
+          : 0
+      setHeading(h)
+    }
+    window.addEventListener('deviceorientation', handler, true)
+    return () => window.removeEventListener('deviceorientation', handler, true)
+  }, [])
+  return heading
+}
 
 interface Props {
   path: Location[]
@@ -13,7 +33,7 @@ interface Props {
   gpsStatus: GpsStatus
 }
 
-// Leaflet uses [lat, lng]; mockData is [lng, lat] (Mapbox convention)
+// mockData는 [lng, lat] (Mapbox 관행) → Leaflet은 [lat, lng]
 const MOCK_ROUTE_LATLNG = MOCK_ROUTE_COORDS.map(([lng, lat]) => [lat, lng] as [number, number])
 const MOCK_CENTER_LATLNG: [number, number] = [MOCK_CENTER[1], MOCK_CENTER[0]]
 
@@ -29,18 +49,19 @@ function CameraFollower({ position }: { position: Location | null }) {
 export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus }: Props) {
   const ridePath = path.map((c) => [c.lat, c.lng] as [number, number])
   const isConnected = gpsStatus === 'connected'
+  const heading = useHeading()
 
   return (
-    <div
-      className="relative h-full w-full overflow-hidden"
-      style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
-    >
+    /* 지도 컨테이너 — 터치 패닝/줌은 허용, 부모가 바운스 차단 */
+    <div className="h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
       <MapContainer
         center={MOCK_CENTER_LATLNG}
         zoom={MOCK_ZOOM}
-        className="h-full w-full"
+        style={{ height: '100%', width: '100%' }}
         zoomControl={false}
         attributionControl={false}
+        dragging={true}
+        touchZoom={true}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -54,7 +75,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus 
           pathOptions={{ color: '#2DD4BF', weight: 2, opacity: 0.2, dashArray: '5 7' }}
         />
 
-        {/* 실제 주행 경로 — glow */}
+        {/* 실제 주행 경로 glow */}
         {ridePath.length > 1 && (
           <Polyline
             positions={ridePath}
@@ -62,7 +83,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus 
           />
         )}
 
-        {/* 실제 주행 경로 — 선명한 선 */}
+        {/* 실제 주행 경로 선명한 선 */}
         {ridePath.length > 1 && (
           <Polyline
             positions={ridePath}
@@ -73,22 +94,31 @@ export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus 
         <CameraFollower position={currentPosition} />
       </MapContainer>
 
-      {/* ── 바이크 센터 마커 ── */}
+      {/* ── 나침반 방향 화살표 마커 (지도 중앙 고정 오버레이) ── */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="relative flex items-center justify-center">
-          <span className="absolute inline-flex h-20 w-20 animate-ping rounded-full border border-teal-400/20 opacity-75" />
+          {/* 외곽 글로우 펄스 */}
+          <span className="absolute inline-flex h-16 w-16 animate-ping rounded-full bg-teal-400/10 opacity-60" />
+          {/* 내부 글로우 */}
           <span
-            className="absolute inline-flex h-14 w-14 animate-ping rounded-full border border-teal-400/30 opacity-75"
-            style={{ animationDelay: '0.45s' }}
+            className="absolute inline-flex h-10 w-10 rounded-full bg-teal-400/15"
+            style={{ filter: 'blur(6px)' }}
           />
-          <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[#161B26]/70 backdrop-blur-md ring-1 ring-teal-400/30">
-            <Bike size={20} strokeWidth={1.5} className="text-teal-400" />
+          {/* 화살표 아이콘 — heading 값에 따라 실시간 회전 */}
+          <div
+            style={{
+              transform: `rotate(${heading}deg)`,
+              transition: 'transform 0.3s ease-out',
+              filter: 'drop-shadow(0 0 8px #2dd4bf) drop-shadow(0 0 16px #2dd4bf88)',
+            }}
+          >
+            <Navigation size={36} strokeWidth={2} className="text-teal-400" fill="#2DD4BF" />
           </div>
         </div>
       </div>
 
       {/* ── GPS 상태 표시등 (우측 상단) ── */}
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 z-10">
         <div className="flex items-center gap-1.5 rounded-full bg-[#161B26]/80 px-3 py-2 backdrop-blur-md">
           <Satellite
             size={13}
@@ -107,7 +137,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus 
 
       {/* ── REC 인디케이터 (좌측 상단, 주행 중만) ── */}
       {isRiding && (
-        <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-2 backdrop-blur-md">
+        <div className="absolute left-4 top-14 z-10 flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-2 backdrop-blur-md">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
           <span className="text-[10px] font-bold tracking-widest text-rose-400">REC</span>
         </div>
