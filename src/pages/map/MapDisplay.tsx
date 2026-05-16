@@ -1,13 +1,10 @@
 // MapDisplay.tsx
-// 사전 요구: .env → VITE_MAPBOX_TOKEN=pk.xxx
-import { useEffect, useRef } from 'react'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import { useEffect } from 'react'
+import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
+import 'leaflet/dist/leaflet.css'
 import { Bike, Satellite } from 'lucide-react'
 import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
 import type { Location, GpsStatus } from './types'
-
-const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 
 interface Props {
   path: Location[]
@@ -16,137 +13,74 @@ interface Props {
   gpsStatus: GpsStatus
 }
 
+// Leaflet uses [lat, lng]; mockData is [lng, lat] (Mapbox convention)
+const MOCK_ROUTE_LATLNG = MOCK_ROUTE_COORDS.map(([lng, lat]) => [lat, lng] as [number, number])
+const MOCK_CENTER_LATLNG: [number, number] = [MOCK_CENTER[1], MOCK_CENTER[0]]
+
+function CameraFollower({ position }: { position: Location | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!position) return
+    map.panTo([position.lat, position.lng], { animate: true, duration: 0.8 })
+  }, [position, map])
+  return null
+}
+
 export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<mapboxgl.Map | null>(null)
-  const loadedRef = useRef(false)
-
-  useEffect(() => {
-    if (!TOKEN || !containerRef.current || mapRef.current) return
-
-    mapboxgl.accessToken = TOKEN
-
-    const center: [number, number] = currentPosition
-      ? [currentPosition.lng, currentPosition.lat]
-      : MOCK_CENTER
-
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center,
-      zoom: MOCK_ZOOM,
-      attributionControl: false,
-      logoPosition: 'bottom-right',
-      dragRotate: false,
-      pitchWithRotate: false,
-    })
-
-    map.on('load', () => {
-      map.addSource('mock-src', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: MOCK_ROUTE_COORDS },
-          properties: {},
-        },
-      })
-      map.addLayer({
-        id: 'mock-route',
-        type: 'line',
-        source: 'mock-src',
-        paint: {
-          'line-color': '#2DD4BF',
-          'line-width': 2,
-          'line-opacity': 0.2,
-          'line-dasharray': [2, 3],
-        },
-      })
-
-      map.addSource('ride-src', {
-        type: 'geojson',
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
-      })
-      map.addLayer({
-        id: 'ride-glow',
-        type: 'line',
-        source: 'ride-src',
-        paint: { 'line-color': '#2DD4BF', 'line-width': 12, 'line-opacity': 0.12, 'line-blur': 6 },
-      })
-      map.addLayer({
-        id: 'ride-line',
-        type: 'line',
-        source: 'ride-src',
-        paint: { 'line-color': '#2DD4BF', 'line-width': 3, 'line-opacity': 0.9 },
-      })
-
-      loadedRef.current = true
-    })
-
-    mapRef.current = map
-    return () => {
-      map.remove()
-      mapRef.current = null
-      loadedRef.current = false
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!currentPosition || !mapRef.current) return
-    mapRef.current.easeTo({
-      center: [currentPosition.lng, currentPosition.lat],
-      duration: 800,
-      essential: true,
-    })
-  }, [currentPosition])
-
-  useEffect(() => {
-    if (!loadedRef.current || !mapRef.current) return
-    const src = mapRef.current.getSource('ride-src') as mapboxgl.GeoJSONSource | undefined
-    src?.setData({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: path.map((c) => [c.lng, c.lat]) },
-      properties: {},
-    })
-  }, [path])
-
+  const ridePath = path.map((c) => [c.lat, c.lng] as [number, number])
   const isConnected = gpsStatus === 'connected'
-
-  const mapArea = TOKEN ? (
-    <div ref={containerRef} className="h-full w-full" />
-  ) : (
-    <div
-      className="h-full w-full bg-[#0b1120]"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)`,
-        backgroundSize: '40px 40px',
-      }}
-    >
-      <p className="absolute left-1/2 top-[30%] -translate-x-1/2 -translate-y-1/2 text-center text-[11px] font-light leading-relaxed text-white/20">
-        .env 파일에 VITE_MAPBOX_TOKEN을<br />추가하면 실제 지도가 표시돼요
-      </p>
-    </div>
-  )
 
   return (
     <div
       className="relative h-full w-full overflow-hidden"
       style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
     >
-      {mapArea}
+      <MapContainer
+        center={MOCK_CENTER_LATLNG}
+        zoom={MOCK_ZOOM}
+        className="h-full w-full"
+        zoomControl={false}
+        attributionControl={false}
+      >
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={19}
+        />
+
+        {/* 참고용 mock 루트 (흐릿한 점선) */}
+        <Polyline
+          positions={MOCK_ROUTE_LATLNG}
+          pathOptions={{ color: '#2DD4BF', weight: 2, opacity: 0.2, dashArray: '5 7' }}
+        />
+
+        {/* 실제 주행 경로 — glow */}
+        {ridePath.length > 1 && (
+          <Polyline
+            positions={ridePath}
+            pathOptions={{ color: '#2DD4BF', weight: 12, opacity: 0.12 }}
+          />
+        )}
+
+        {/* 실제 주행 경로 — 선명한 선 */}
+        {ridePath.length > 1 && (
+          <Polyline
+            positions={ridePath}
+            pathOptions={{ color: '#2DD4BF', weight: 3, opacity: 0.9 }}
+          />
+        )}
+
+        <CameraFollower position={currentPosition} />
+      </MapContainer>
 
       {/* ── 바이크 센터 마커 ── */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="relative flex items-center justify-center">
-          {/* 외곽 펄스 링 */}
           <span className="absolute inline-flex h-20 w-20 animate-ping rounded-full border border-teal-400/20 opacity-75" />
-          {/* 중간 펄스 링 */}
           <span
             className="absolute inline-flex h-14 w-14 animate-ping rounded-full border border-teal-400/30 opacity-75"
             style={{ animationDelay: '0.45s' }}
           />
-          {/* 유리 질감 카드 */}
           <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[#161B26]/70 backdrop-blur-md ring-1 ring-teal-400/30">
             <Bike size={20} strokeWidth={1.5} className="text-teal-400" />
           </div>
