@@ -35,13 +35,12 @@ async function fetchFuelLogs(): Promise<FuelRecord[]> {
   }))
 }
 
-/* ── Area Chart ── */
 function FuelAreaChart({ logs }: { logs: FuelRecord[] }) {
   const W = 320
-  const H = 110
-  const PL = 4
-  const PR = 4
-  const PT = 12
+  const H = 100
+  const PL = 6
+  const PR = 6
+  const PT = 10
   const PB = 24
 
   const now = new Date()
@@ -87,94 +86,92 @@ function FuelAreaChart({ logs }: { logs: FuelRecord[] }) {
   const areaPath = `${linePath} L ${pts[pts.length - 1].x} ${H - PB} L ${pts[0].x} ${H - PB} Z`
 
   return (
-    <div className="rounded-3xl bg-[#161B26]/60 p-4 backdrop-blur-xl">
-      <p className="mb-2 text-[10px] font-light uppercase tracking-widest text-white/30">
-        월별 주유 금액
-      </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        <defs>
-          <linearGradient id="fuelGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0" />
-          </linearGradient>
-        </defs>
+    <div className="rounded-3xl bg-[#161B26]/60 px-4 pt-4 pb-2 backdrop-blur-xl">
+      <p className="mb-1 text-[10px] font-light uppercase tracking-widest text-white/30">월별 주유 금액</p>
+      <div style={{ height: '100px', maxHeight: '140px' }}>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          height="100%"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <defs>
+            <linearGradient id="fuelGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0" />
+            </linearGradient>
+          </defs>
 
-        {/* 격자 수평선 2개 */}
-        {[0.33, 0.66].map((r) => (
-          <line
-            key={r}
-            x1={PL} y1={PT + ch * r} x2={W - PR} y2={PT + ch * r}
-            stroke="rgba(255,255,255,0.05)" strokeWidth="1"
-          />
-        ))}
+          <line x1={PL} y1={PT + ch * 0.5} x2={W - PR} y2={PT + ch * 0.5}
+            stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
 
-        {/* 면 */}
-        <path d={areaPath} fill="url(#fuelGrad)" />
-        {/* 선 */}
-        <path d={linePath} fill="none" stroke="#2DD4BF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={areaPath} fill="url(#fuelGrad)" />
+          <path d={linePath} fill="none" stroke="#2DD4BF" strokeWidth="1.5"
+            strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* 데이터 점 */}
-        {pts.map((p, i) => (
-          totals[i] > 0 && (
-            <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2DD4BF" />
-          )
-        ))}
+          {pts.map((p, i) => (
+            totals[i] > 0 && (
+              <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#2DD4BF" />
+            )
+          ))}
 
-        {/* X축 레이블 */}
-        {months.map((m, i) => (
-          <text
-            key={i}
-            x={PL + i * cw} y={H - 4}
-            textAnchor="middle"
-            fontSize="9"
-            fill="rgba(255,255,255,0.3)"
-          >
-            {m.label}
-          </text>
-        ))}
-      </svg>
+          {months.map((m, i) => (
+            <text
+              key={i}
+              x={PL + i * cw}
+              y={H - 6}
+              textAnchor="middle"
+              fontSize="9"
+              fill="rgba(255,255,255,0.3)"
+              fontFamily="sans-serif"
+            >
+              {m.label}
+            </text>
+          ))}
+        </svg>
+      </div>
     </div>
   )
 }
 
-/* ── 기록 아이템 ── */
 function FuelItem({ log }: { log: FuelRecord }) {
   const isPremium = log.fuelType === '고급유'
   const d = new Date(log.date)
-  const dateStr = d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
+  const dateStr = d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
   const timeStr = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="rounded-3xl bg-[#161B26]/60 p-4 backdrop-blur-xl">
-      <div className="mb-3 flex items-center justify-between">
-        <span className={`text-xs font-bold ${isPremium ? 'text-teal-400' : 'text-white/50'}`}>
-          {log.fuelType}
-        </span>
-        <span className="text-base font-bold text-white">{log.amount.toLocaleString()}원</span>
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5">
-          <MapPin size={11} strokeWidth={1.5} className="text-white/25" />
-          <span className="text-xs font-light text-white/50">{log.stationName}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <Calendar size={11} strokeWidth={1.5} className="text-white/25" />
-            <span className="text-xs font-light text-white/35">{dateStr} {timeStr}</span>
-          </div>
-          {log.totalKm > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Gauge size={11} strokeWidth={1.5} className="text-white/25" />
-              <span className="text-xs font-light text-white/35">{log.totalKm.toLocaleString()} km</span>
+    <div className="rounded-2xl bg-[#161B26]/60 px-4 py-3 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 pr-3">
+          <div className="flex items-center gap-2">
+            <span className={`shrink-0 text-[10px] font-bold ${isPremium ? 'text-teal-400' : 'text-white/40'}`}>
+              {log.fuelType}
+            </span>
+            <div className="flex min-w-0 items-center gap-1">
+              <MapPin size={10} strokeWidth={1.5} className="shrink-0 text-white/20" />
+              <span className="truncate text-xs font-light text-white/50">{log.stationName}</span>
             </div>
-          )}
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1">
+              <Calendar size={10} strokeWidth={1.5} className="text-white/20" />
+              <span className="text-[10px] font-light text-white/30">{dateStr} {timeStr}</span>
+            </div>
+            {log.totalKm > 0 && (
+              <div className="flex items-center gap-1">
+                <Gauge size={10} strokeWidth={1.5} className="text-white/20" />
+                <span className="text-[10px] font-light text-white/30">{log.totalKm.toLocaleString()} km</span>
+              </div>
+            )}
+          </div>
         </div>
+        <span className="shrink-0 text-sm font-bold text-white">{log.amount.toLocaleString()}원</span>
       </div>
     </div>
   )
 }
 
-/* ── 메인 탭 ── */
 export default function FuelLogTab() {
   const [logs, setLogs] = useState<FuelRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -190,32 +187,29 @@ export default function FuelLogTab() {
   const totalAmount = logs.reduce((s, l) => s + l.amount, 0)
 
   return (
-    <div className="flex flex-col gap-4 pb-36">
+    <div className="flex flex-col gap-3 pb-32">
 
-      {/* 그래프 */}
       <FuelAreaChart logs={logs} />
 
-      {/* 요약 카드 */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2">
         {[
           { label: '총 주유 금액', value: `${totalAmount.toLocaleString()}원` },
           { label: '총 주유 횟수', value: `${logs.length}회` },
         ].map(({ label, value }) => (
-          <div key={label} className="flex flex-col gap-1 rounded-3xl bg-[#161B26]/60 p-4 backdrop-blur-xl">
+          <div key={label} className="flex flex-col gap-0.5 rounded-2xl bg-[#161B26]/60 px-4 py-3 backdrop-blur-xl">
             <span className="text-[10px] font-light uppercase tracking-widest text-white/30">{label}</span>
-            <span className="text-xl font-bold text-teal-400">{value}</span>
+            <span className="text-lg font-bold text-teal-400">{value}</span>
           </div>
         ))}
       </div>
 
-      {/* 타임라인 */}
       {logs.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-16">
           <Fuel size={28} strokeWidth={1.5} className="text-white/15" />
           <p className="text-sm font-light text-white/25">아직 주유 기록이 없어요</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {logs.map((log) => <FuelItem key={log.id} log={log} />)}
         </div>
       )}

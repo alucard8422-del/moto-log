@@ -1,57 +1,207 @@
-import MapContainer from '../components/MapContainer'
-import { Search, SlidersHorizontal, Fuel } from 'lucide-react'
-import { parseFuelSms } from '../lib/fuelFilter'
-import { useFuel } from '../context/FuelContext'
+// index.tsx (MapPage)
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import MapDisplay from './map/MapDisplay'
+import RideController from './map/RideController'
+import NaviSettings from './map/NaviSettings'
+import {
+  NAVI_OPTIONS,
+  NAVI_STORAGE_KEY,
+  type Coordinates,
+  type NavigationType,
+  type RideSession,
+  type RideStatus,
+} from './map/types'
 
-const MOCK_SMS = {
-  sender: 'GS칼텍스',
-  body: '[Web발신] GS칼텍스 결제완료\n가맹점: GS주유소강남점\n금액: 28,000원\n일시: 2026-05-16',
-  receivedAt: new Date(),
+function haversine(a: Coordinates, b: Coordinates): number {
+  const R = 6371
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+function loadNaviPref(): NavigationType | null {
+  return (localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType) ?? null
+}
+
+function saveNaviPref(type: NavigationType) {
+  localStorage.setItem(NAVI_STORAGE_KEY, type)
+}
+
+function launchNavi(type: NavigationType) {
+  const opt = NAVI_OPTIONS.find((o) => o.type === type)
+  if (!opt) return
+  window.location.href = opt.scheme
+  setTimeout(() => window.open(opt.fallback, '_blank'), 1500)
 }
 
 export default function MapPage() {
-  const { triggerFuelPopup } = useFuel()
+  const navigate = useNavigate()
 
-  const handleFuelTest = () => {
-    const detected = parseFuelSms(MOCK_SMS)
-    if (detected) {
-      triggerFuelPopup(detected)
-    } else {
-      console.warn('[MapPage] 주유 문자 감지 실패')
-    }
+  const [naviPref, setNaviPref] = useState<NavigationType | null>(loadNaviPref)
+  const [naviDraft, setNaviDraft] = useState<NavigationType>(naviPref ?? 'tmap')
+  const [showSettings, setShowSettings] = useState(false)
+  const [status, setStatus] = useState<RideStatus>('idle')
+  const [path, setPath] = useState<Coordinates[]>([])
+  const [currentPosition, setCurrentPosition] = useState<Coordinates | null>(null)
+  const [duration, setDuration] = useState(0)
+  const [distance, setDistance] = useState(0)
+  const [session, setSession] = useState<RideSession | null>(null)
+
+  const watchIdRef = useRef<number | null>(null)
+  const rideWatchIdRef = useRef<number | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const startTimeRef = useRef<Date | null>(null)
+  const pathRef = useRef<Coordinates[]>([])
+  const distanceRef = useRef(0)
+
+  // 앱 시작 시 위치 미리 수신
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        setCurrentPosition({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          timestamp: pos.timestamp,
+        })
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 }
+    )
+    watchIdRef.current = id
+    return () => navigator.geolocation.clearWatch(id)
+  }, [])
+
+  // 최초 실행 시 내비 설정 안내
+  useEffect(() => {
+    if (!naviPref) setShowSettings(true)
+  }, [naviPref])
+
+  const handleSaveSettings = () => {
+    saveNaviPref(naviDraft)
+    setNaviPref(naviDraft)
+    setShowSettings(false)
   }
 
+  const handleStart = () => {
+    if (!naviPref) {
+      setShowSettings(true)
+      return
+    }
+
+    // 1. 외부 내비 즉시 실행
+    launchNavi(naviPref)
+
+    // 2. 앱 내 GPX 기록 시작
+    startTimeRef.current = new Date()
+    pathRef.current = []
+    distanceRef.current = 0
+    setPath([])
+    setDistance(0)
+    setDuration(0)
+    setStatus('riding')
+
+    rideWatchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const coord: Coordinates = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          timestamp: pos.timestamp,
+        }
+        setCurrentPosition(coord)
+        const prev = pathRef.current[pathRef.current.length - 1]
+        if (prev) {
+          const delta = haversine(prev, coord)
+          if (delta > 0.005) {
+            distanceRef.current += delta
+            setDistance(distanceRef.current)
+            pathRef.current = [...pathRef.current, coord]
+            setPath([...pathRef.current])
+          }
+        } else {
+          pathRef.current = [coord]
+          setPath([coord])
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+    )
+
+    timerRef.current = setInterval(() => {
+      setDuration((d) => d + 1)
+    }, 1000)
+  }
+
+  const handleStop = () => {
+    if (rideWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(rideWatchIdRef.current)
+      rideWatchIdRef.current = null
+    }
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    const endTime = new Date()
+    setSession({
+      id: crypto.randomUUID(),
+      startTime: startTimeRef.current ?? endTime,
+      endTime,
+      distance: distanceRef.current,
+      duration,
+      path: pathRef.current,
+    })
+    setStatus('finished')
+  }
+
+  const handleGoToCourses = () => {
+    navigate('/courses', { state: { completedSession: session } })
+  }
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current)
+      if (rideWatchIdRef.current !== null) navigator.geolocation.clearWatch(rideWatchIdRef.current)
+      if (timerRef.current !== null) clearInterval(timerRef.current)
+    }
+  }, [])
+
   return (
-    <div className="flex h-[calc(100svh-64px-112px)] flex-col gap-4 p-4">
-      {/* 검색 바 */}
-      <div className="flex gap-2">
-        <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/5 bg-white/5 px-4 py-3">
-          <Search size={16} strokeWidth={1.5} className="text-white/30" />
-          <input
-            type="text"
-            placeholder="지역, 코스 이름 검색"
-            className="flex-1 bg-transparent text-sm font-light text-white placeholder-white/30 outline-none"
-            onChange={(e) => console.log('[MapPage] 검색:', e.target.value)}
-          />
-        </div>
-        <button className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/5 bg-white/5">
-          <SlidersHorizontal size={16} strokeWidth={1.5} className="text-white/60" />
-        </button>
-      </div>
+    <div className="relative h-[calc(100svh-64px)] w-full overflow-hidden">
+      <MapDisplay
+        path={path}
+        currentPosition={currentPosition}
+        isRiding={status === 'riding'}
+      />
 
-      {/* 지도 */}
-      <div className="flex-1 overflow-hidden rounded-3xl">
-        <MapContainer />
-      </div>
+      <RideController
+        status={status}
+        naviType={naviPref}
+        duration={duration}
+        distance={distance}
+        onStart={handleStart}
+        onStop={handleStop}
+        onGoToCourses={handleGoToCourses}
+        onOpenSettings={() => {
+          setNaviDraft(naviPref ?? 'tmap')
+          setShowSettings(true)
+        }}
+      />
 
-      {/* 주유 감지 테스트 버튼 */}
-      <button
-        onClick={handleFuelTest}
-        className="flex items-center justify-center gap-2 rounded-2xl bg-white/5 py-3 text-sm font-light text-white/50 transition-colors active:bg-white/10"
-      >
-        <Fuel size={14} strokeWidth={1.5} className="text-teal-400" />
-        주유 기록 테스트
-      </button>
+      {showSettings && (
+        <NaviSettings
+          selected={naviDraft}
+          onSelect={setNaviDraft}
+          onSave={handleSaveSettings}
+          onClose={() => setShowSettings(false)}
+          isFirstLaunch={!naviPref}
+        />
+      )}
     </div>
   )
 }
