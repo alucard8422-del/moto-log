@@ -1,6 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Map, Route, User, Bell, Navigation } from 'lucide-react'
-import FuelConfirmPopup from './FuelConfirmPopup'
 import FuelCompleteSheet from './FuelCompleteSheet'
 
 const TAB_ITEMS = [
@@ -46,7 +45,6 @@ export default function Layout() {
         <Outlet />
       </main>
 
-      <FuelConfirmPopup />
       <FuelCompleteSheet />
 
       {/* z-30: 항상 지도·컨트롤러 위에 떠 있는 탭 바 */}

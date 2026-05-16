@@ -1,7 +1,6 @@
 // MapPage.tsx
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Satellite, Locate } from 'lucide-react'
 import type { Map as LeafletMap } from 'leaflet'
 
 function fmtTime(s: number): string {
@@ -86,7 +85,6 @@ export default function MapPage() {
   const navigate = useNavigate()
   const { position, errorCode, loading } = useGeolocation()
 
-  const [naviType, setNaviType] = useState<NavigationType>(loadNaviPref)
   const [status, setStatus] = useState<RideStatus>('idle')
   const [path, setPath] = useState<Location[]>([])
   const [duration, setDuration] = useState(0)
@@ -122,7 +120,7 @@ export default function MapPage() {
   }, [])
 
   const handleStart = () => {
-    launchNavi(naviType)
+    launchNavi(loadNaviPref())
 
     startTimeRef.current = new Date()
     prevPosRef.current = null
@@ -211,40 +209,19 @@ export default function MapPage() {
         />
       </div>
 
-      {/* [1층] 우측 상단 — GPS + Locate 아이콘 전용 원형 버튼 수직 배치 */}
-      <div className="pointer-events-none fixed top-4 right-4 z-10 flex flex-col items-center gap-2">
-        {/* GPS 상태 표시등 */}
-        <div className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#161B26]/80 backdrop-blur-md">
-          <Satellite
-            size={16}
-            strokeWidth={1.5}
-            className={gpsStatus === 'connected' ? 'text-teal-400' : 'animate-pulse text-white/30'}
-          />
-        </div>
-
-        {/* 현재 위치로 이동 */}
-        <button
-          className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#161B26]/80 backdrop-blur-md transition-opacity active:opacity-70"
-          onClick={() => {
-            if (position) {
-              mapRef.current?.flyTo([position.lat, position.lng], 15, { duration: 0.8 })
-            }
-          }}
-        >
-          <Locate size={16} strokeWidth={1.5} className="text-teal-400" />
-        </button>
-      </div>
-
-      {/* [1.5층] 주행 중 투명 HUD
-           · left-0 right-[5rem]: 우측 GPS버튼(w-10=2.5rem, right-4=1rem) + 여백 확보
-           · justify-center: 가용 공간 안에서만 중앙 정렬 → 우측 침범 원천 차단 */}
+      {/* [1층] 주행 중 HUD — 상단 정중앙, 우측 패딩 없음 */}
       {status === 'riding' && (() => {
         const avg = duration > 0 ? distance / (duration / 3600) : 0
         return (
-          <div className="pointer-events-none fixed top-8 left-0 right-[5rem] z-20 flex justify-center gap-x-6 md:gap-x-12 [@media(orientation:landscape)]:top-3">
-            <HUDCol value={fmtTime(duration)} label="주행시간" />
-            <HUDCol value={distance.toFixed(2)} label="주행거리" />
-            <HUDCol value={avg.toFixed(0)} label="현재속도" />
+          <div className="pointer-events-none fixed top-8 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-3 [@media(orientation:landscape)]:top-3">
+            <div className="flex items-center justify-center gap-x-10 md:gap-x-16">
+              <HUDCol value={fmtTime(duration)} label="주행시간" />
+              <HUDCol value={distance.toFixed(2)} label="주행거리" />
+              <HUDCol value={avg.toFixed(0)} label="현재속도" />
+            </div>
+            <p className="text-xs font-medium text-[#2DD4BF] animate-pulse drop-shadow-[0_0_5px_rgba(45,212,191,0.6)]">
+              • 경로를 기록중입니다
+            </p>
           </div>
         )
       })()}
@@ -263,7 +240,6 @@ export default function MapPage() {
         onStart={handleStart}
         onStop={handleStop}
         onGoToCourses={handleGoToCourses}
-        onNaviChange={setNaviType}
       />
     </div>
   )

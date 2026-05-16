@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
 import type { Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Navigation, Satellite } from 'lucide-react'
+import { Navigation } from 'lucide-react'
 import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
 import type { Location, GpsStatus } from './types'
 
@@ -58,7 +58,6 @@ function CameraFollower({ position }: { position: Location | null }) {
 
 export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus, mapRef }: Props) {
   const ridePath = path.map((c) => [c.lat, c.lng] as [number, number])
-  const isConnected = gpsStatus === 'connected'
   const heading = useHeading()
 
   return (
@@ -128,23 +127,6 @@ export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus,
         </div>
       </div>
 
-      {/* ── GPS 상태 표시등 (우측 상단) ── */}
-      <div className="absolute right-4 top-4 z-10">
-        <div className="flex items-center gap-1.5 rounded-full bg-[#161B26]/80 px-3 py-2 backdrop-blur-md">
-          <Satellite
-            size={13}
-            strokeWidth={1.5}
-            className={isConnected ? 'text-teal-400' : 'text-white/30'}
-          />
-          <span
-            className={`text-[10px] font-light ${
-              isConnected ? 'text-teal-400' : 'animate-pulse text-white/30'
-            }`}
-          >
-            {isConnected ? 'GPS 수신 중' : 'GPS 재연결 중'}
-          </span>
-        </div>
-      </div>
 
       {/* ── REC 인디케이터 (좌측 상단, 주행 중만) ── */}
       {isRiding && (

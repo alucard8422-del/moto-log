@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Settings, Gauge, Wrench, LogOut } from 'lucide-react'
+import { Settings, Gauge, Wrench, LogOut, FlaskConical, Check } from 'lucide-react'
+import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from './map/types'
 import GarageEditModal, { type GarageData } from '../components/GarageEditModal'
 import { fetchProfile, upsertProfile } from '../lib/profileService'
 import FuelLogTab from '../components/FuelLogTab'
+import FuelConfirmPopup from '../components/FuelConfirmPopup'
+import { useFuel } from '../context/FuelContext'
 
 type Tab = 'garage' | 'fuel'
 
@@ -27,6 +30,11 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 }
 
 export default function ProfilePage() {
+  const { triggerFuelPopup } = useFuel()
+  const [naviType, setNaviType] = useState<NavigationType>(
+    () => (localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType) ?? 'tmap'
+  )
+
   const [garage, setGarage] = useState<GarageData>({
     bikeModel: 'Honda CB500F',
     totalKm: 12340,
@@ -113,7 +121,29 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      {activeTab === 'fuel' && <FuelLogTab />}
+      {activeTab === 'fuel' && (
+        <>
+          <FuelLogTab />
+
+          {/* ─────────────────────────────────────────────────────
+              [임시 테스트] 주유 팝업 트리거 버튼
+              이 메뉴는 테스트 이후 삭제될 예정입니다.
+          ───────────────────────────────────────────────────── */}
+          <button
+            onClick={() =>
+              triggerFuelPopup({
+                storeName: 'GS칼텍스 테스트점',
+                amount: 45000,
+                receivedAt: new Date(),
+              })
+            }
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 py-3 text-xs font-light text-white/25 transition-opacity active:opacity-60"
+          >
+            <FlaskConical size={12} strokeWidth={1.5} />
+            주유 팝업 테스트 (삭제 예정)
+          </button>
+        </>
+      )}
 
       {activeTab === 'garage' && <>
       {/* ── 마이 가라지 카드 ── */}
@@ -171,6 +201,36 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── [임시] 내비게이션 설정 ── */}
+      <div className="rounded-2xl bg-white/5 p-4">
+        <p className="mb-3 text-[10px] font-light uppercase tracking-widest text-white/30">
+          내비게이션 설정 (임시)
+        </p>
+        <div className="flex flex-col gap-2">
+          {NAVI_OPTIONS.map((opt) => {
+            const active = naviType === opt.type
+            return (
+              <button
+                key={opt.type}
+                onClick={() => {
+                  setNaviType(opt.type)
+                  localStorage.setItem(NAVI_STORAGE_KEY, opt.type)
+                }}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-150 ${active ? 'bg-teal-400/10 ring-1 ring-teal-400/40' : 'bg-white/5'}`}
+              >
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black ${active ? 'bg-teal-400 text-slate-950' : 'bg-white/10 text-white/50'}`}>
+                  {opt.badge}
+                </div>
+                <span className={`flex-1 text-left text-sm font-semibold ${active ? 'text-teal-400' : 'text-white/70'}`}>
+                  {opt.label}
+                </span>
+                {active && <Check size={14} strokeWidth={2.5} className="text-teal-400" />}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* ── 가라지 편집 모달 ── */}
       {editOpen && (
         <GarageEditModal
@@ -192,6 +252,7 @@ export default function ProfilePage() {
       </div>
       </>}
 
+      <FuelConfirmPopup />
     </div>
   )
 }
