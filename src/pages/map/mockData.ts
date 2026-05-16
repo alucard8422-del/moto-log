@@ -1,6 +1,4 @@
 // mockData.ts
-// 테스트용 GPX 경로 — 올림픽공원 일대 루프 코스 (서울 송파구)
-
 export const MOCK_ROUTE_COORDS: [number, number][] = [
   [127.0815, 37.5183],
   [127.0832, 37.5172],

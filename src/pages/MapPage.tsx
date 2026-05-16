@@ -7,6 +7,7 @@ import ErgonomicController from './map/ErgonomicController'
 import {
   NAVI_OPTIONS,
   NAVI_STORAGE_KEY,
+  type GpsStatus,
   type Location,
   type NavigationType,
   type RideSession,
@@ -53,21 +54,24 @@ export default function MapPage() {
   const prevPosRef = useRef<Location | null>(null)
   const distanceRef = useRef(0)
 
-  // 오버스크롤/바운스 방지 (APK 환경)
+  const gpsStatus: GpsStatus =
+    !loading && position !== null && errorCode === null ? 'connected' : 'disconnected'
+
+  // APK 오버스크롤/바운스 방지
   useEffect(() => {
     const saved = {
-      overflow: document.body.style.overflow,
-      overscroll: document.body.style.overscrollBehavior,
-      touchAction: document.body.style.touchAction,
-      position: document.body.style.position,
-      width: document.body.style.width,
+      overflow:           document.body.style.overflow,
+      overscrollBehavior: document.body.style.overscrollBehavior,
+      touchAction:        document.body.style.touchAction,
+      position:           document.body.style.position,
+      width:              document.body.style.width,
     }
     Object.assign(document.body.style, {
-      overflow: 'hidden',
+      overflow:           'hidden',
       overscrollBehavior: 'none',
-      touchAction: 'none',
-      position: 'fixed',
-      width: '100%',
+      touchAction:        'none',
+      position:           'fixed',
+      width:              '100%',
     })
     return () => {
       Object.assign(document.body.style, saved)
@@ -146,10 +150,9 @@ export default function MapPage() {
 
   return (
     <div
-      className="relative w-screen overflow-hidden"
+      className="relative w-screen overflow-hidden touch-none"
       style={{
         height: '100svh',
-        touchAction: 'none',
         overscrollBehavior: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
@@ -159,8 +162,7 @@ export default function MapPage() {
         path={path}
         currentPosition={position}
         isRiding={status === 'riding'}
-        geoError={errorCode}
-        geoLoading={loading}
+        gpsStatus={gpsStatus}
       />
 
       <ErgonomicController

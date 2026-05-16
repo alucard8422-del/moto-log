@@ -26,27 +26,20 @@ function StatRow({ duration, distance }: { duration: number; distance: number })
   const avg = duration > 0 ? distance / (duration / 3600) : 0
   return (
     <div className="mb-3 flex items-center justify-between rounded-2xl bg-white/5 px-5 py-3">
-      <div className="flex flex-col items-center gap-0.5">
-        <Timer size={12} strokeWidth={1.5} className="text-teal-400" />
-        <span className="text-sm font-bold tabular-nums text-white">{fmt(duration)}</span>
-        <span className="text-[9px] font-light text-white/30">시간</span>
-      </div>
-      <div className="h-8 w-px bg-white/8" />
-      <div className="flex flex-col items-center gap-0.5">
-        <Route size={12} strokeWidth={1.5} className="text-teal-400" />
-        <span className="text-sm font-bold tabular-nums text-white">
-          {distance.toFixed(2)}<span className="text-[10px] font-light text-white/40"> km</span>
-        </span>
-        <span className="text-[9px] font-light text-white/30">거리</span>
-      </div>
-      <div className="h-8 w-px bg-white/8" />
-      <div className="flex flex-col items-center gap-0.5">
-        <Gauge size={12} strokeWidth={1.5} className="text-teal-400" />
-        <span className="text-sm font-bold tabular-nums text-white">
-          {avg.toFixed(0)}<span className="text-[10px] font-light text-white/40"> km/h</span>
-        </span>
-        <span className="text-[9px] font-light text-white/30">평균</span>
-      </div>
+      {[
+        { icon: <Timer size={12} strokeWidth={1.5} className="text-teal-400" />, value: fmt(duration), label: '시간' },
+        { icon: <Route size={12} strokeWidth={1.5} className="text-teal-400" />, value: `${distance.toFixed(2)} km`, label: '거리' },
+        { icon: <Gauge size={12} strokeWidth={1.5} className="text-teal-400" />, value: `${avg.toFixed(0)} km/h`, label: '평균' },
+      ].map(({ icon, value, label }, i, arr) => (
+        <>
+          <div key={label} className="flex flex-col items-center gap-0.5">
+            {icon}
+            <span className="text-sm font-bold tabular-nums text-white">{value}</span>
+            <span className="text-[9px] font-light text-white/30">{label}</span>
+          </div>
+          {i < arr.length - 1 && <div className="h-8 w-px bg-white/8" />}
+        </>
+      ))}
     </div>
   )
 }
@@ -72,7 +65,7 @@ function NaviToggle({ naviType, onNaviChange }: { naviType: NavigationType; onNa
               <span className={`text-[15px] font-black leading-none ${active ? 'text-slate-950' : 'text-white/40'}`}>
                 {opt.badge}
               </span>
-              <span className={`text-[9px] font-light ${active ? 'text-slate-950/65' : 'text-white/25'}`}>
+              <span className={`text-[9px] font-light leading-none ${active ? 'text-slate-950/65' : 'text-white/25'}`}>
                 {opt.label}
               </span>
             </button>

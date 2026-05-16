@@ -64,7 +64,7 @@ export default function NaviSettings({
                     <p className={`text-sm font-bold ${isSelected ? 'text-teal-400' : 'text-white/70'}`}>
                       {opt.label}
                     </p>
-                    <p className="text-[11px] font-light text-white/30">{opt.description}</p>
+                    <p className="text-[11px] font-light text-white/30">{opt.label}</p>
                   </div>
 
                   {/* 체크 */}
