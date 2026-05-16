@@ -116,7 +116,7 @@ export default function ErgonomicController({
 
   if (status === 'finished') {
     return (
-      <div className="absolute bottom-28 left-4 right-4 z-20">
+      <div className="absolute bottom-36 left-4 right-4 z-20">
         <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
           <div className="mb-3 flex items-center gap-2">
             <Flag size={14} strokeWidth={1.5} className="text-teal-400" />
@@ -136,7 +136,7 @@ export default function ErgonomicController({
 
   if (status === 'riding') {
     return (
-      <div className="absolute bottom-28 left-4 right-4 z-20">
+      <div className="absolute bottom-36 left-4 right-4 z-20">
         <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
           <StatRow duration={duration} distance={distance} />
           <button
@@ -153,7 +153,7 @@ export default function ErgonomicController({
 
   return (
     <>
-      <div className="absolute bottom-28 left-4 right-4 z-20">
+      <div className="absolute bottom-36 left-4 right-4 z-20">
         <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
           <div className="flex gap-2.5">
             {/* 출발 버튼 (좌측 full) */}

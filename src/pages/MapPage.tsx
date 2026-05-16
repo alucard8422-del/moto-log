@@ -1,7 +1,8 @@
 // MapPage.tsx
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Satellite } from 'lucide-react'
+import { Satellite, Locate } from 'lucide-react'
+import type { Map as LeafletMap } from 'leaflet'
 import { useGeolocation } from './map/useGeolocation'
 import MapDisplay from './map/MapDisplay'
 import ErgonomicController from './map/ErgonomicController'
@@ -66,6 +67,7 @@ export default function MapPage() {
   const startTimeRef = useRef<Date | null>(null)
   const prevPosRef = useRef<Location | null>(null)
   const distanceRef = useRef(0)
+  const mapRef = useRef<LeafletMap | null>(null)
 
   const gpsStatus: GpsStatus =
     !loading && position !== null && errorCode === null ? 'connected' : 'disconnected'
@@ -164,8 +166,8 @@ export default function MapPage() {
      * 레이어 순서: 지도(z-0) < 타이틀(z-10) < 컨트롤러(z-20) < Layout nav(z-30) < NaviSheet(z-40/50)
      */
     <div
-      className="relative w-screen h-screen overflow-hidden bg-[#0B0F19] touch-none"
-      style={{ overscrollBehavior: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+      className="relative w-screen overflow-hidden bg-[#0B0F19] touch-none"
+      style={{ height: '100dvh', overscrollBehavior: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
       {/* [0층] 지도 엔진 — fixed + z-0 으로 완전히 바닥에 격리 */}
       <div className="fixed inset-0 w-full h-full z-0">
@@ -174,11 +176,13 @@ export default function MapPage() {
           currentPosition={position}
           isRiding={status === 'riding'}
           gpsStatus={gpsStatus}
+          mapRef={mapRef}
         />
       </div>
 
-      {/* [1층] GPS 상태 표시등 — 우측 상단 고정, z-10 루트 기준 */}
-      <div className="pointer-events-none fixed top-4 right-4 z-10">
+      {/* [1층] 우측 상단 패널 — GPS 표시등 + 현재 위치 이동 버튼 수직 배치 */}
+      <div className="pointer-events-none fixed top-4 right-4 z-10 flex flex-col items-end gap-2">
+        {/* GPS 상태 표시등 */}
         <div className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-[#161B26]/80 px-3 py-2 backdrop-blur-md">
           <Satellite
             size={13}
@@ -193,6 +197,19 @@ export default function MapPage() {
             {gpsStatus === 'connected' ? 'GPS 수신 중' : 'GPS 재연결 중'}
           </span>
         </div>
+
+        {/* 현재 위치로 이동 버튼 */}
+        <button
+          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/5 bg-[#161B26]/80 px-3 py-2 shadow-lg backdrop-blur-xl transition-opacity active:opacity-70"
+          onClick={() => {
+            if (position) {
+              mapRef.current?.flyTo([position.lat, position.lng], 15, { duration: 0.8 })
+            }
+          }}
+        >
+          <Locate size={13} strokeWidth={1.5} className="text-teal-400" />
+          <span className="text-xs font-medium text-white/90">현재위치</span>
+        </button>
       </div>
 
       {/*

@@ -1,6 +1,7 @@
 // MapDisplay.tsx
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
+import type { Map as LeafletMap } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, Satellite } from 'lucide-react'
 import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
@@ -31,6 +32,15 @@ interface Props {
   currentPosition: Location | null
   isRiding: boolean
   gpsStatus: GpsStatus
+  mapRef?: React.MutableRefObject<LeafletMap | null>
+}
+
+function MapRefSetter({ mapRef }: { mapRef?: React.MutableRefObject<LeafletMap | null> }) {
+  const map = useMap()
+  useEffect(() => {
+    if (mapRef) mapRef.current = map
+  }, [map, mapRef])
+  return null
 }
 
 // mockData는 [lng, lat] (Mapbox 관행) → Leaflet은 [lat, lng]
@@ -46,7 +56,7 @@ function CameraFollower({ position }: { position: Location | null }) {
   return null
 }
 
-export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus }: Props) {
+export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus, mapRef }: Props) {
   const ridePath = path.map((c) => [c.lat, c.lng] as [number, number])
   const isConnected = gpsStatus === 'connected'
   const heading = useHeading()
@@ -92,10 +102,11 @@ export default function MapDisplay({ path, currentPosition, isRiding, gpsStatus 
         )}
 
         <CameraFollower position={currentPosition} />
+        <MapRefSetter mapRef={mapRef} />
       </MapContainer>
 
-      {/* ── 나침반 방향 화살표 마커 (지도 중앙 고정 오버레이) ── */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      {/* ── 나침반 방향 화살표 마커 — z-[999]로 Leaflet 타일(z-200)·오버레이(z-400) 위에 강제 격상 ── */}
+      <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center">
         <div className="relative flex items-center justify-center">
           {/* 외곽 글로우 펄스 */}
           <span className="absolute inline-flex h-16 w-16 animate-ping rounded-full bg-teal-400/10 opacity-60" />
