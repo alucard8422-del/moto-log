@@ -17,16 +17,16 @@ function HUDCol({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
       <span
-        className="text-5xl font-bold leading-none text-[#2DD4BF] [@media(orientation:landscape)]:text-3xl"
+        className="text-3xl font-bold leading-none text-[#2DD4BF] md:text-5xl [@media(orientation:landscape)]:text-2xl"
         style={{
           fontFamily: "'Orbitron', sans-serif",
-          textShadow: '0 0 12px rgba(45,212,191,0.55)',
+          textShadow: '0 0 10px rgba(45,212,191,0.5)',
         }}
       >
         {value}
       </span>
       <span
-        className="text-[10px] font-medium uppercase tracking-widest text-white/55 [@media(orientation:landscape)]:text-[9px]"
+        className="text-[9px] font-medium uppercase tracking-widest text-white/50 [@media(orientation:landscape)]:text-[8px]"
         style={{ fontFamily: "'Urbanist', sans-serif" }}
       >
         {label}
@@ -235,14 +235,16 @@ export default function MapPage() {
         </button>
       </div>
 
-      {/* [1.5층] 주행 중 투명 HUD — 지도 위에 떠 있는 실시간 데이터 */}
+      {/* [1.5층] 주행 중 투명 HUD
+           · left-0 right-[5rem]: 우측 GPS버튼(w-10=2.5rem, right-4=1rem) + 여백 확보
+           · justify-center: 가용 공간 안에서만 중앙 정렬 → 우측 침범 원천 차단 */}
       {status === 'riding' && (() => {
         const avg = duration > 0 ? distance / (duration / 3600) : 0
         return (
-          <div className="pointer-events-none fixed top-8 left-1/2 z-20 flex -translate-x-1/2 gap-12 [@media(orientation:landscape)]:top-3 [@media(orientation:landscape)]:gap-8">
-            <HUDCol value={fmtTime(duration)} label="주행 시간" />
-            <HUDCol value={distance.toFixed(2)} label="km" />
-            <HUDCol value={avg.toFixed(0)} label="km/h" />
+          <div className="pointer-events-none fixed top-8 left-0 right-[5rem] z-20 flex justify-center gap-x-6 md:gap-x-12 [@media(orientation:landscape)]:top-3">
+            <HUDCol value={fmtTime(duration)} label="주행시간" />
+            <HUDCol value={distance.toFixed(2)} label="거리(km)" />
+            <HUDCol value={avg.toFixed(0)} label="평균속도" />
           </div>
         )
       })()}
