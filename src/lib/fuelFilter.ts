@@ -1,5 +1,5 @@
-const FUEL_KEYWORDS = ['주유', '오일', '석유', '에너지', '충전소', 'SK', 'GS', 'S-OIL', '현대오일']
-const MAX_AMOUNT = 35000
+const FUEL_KEYWORDS = ['주유', '오일', '석유', '에너지', '충전소', 'SK', 'GS', 'S-OIL', '현대오일', '농협주유소', '지역농협']
+const MAX_AMOUNT = 40000
 
 export interface SmsData {
   sender: string
