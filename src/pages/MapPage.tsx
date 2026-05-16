@@ -243,8 +243,8 @@ export default function MapPage() {
         return (
           <div className="pointer-events-none fixed top-8 left-0 right-[5rem] z-20 flex justify-center gap-x-6 md:gap-x-12 [@media(orientation:landscape)]:top-3">
             <HUDCol value={fmtTime(duration)} label="주행시간" />
-            <HUDCol value={distance.toFixed(2)} label="거리(km)" />
-            <HUDCol value={avg.toFixed(0)} label="평균속도" />
+            <HUDCol value={distance.toFixed(2)} label="주행거리" />
+            <HUDCol value={avg.toFixed(0)} label="현재속도" />
           </div>
         )
       })()}
