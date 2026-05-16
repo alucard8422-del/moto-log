@@ -5,7 +5,6 @@ import { useGeolocation } from './map/useGeolocation'
 import MapDisplay from './map/MapDisplay'
 import ErgonomicController from './map/ErgonomicController'
 import {
-  NAVI_OPTIONS,
   NAVI_STORAGE_KEY,
   type GpsStatus,
   type Location,
@@ -160,15 +159,15 @@ export default function MapPage() {
 
   return (
     /*
-     * fixed inset-0: Layout의 flex 흐름을 이탈해 뷰포트 전체 점유
-     * z-0: Layout nav(z-30)가 항상 위에 뜨도록 최하위 레이어
+     * [루트] relative + NO z-index → 스태킹 컨텍스트 미생성 → 자식 z-index가 루트 기준으로 비교됨
+     * 레이어 순서: 지도(z-0) < 타이틀(z-10) < 컨트롤러(z-20) < Layout nav(z-30) < NaviSheet(z-40/50)
      */
     <div
-      className="fixed inset-0 z-0 overflow-hidden touch-none bg-[#0B0F19]"
+      className="relative w-screen h-screen overflow-hidden bg-[#0B0F19] touch-none"
       style={{ overscrollBehavior: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
-      {/* 지도 배경 — 전체 채움 */}
-      <div className="absolute inset-0">
+      {/* [0층] 지도 엔진 — fixed + z-0 으로 완전히 바닥에 격리 */}
+      <div className="fixed inset-0 w-full h-full z-0">
         <MapDisplay
           path={path}
           currentPosition={position}
@@ -177,14 +176,19 @@ export default function MapPage() {
         />
       </div>
 
-      {/* 상단 타이틀 pill */}
-      <div className="absolute left-0 right-0 top-0 z-10 flex justify-center pt-4">
-        <div className="rounded-full bg-[#161B26]/70 px-4 py-1.5 backdrop-blur-md">
+      {/* [1층] 상단 타이틀 — z-10, 빈 영역은 지도 터치 통과 */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-4">
+        <div className="pointer-events-auto rounded-full bg-[#161B26]/70 px-4 py-1.5 backdrop-blur-md">
           <span className="text-[11px] font-bold tracking-[0.2em] text-white/50">MOTO LOG</span>
         </div>
       </div>
 
-      {/* 하단 컨트롤러 — ErgonomicController 내부: absolute bottom-28 z-20 */}
+      {/*
+       * [2층] 제어 바 — 루트 직계 자식으로 배치 (핵심)
+       * · ErgonomicController 내부 absolute(z-20): 루트 기준 z-20 → nav(z-30) 아래, 지도(z-0) 위 ✓
+       * · NaviSheet 내부 fixed(z-40/50): 루트 기준 z-40/50 → nav(z-30) 위 ✓
+       *   → z-10 div 안에 넣으면 NaviSheet가 z-10 컨텍스트에 갇혀 nav 뒤로 숨는 버그 발생하므로 반드시 분리
+       */}
       <ErgonomicController
         status={status}
         naviType={naviType}
