@@ -3,6 +3,37 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Satellite, Locate } from 'lucide-react'
 import type { Map as LeafletMap } from 'leaflet'
+
+function fmtTime(s: number): string {
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
+function HUDCol({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <span
+        className="text-5xl font-bold leading-none text-[#2DD4BF] [@media(orientation:landscape)]:text-3xl"
+        style={{
+          fontFamily: "'Orbitron', sans-serif",
+          textShadow: '0 0 12px rgba(45,212,191,0.55)',
+        }}
+      >
+        {value}
+      </span>
+      <span
+        className="text-[10px] font-medium uppercase tracking-widest text-white/55 [@media(orientation:landscape)]:text-[9px]"
+        style={{ fontFamily: "'Urbanist', sans-serif" }}
+      >
+        {label}
+      </span>
+    </div>
+  )
+}
 import { useGeolocation } from './map/useGeolocation'
 import MapDisplay from './map/MapDisplay'
 import ErgonomicController from './map/ErgonomicController'
@@ -180,37 +211,41 @@ export default function MapPage() {
         />
       </div>
 
-      {/* [1층] 우측 상단 패널 — GPS 표시등 + 현재 위치 이동 버튼 수직 배치 */}
-      <div className="pointer-events-none fixed top-4 right-4 z-10 flex flex-col items-end gap-2">
+      {/* [1층] 우측 상단 — GPS + Locate 아이콘 전용 원형 버튼 수직 배치 */}
+      <div className="pointer-events-none fixed top-4 right-4 z-10 flex flex-col items-center gap-2">
         {/* GPS 상태 표시등 */}
-        <div className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-[#161B26]/80 px-3 py-2 backdrop-blur-md">
+        <div className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#161B26]/80 backdrop-blur-md">
           <Satellite
-            size={13}
+            size={16}
             strokeWidth={1.5}
-            className={gpsStatus === 'connected' ? 'text-teal-400' : 'text-white/30'}
+            className={gpsStatus === 'connected' ? 'text-teal-400' : 'animate-pulse text-white/30'}
           />
-          <span
-            className={`text-[10px] font-light ${
-              gpsStatus === 'connected' ? 'text-teal-400' : 'animate-pulse text-white/30'
-            }`}
-          >
-            {gpsStatus === 'connected' ? 'GPS 수신 중' : 'GPS 재연결 중'}
-          </span>
         </div>
 
-        {/* 현재 위치로 이동 버튼 */}
+        {/* 현재 위치로 이동 */}
         <button
-          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-white/5 bg-[#161B26]/80 px-3 py-2 shadow-lg backdrop-blur-xl transition-opacity active:opacity-70"
+          className="pointer-events-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#161B26]/80 backdrop-blur-md transition-opacity active:opacity-70"
           onClick={() => {
             if (position) {
               mapRef.current?.flyTo([position.lat, position.lng], 15, { duration: 0.8 })
             }
           }}
         >
-          <Locate size={13} strokeWidth={1.5} className="text-teal-400" />
-          <span className="text-xs font-medium text-white/90">현재위치</span>
+          <Locate size={16} strokeWidth={1.5} className="text-teal-400" />
         </button>
       </div>
+
+      {/* [1.5층] 주행 중 투명 HUD — 지도 위에 떠 있는 실시간 데이터 */}
+      {status === 'riding' && (() => {
+        const avg = duration > 0 ? distance / (duration / 3600) : 0
+        return (
+          <div className="pointer-events-none fixed top-8 left-1/2 z-20 flex -translate-x-1/2 gap-12 [@media(orientation:landscape)]:top-3 [@media(orientation:landscape)]:gap-8">
+            <HUDCol value={fmtTime(duration)} label="주행 시간" />
+            <HUDCol value={distance.toFixed(2)} label="km" />
+            <HUDCol value={avg.toFixed(0)} label="km/h" />
+          </div>
+        )
+      })()}
 
       {/*
        * [2층] 제어 바 — 루트 직계 자식으로 배치 (핵심)

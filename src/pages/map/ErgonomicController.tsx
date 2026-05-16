@@ -116,8 +116,8 @@ export default function ErgonomicController({
 
   if (status === 'finished') {
     return (
-      <div className="absolute bottom-36 left-4 right-4 z-20">
-        <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
+      <div className="absolute bottom-24 left-4 right-4 z-20 [@media(orientation:landscape)]:bottom-6 [@media(orientation:landscape)]:left-6 [@media(orientation:landscape)]:right-auto [@media(orientation:landscape)]:w-80">
+        <div className="rounded-2xl border border-white/5 bg-[#111622]/90 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
           <div className="mb-3 flex items-center gap-2">
             <Flag size={14} strokeWidth={1.5} className="text-teal-400" />
             <span className="text-sm font-bold text-white">주행 완료</span>
@@ -136,25 +136,22 @@ export default function ErgonomicController({
 
   if (status === 'riding') {
     return (
-      <div className="absolute bottom-36 left-4 right-4 z-20">
-        <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
-          <StatRow duration={duration} distance={distance} />
-          <button
-            onClick={onStop}
-            className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-rose-500/15 transition-opacity active:opacity-75"
-          >
-            <Square size={16} strokeWidth={2} className="text-rose-400" fill="currentColor" />
-            <span className="text-base font-bold text-rose-400">도착 · 주행 종료</span>
-          </button>
-        </div>
+      <div className="absolute bottom-24 left-4 right-4 z-20 [@media(orientation:landscape)]:bottom-6 [@media(orientation:landscape)]:left-6 [@media(orientation:landscape)]:right-auto [@media(orientation:landscape)]:w-80">
+        <button
+          onClick={onStop}
+          className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl border border-rose-500/20 bg-[#111622]/90 shadow-lg shadow-black/40 backdrop-blur-md transition-opacity active:opacity-75"
+        >
+          <Square size={15} strokeWidth={2} className="text-rose-400" fill="currentColor" />
+          <span className="text-base font-bold text-rose-400">도착 · 주행 종료</span>
+        </button>
       </div>
     )
   }
 
   return (
     <>
-      <div className="absolute bottom-36 left-4 right-4 z-20">
-        <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
+      <div className="absolute bottom-24 left-4 right-4 z-20 [@media(orientation:landscape)]:bottom-6 [@media(orientation:landscape)]:left-6 [@media(orientation:landscape)]:right-auto [@media(orientation:landscape)]:w-80">
+        <div className="rounded-2xl border border-white/5 bg-[#111622]/90 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
           <div className="flex gap-2.5">
             {/* 출발 버튼 (좌측 full) */}
             <button
