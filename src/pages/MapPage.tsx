@@ -1,6 +1,7 @@
 // MapPage.tsx
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Satellite } from 'lucide-react'
 import { useGeolocation } from './map/useGeolocation'
 import MapDisplay from './map/MapDisplay'
 import ErgonomicController from './map/ErgonomicController'
@@ -176,10 +177,21 @@ export default function MapPage() {
         />
       </div>
 
-      {/* [1층] 상단 타이틀 — z-10, 빈 영역은 지도 터치 통과 */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-4">
-        <div className="pointer-events-auto rounded-full bg-[#161B26]/70 px-4 py-1.5 backdrop-blur-md">
-          <span className="text-[11px] font-bold tracking-[0.2em] text-white/50">MOTO LOG</span>
+      {/* [1층] GPS 상태 표시등 — 우측 상단 고정, z-10 루트 기준 */}
+      <div className="pointer-events-none fixed top-4 right-4 z-10">
+        <div className="pointer-events-auto flex items-center gap-1.5 rounded-full bg-[#161B26]/80 px-3 py-2 backdrop-blur-md">
+          <Satellite
+            size={13}
+            strokeWidth={1.5}
+            className={gpsStatus === 'connected' ? 'text-teal-400' : 'text-white/30'}
+          />
+          <span
+            className={`text-[10px] font-light ${
+              gpsStatus === 'connected' ? 'text-teal-400' : 'animate-pulse text-white/30'
+            }`}
+          >
+            {gpsStatus === 'connected' ? 'GPS 수신 중' : 'GPS 재연결 중'}
+          </span>
         </div>
       </div>
 

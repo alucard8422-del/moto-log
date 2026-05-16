@@ -156,22 +156,22 @@ export default function ErgonomicController({
       <div className="absolute bottom-28 left-4 right-4 z-20">
         <div className="rounded-3xl bg-[#161B26]/95 p-4 backdrop-blur-xl">
           <div className="flex gap-2.5">
-            {/* 내비 뱃지 버튼 */}
-            <button
-              onClick={() => setSheetOpen(true)}
-              className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/8 transition-opacity active:opacity-70"
-            >
-              <span className="text-xl font-black text-white/80">{currentNavi.badge}</span>
-              <ChevronDown size={10} strokeWidth={2} className="text-white/30" />
-            </button>
-
-            {/* 출발 버튼 */}
+            {/* 출발 버튼 (좌측 full) */}
             <button
               onClick={onStart}
               className="flex h-16 flex-1 items-center justify-center gap-3 rounded-2xl bg-teal-400 transition-opacity active:opacity-75"
             >
               <Play size={22} strokeWidth={2} className="text-slate-950" fill="currentColor" />
               <span className="text-xl font-bold text-slate-950">출발</span>
+            </button>
+
+            {/* 내비 뱃지 버튼 (우측 끝) */}
+            <button
+              onClick={() => setSheetOpen(true)}
+              className="flex h-16 w-16 shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-white/8 transition-opacity active:opacity-70"
+            >
+              <span className="text-xl font-black text-white/80">{currentNavi.badge}</span>
+              <ChevronDown size={10} strokeWidth={2} className="text-white/30" />
             </button>
           </div>
         </div>
