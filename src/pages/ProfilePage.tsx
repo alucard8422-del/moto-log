@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import { Settings, Gauge, Wrench, LogOut } from 'lucide-react'
 import GarageEditModal, { type GarageData } from '../components/GarageEditModal'
 import { fetchProfile, upsertProfile } from '../lib/profileService'
+import FuelLogTab from '../components/FuelLogTab'
+
+type Tab = 'garage' | 'fuel'
 
 const INTERVALS = [
   { label: '엔진오일 교체 주기', total: 5000 },
@@ -31,6 +34,7 @@ export default function ProfilePage() {
     completedCourses: 12,
   })
   const [editOpen, setEditOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('garage')
 
   useEffect(() => {
     fetchProfile().then((data) => {
@@ -92,6 +96,26 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      {/* ── 탭 스위처 ── */}
+      <div className="flex rounded-2xl bg-white/5 p-1">
+        {([['garage', '마이 가라지'], ['fuel', '주유 기록']] as [Tab, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex-1 rounded-xl py-2 text-xs transition-all duration-200 ${
+              activeTab === key
+                ? 'bg-white/10 font-bold text-teal-400'
+                : 'font-light text-white/40'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'fuel' && <FuelLogTab />}
+
+      {activeTab === 'garage' && <>
       {/* ── 마이 가라지 카드 ── */}
       <div className="rounded-3xl bg-white/5 p-6 backdrop-blur-xl">
         {/* 바이크 헤더 */}
@@ -166,6 +190,7 @@ export default function ProfilePage() {
           로그아웃
         </button>
       </div>
+      </>}
 
     </div>
   )

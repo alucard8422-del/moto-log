@@ -5,6 +5,7 @@ import MapPage from './pages/MapPage'
 import TourPage from './pages/TourPage'
 import ProfilePage from './pages/ProfilePage'
 import AuthListener from './components/AuthListener'
+import FuelCompletePage from './pages/FuelCompletePage'
 import { FuelProvider } from './context/FuelContext'
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
       <AuthListener />
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/fuel-complete" element={<FuelCompletePage />} />
         <Route element={<Layout />}>
           <Route path="/map" element={<MapPage />} />
           <Route path="/courses" element={<TourPage />} />

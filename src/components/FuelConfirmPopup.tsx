@@ -1,9 +1,11 @@
 import { Fuel } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { saveFuelLog, type FuelType } from '../lib/fuelService'
 import { useFuel } from '../context/FuelContext'
 
 export default function FuelConfirmPopup() {
   const { pendingFuel, clearFuelPopup } = useFuel()
+  const navigate = useNavigate()
 
   const handleSelect = async (fuelType: FuelType) => {
     if (!pendingFuel) return
@@ -14,6 +16,15 @@ export default function FuelConfirmPopup() {
       loggedAt: pendingFuel.receivedAt.toISOString(),
     })
     clearFuelPopup()
+    navigate('/fuel-complete', {
+      state: {
+        fuelType,
+        amount: pendingFuel.amount,
+        storeName: pendingFuel.storeName,
+        totalKm: 0,
+        loggedAt: pendingFuel.receivedAt.toISOString(),
+      },
+    })
   }
 
   return (
