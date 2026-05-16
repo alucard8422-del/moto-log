@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Map, Route, User, Bell } from 'lucide-react'
-import { Navigation } from 'lucide-react'
+import { Map, Route, User, Bell, Navigation } from 'lucide-react'
+import FuelConfirmPopup from './FuelConfirmPopup'
 
 const TAB_ITEMS = [
   { path: '/map', icon: Map, label: '지도' },
@@ -46,6 +46,9 @@ export default function Layout() {
       <main className="flex-1 pb-28">
         <Outlet />
       </main>
+
+      {/* 주유 확인 팝업 */}
+      <FuelConfirmPopup />
 
       {/* 하단 플로팅 탭 바 */}
       <nav className="fixed bottom-6 left-1/2 z-20 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2">

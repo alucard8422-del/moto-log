@@ -5,9 +5,11 @@ import MapPage from './pages/MapPage'
 import TourPage from './pages/TourPage'
 import ProfilePage from './pages/ProfilePage'
 import AuthListener from './components/AuthListener'
+import { FuelProvider } from './context/FuelContext'
 
 export default function App() {
   return (
+    <FuelProvider>
     <BrowserRouter>
       <AuthListener />
       <Routes>
@@ -19,5 +21,6 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </FuelProvider>
   )
 }
