@@ -2,6 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ════════════════════════════════════════════════════════════════════════
+   MOTO LOG — 3단 테마 디자인 토큰 (CSS Custom Properties)
+   사용법: HTML 루트 요소에 .theme-dark / .theme-light / .theme-white 클래스 부여
+   기본값(변수 미설정 방어): 다크 테마 기준
+════════════════════════════════════════════════════════════════════════ */
+
+/* ── 다크 테마 (default + .theme-dark) ─────────────────────────────────
+   '시크한 심해 네이비' — 현재 앱 기본 비주얼
+   ─────────────────────────────────────────────────────────────────── */
+:root,
+.theme-dark {
+  --bg-app:        #0F172A;   /* 전체 도화지 — 심해 남색               */
+  --bg-surface:    #1E293B;   /* 카드·가라지·배지 배경 — 한 톤 밝은 남색 */
+  --text-main:     #F1F5F9;   /* 메인 타이틀 — 눈부심 없는 크림 화이트  */
+  --text-sub:      #94A3B8;   /* 서브·설명 텍스트 — 은회색              */
+  --brand-accent:  #2DD4BF;   /* 포인트 버튼·아이콘 — 형광 민트         */
+  --border-line:   rgba(255,255,255,0.07); /* 카드 테두리·구분선         */
+}
+
+/* ── 라이트 테마 (.theme-light) ─────────────────────────────────────────
+   '눈이 편안한 연회색 미니멀'
+   ─────────────────────────────────────────────────────────────────── */
+.theme-light {
+  --bg-app:        #F8FAFC;   /* 전체 도화지 — 부드러운 연회색          */
+  --bg-surface:    #FFFFFF;   /* 카드 배경 — 흰색으로 배경 위에 띄움    */
+  --text-main:     #1E293B;   /* 메인 타이틀 — 부드러운 먹색            */
+  --text-sub:      #475569;   /* 서브 텍스트 — 철회색                   */
+  --brand-accent:  #14B8A6;   /* 포인트 — 표준 민트색                   */
+  --border-line:   rgba(0,0,0,0.08);       /* 카드 테두리·구분선         */
+}
+
+/* ── 화이트 테마 (.theme-white) ─────────────────────────────────────────
+   '완전 순백과 청록의 강렬한 대비'
+   ─────────────────────────────────────────────────────────────────── */
+.theme-white {
+  --bg-app:        #FFFFFF;   /* 전체 도화지 — 완전 흰색               */
+  --bg-surface:    #F1F5F9;   /* 카드 배경 — 밝은 회색으로 레이어 구분  */
+  --text-main:     #0F172A;   /* 메인 타이틀 — 극도로 어두운 네이비     */
+  --text-sub:      #64748B;   /* 서브 텍스트 — 슬레이트 회색            */
+  --brand-accent:  #0D9488;   /* 포인트 — 진한 청록 (흰 배경 최적 대비) */
+  --border-line:   rgba(0,0,0,0.10);       /* 카드 테두리·구분선         */
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   라이트/화이트 테마 — 다크모드 하드코딩 색상 자동 대비 보정
+   컴포넌트를 일일이 수정하지 않아도 전역에서 시인성 확보
+════════════════════════════════════════════════════════════════════════ */
+
+/* text-white (순수 흰색 텍스트) → 테마 메인 텍스트 색으로 전환
+   명시도: 0,0,2,0 — Tailwind 단일 클래스(0,0,1,0)보다 높아 !important 불필요 */
+.theme-light .text-white,
+.theme-white .text-white {
+  color: var(--text-main);
+}
+
+/* text-white/N (반투명 흰색 계열) → 서브 텍스트 색으로 전환
+   [class*="text-white/"] 는 "text-white/40" 등 substring 매칭
+   border-white/N·bg-white/N은 "text-white/"를 포함하지 않으므로 안전 */
+.theme-light [class*="text-white/"],
+.theme-white [class*="text-white/"] {
+  color: var(--text-sub);
+}
+
+/* 다크 고정 배경 → 테마 앱 배경으로 전환 */
+.theme-light .bg-slate-950,
+.theme-white .bg-slate-950 {
+  background-color: var(--bg-app);
+}
+.theme-light .bg-slate-900,
+.theme-white .bg-slate-900 {
+  background-color: var(--bg-surface);
+}
+
+/* 반투명 화이트 카드 오버레이 → 테마 서피스로 전환 */
+.theme-light .bg-white\/5,
+.theme-white .bg-white\/5 {
+  background-color: var(--bg-surface);
+}
+.theme-light .bg-white\/\[0\.03\],
+.theme-white .bg-white\/\[0\.03\] {
+  background-color: var(--bg-surface);
+}
+.theme-light .bg-white\/10,
+.theme-white .bg-white\/10 {
+  background-color: var(--bg-surface);
+}
+
+/* 다크 고정 반투명 배경 (모달 시트, 헤더 backdrop) */
+.theme-light .bg-slate-950\/80,
+.theme-white .bg-slate-950\/80 {
+  background-color: color-mix(in srgb, var(--bg-app) 85%, transparent);
+}
+.theme-light .bg-slate-900\/80,
+.theme-white .bg-slate-900\/80 {
+  background-color: color-mix(in srgb, var(--bg-surface) 90%, transparent);
+}
+
+/* 테두리: 반투명 화이트 → 테마 라인으로 전환 */
+.theme-light .border-white\/5,
+.theme-white .border-white\/5,
+.theme-light .border-white\/10,
+.theme-white .border-white\/10 {
+  border-color: var(--border-line);
+}
+
+/* 예외: 색상 버튼 위의 텍스트는 강제 변환 차단
+   teal/amber/rose 배경 버튼의 text-white 또는 text-slate-950 은 그대로 유지
+   → Tailwind text-slate-950 은 영향 없음 / teal 버튼은 text-slate-950 사용 */
+
+/* ════════════════════════════════════════════════════════════════════════
+   베이스 리셋
+════════════════════════════════════════════════════════════════════════ */
 * {
   margin: 0;
   padding: 0;
@@ -10,8 +122,8 @@
 
 body {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  background-color: #020617;
-  color: #f8fafc;
+  background-color: var(--bg-app, #0F172A);
+  color: var(--text-main, #F1F5F9);
   -webkit-font-smoothing: antialiased;
 }
 

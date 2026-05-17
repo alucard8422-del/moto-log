@@ -3,8 +3,8 @@
 // Section 2: 라이더 공유 광장 (2열 그리드, 중단)
 // Section 3: 코스 탐색 필터 + 세로 리스트 (하단)
 import { useState, useMemo, useEffect } from 'react'
-import { Flame, ChevronRight, Clock, MapPin } from 'lucide-react'
-import SmartRecommendSection, { type RankedCourse } from './tour/SmartRecommendSection'
+import { Flame, ChevronRight, Clock, MapPin, ThumbsUp } from 'lucide-react'
+import { type RankedCourse } from './tour/SmartRecommendSection'
 import CourseDetailModal from '../components/CourseDetailModal'
 import { loadCommunityCourses, type SavedCourse } from '../lib/courseStorage'
 import type { CourseCardData } from './tour/CourseCard'
@@ -218,6 +218,74 @@ const MOOD_CHIP: Record<CourseCardData['mood'], string> = {
   '도전적인': 'text-rose-400   bg-rose-400/15',
 }
 
+// ── Section 1: 오늘의 베스트 코스 캐러셀 (👍 내림차순) ───────────────────
+function BestCoursesCarousel({ courses, onPress }: { courses: RankedCourse[]; onPress: (c: CourseCardData) => void }) {
+  // localStorage thumbsUp 반영: moto:thumbCount:{id} 우선, 없으면 recommendCount
+  const ranked = [...courses]
+    .map(c => ({
+      ...c,
+      score: parseInt(localStorage.getItem(`moto:thumbCount:${c.id}`) ?? String(c.recommendCount ?? 0)),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between px-0.5">
+        <div className="flex items-center gap-2">
+          <span className="text-base">🏆</span>
+          <span className="text-sm font-bold text-white">오늘의 베스트 코스</span>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] font-light text-white/25">
+          <ThumbsUp size={9} strokeWidth={1.5} />
+          <span>순</span>
+        </div>
+      </div>
+
+      {/* 가로 스크롤 카드 */}
+      <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {ranked.map((course, rank) => (
+          <button
+            key={course.id}
+            onClick={() => onPress(course)}
+            className="group relative h-52 w-44 shrink-0 overflow-hidden rounded-3xl transition-transform duration-200 active:scale-[0.97]"
+          >
+            {course.imageUrl ? (
+              <img src={course.imageUrl} alt={course.title}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+            ) : (
+              <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
+                <span className="text-3xl opacity-20">🏍</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+
+            {/* 순위 뱃지 */}
+            <div className={`absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold
+              ${rank === 0 ? 'bg-amber-400 text-slate-950'
+              : rank === 1 ? 'bg-slate-300 text-slate-950'
+              : rank === 2 ? 'bg-amber-700/80 text-white'
+              : 'bg-white/10 text-white/60'}`}>
+              {rank + 1}
+            </div>
+
+            <div className="absolute bottom-0 inset-x-0 p-3">
+              <p className="text-left text-[12px] font-bold text-white line-clamp-2">{course.title}</p>
+              <p className="mt-0.5 flex items-center gap-0.5 text-[10px] font-light text-white/50">
+                <MapPin size={8} strokeWidth={1.5} />{course.region}
+              </p>
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-teal-400">
+                <ThumbsUp size={10} strokeWidth={1.5} />
+                {course.score.toLocaleString()}
+              </p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── 섹션 구분선 ───────────────────────────────────────────────────────────
 function Divider({ label }: { label: string }) {
   return (
@@ -237,12 +305,10 @@ interface CommunityGridProps {
 
 function CommunityGrid({ courses, onPress }: CommunityGridProps) {
   if (courses.length === 0) return null
-  // 별점 높은 순 → 최근 등록 순 2차 정렬
-  const sorted = [...courses].sort((a, b) => {
-    const stars = (b.starRating ?? 0) - (a.starRating ?? 0)
-    if (stars !== 0) return stars
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
+  // 최신 등록 시간순 (실시간 광장 = 새 글이 위로)
+  const sorted = [...courses].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  )
 
   const isNew = (iso: string) =>
     Date.now() - new Date(iso).getTime() < 7 * 24 * 60 * 60 * 1000
@@ -258,7 +324,7 @@ function CommunityGrid({ courses, onPress }: CommunityGridProps) {
             LIVE
           </span>
         </div>
-        <span className="text-[10px] font-light text-white/25">별점순</span>
+        <span className="text-[10px] font-light text-white/25">최신순</span>
       </div>
 
       {/* 2열 그리드 */}
@@ -425,15 +491,11 @@ export default function TourPage() {
       </div>
 
       {/* ══════════════════════════════════════════════════════
-          SECTION 1 — AI 맞춤 추천 캐러셀 (최상단, 3개)
+          SECTION 1 — 오늘의 베스트 코스 (👍 내림차순 캐러셀)
       ══════════════════════════════════════════════════════ */}
-      <SmartRecommendSection
-        courses={RECOMMENDED}
-        onPress={handleSelectCurated}
-        limit={3}
-      />
+      <BestCoursesCarousel courses={RECOMMENDED} onPress={handleSelectCurated} />
 
-      <Divider label="실시간 공유" />
+      <Divider label="실시간 라이더 광장" />
 
       {/* ══════════════════════════════════════════════════════
           SECTION 2 — 라이더 공유 광장 (2열 그리드)

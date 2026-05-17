@@ -1,6 +1,6 @@
 // CourseDetailModal.tsx — 추천 코스 상세 + 내비 연동 + 3초 카운트다운 + 별점 + 댓글
-import { useState, useEffect } from 'react'
-import { X, MapPin, Gauge, Map, Navigation, ThumbsUp, Heart, MessageCircle, Send } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, MapPin, Gauge, Map, Navigation, ThumbsUp, Bookmark, MessageCircle, Send } from 'lucide-react'
 import type { TourCardData } from './TourCard'
 import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../pages/map/types'
 import NavigationCountdownPopup from './NavigationCountdownPopup'
@@ -53,50 +53,50 @@ function ThumbsUpButton({ courseId, initialCount }: { courseId: string; initialC
   }
 
   return (
-    <button onClick={toggle} className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-2 transition-transform active:scale-90">
+    // 라벨 텍스트 제거 — 아이콘 + 숫자만
+    <button onClick={toggle} className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 transition-transform active:scale-90">
       <ThumbsUp
-        size={22}
+        size={20}
         strokeWidth={1.5}
         className={thumbed ? 'fill-teal-400 text-teal-400' : 'text-white/30'}
       />
       <span className={`text-sm font-bold tabular-nums ${thumbed ? 'text-teal-400' : 'text-white/30'}`}>
         {count.toLocaleString()}
       </span>
-      <span className="text-[9px] font-light text-white/25">가볼 만해요!</span>
     </button>
   )
 }
 
-// ── 하트(찜) 버튼 — localStorage 영속 ────────────────────────────────────
-function HeartButton({ courseId, initialCount }: { courseId: string; initialCount: number }) {
-  const lk = `moto:liked:${courseId}`
-  const ck = `moto:count:${courseId}`
-  const [liked, setLiked] = useState(() => localStorage.getItem(lk) === '1')
+// ── 북마크(저장) 버튼 — Heart → Bookmark 대체, localStorage 영속 ──────────
+function BookmarkButton({ courseId, initialCount }: { courseId: string; initialCount: number }) {
+  const lk = `moto:bookmarked:${courseId}`
+  const ck = `moto:bookmarkCount:${courseId}`
+  const [saved, setSaved] = useState(() => localStorage.getItem(lk) === '1')
   const [count, setCount] = useState(() => {
     const s = localStorage.getItem(ck)
     return s !== null ? parseInt(s) : initialCount
   })
 
   const toggle = () => {
-    const next      = !liked
+    const next      = !saved
     const nextCount = Math.max(0, count + (next ? 1 : -1))
     localStorage.setItem(lk, next ? '1' : '0')
     localStorage.setItem(ck, String(nextCount))
-    setLiked(next)
+    setSaved(next)
     setCount(nextCount)
   }
 
   return (
-    <button onClick={toggle} className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-2 transition-transform active:scale-90">
-      <Heart
-        size={22}
+    // 라벨 텍스트 제거 — 아이콘 + 숫자만
+    <button onClick={toggle} className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 transition-transform active:scale-90">
+      <Bookmark
+        size={20}
         strokeWidth={1.5}
-        className={liked ? 'fill-rose-500 text-rose-500' : 'text-white/30'}
+        className={saved ? 'fill-amber-400 text-amber-400' : 'text-white/30'}
       />
-      <span className={`text-sm font-bold tabular-nums ${liked ? 'text-rose-400' : 'text-white/30'}`}>
+      <span className={`text-sm font-bold tabular-nums ${saved ? 'text-amber-400' : 'text-white/30'}`}>
         {count.toLocaleString()}
       </span>
-      <span className="text-[9px] font-light text-white/25">보관함에 찜!</span>
     </button>
   )
 }
@@ -192,6 +192,26 @@ export default function CourseDetailModal({
   )
   const [showCountdown, setShowCountdown] = useState(false)
 
+  // ── 슬라이더 ──
+  // imageUrl 단일 → 배열 (추후 multi-photo 확장 포인트)
+  const photos        = course.imageUrl ? [course.imageUrl] : []
+  const [slideIdx, setSlideIdx]   = useState(0)
+  const [lightbox, setLightbox]   = useState(false)
+  const touchX = useRef(0)
+  const touchY = useRef(0)
+
+  const onSliderTouchStart = (e: React.TouchEvent) => {
+    touchX.current = e.touches[0].clientX
+    touchY.current = e.touches[0].clientY
+  }
+  const onSliderTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchX.current
+    const dy = e.changedTouches[0].clientY - touchY.current
+    if (Math.abs(dy) > Math.abs(dx) || Math.abs(dx) < 40) return
+    if (dx < 0 && slideIdx < photos.length - 1) setSlideIdx(i => i + 1)
+    if (dx > 0 && slideIdx > 0) setSlideIdx(i => i - 1)
+  }
+
   useEffect(() => {
     const stored = localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType | null
     if (stored) setNaviType(stored)
@@ -221,42 +241,69 @@ export default function CourseDetailModal({
           style={{ maxHeight: '90dvh' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* ── 썸네일 배너 (고정 헤더) ── */}
-          <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-3xl">
-            {course.imageUrl ? (
-              <img
-                src={course.imageUrl}
-                alt={course.title}
-                className="h-full w-full object-cover"
-              />
+          {/* ── 썸네일 슬라이더 배너 (고정 헤더) ── */}
+          <div
+            className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-3xl"
+            onTouchStart={onSliderTouchStart}
+            onTouchEnd={onSliderTouchEnd}
+            onClick={() => photos.length > 0 && setLightbox(true)}
+          >
+            {/* 슬라이드 스트립 */}
+            {photos.length > 0 ? (
+              <div
+                className="flex h-full transition-transform duration-300 ease-out"
+                style={{
+                  width: `${photos.length * 100}%`,
+                  transform: `translateX(-${(slideIdx * 100) / photos.length}%)`,
+                }}
+              >
+                {photos.map((url, i) => (
+                  <div key={i} style={{ width: `${100 / photos.length}%` }} className="h-full shrink-0">
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="h-full w-full bg-slate-800" />
             )}
+
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent" />
 
-            {/* 닫기 */}
+            {/* 닫기 — stopPropagation으로 lightbox 트리거 방지 */}
             <button
-              onClick={onClose}
+              onClick={(e) => { e.stopPropagation(); onClose() }}
               className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-950/60 text-white/50 backdrop-blur-sm hover:text-white/80"
             >
               <X size={14} strokeWidth={1.5} />
             </button>
 
             {/* 무드 배지 */}
-            <div className="absolute left-4 top-4">
-              <span
-                className={`rounded-full px-2.5 py-1 text-[10px] font-light backdrop-blur-sm ${MOOD_COLOR[course.mood]}`}
-              >
+            <div className="absolute left-4 top-4" onClick={e => e.stopPropagation()}>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-light backdrop-blur-sm ${MOOD_COLOR[course.mood]}`}>
                 {course.mood}
               </span>
             </div>
 
             {/* 커뮤니티 배지 */}
             {savedCourseId && (
-              <div className="absolute bottom-4 left-4">
+              <div className="absolute bottom-8 left-4" onClick={e => e.stopPropagation()}>
                 <span className="rounded-full bg-teal-400/20 px-2.5 py-1 text-[10px] font-medium text-teal-300 backdrop-blur-sm">
                   🤝 커뮤니티 공유 코스
                 </span>
+              </div>
+            )}
+
+            {/* Dot 인디케이터 — 2장 이상일 때만 표시 */}
+            {photos.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5" onClick={e => e.stopPropagation()}>
+                {photos.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === slideIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/40'
+                    }`}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -281,14 +328,14 @@ export default function CourseDetailModal({
               </div>
             </div>
 
-            {/* ── 따봉 👍 + 하트 ❤️ 투트랙 피드백 바 ── */}
+            {/* ── 따봉 👍 + 북마크 🔖 피드백 바 ── */}
             <div className="flex items-stretch gap-0 rounded-2xl border border-white/5 bg-white/[0.03] px-2">
               <ThumbsUpButton
                 courseId={course.id}
                 initialCount={(course as unknown as { recommendCount?: number }).recommendCount ?? 0}
               />
               <div className="my-3 w-px bg-white/8" />
-              <HeartButton
+              <BookmarkButton
                 courseId={course.id}
                 initialCount={0}
               />
@@ -350,6 +397,21 @@ export default function CourseDetailModal({
         onLaunch={handleCountdownLaunch}
         onCancel={handleCountdownCancel}
       />
+
+      {/* 라이트박스 — 슬라이더 사진 탭 시 원본 확대 */}
+      {lightbox && photos.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 backdrop-blur-sm"
+          onClick={() => setLightbox(false)}
+        >
+          <img
+            src={photos[slideIdx]}
+            alt=""
+            className="max-h-[85dvh] max-w-[95vw] rounded-2xl object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   )
 }

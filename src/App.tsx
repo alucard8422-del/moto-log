@@ -5,28 +5,36 @@ import MapPage from './pages/MapPage'
 import TourPage from './pages/TourPage'
 import MyRoutesPage from './pages/MyRoutesPage'
 import ProfilePage from './pages/ProfilePage'
-import CourseSharePage from './pages/CourseSharePage'
+import SavedCoursesPage from './pages/SavedCoursesPage'
+import SettingsPage from './pages/SettingsPage'
+import RoutePlanner from './pages/RoutePlanner'
 import AuthListener from './components/AuthListener'
 import FuelCompletePage from './pages/FuelCompletePage'
 import { FuelProvider } from './context/FuelContext'
+import { ThemeProvider } from './context/ThemeContext'
 
 export default function App() {
   return (
-    <FuelProvider>
-      <BrowserRouter>
-        <AuthListener />
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/fuel-complete" element={<FuelCompletePage />} />
-          <Route element={<Layout />}>
-            <Route path="/map"        element={<MapPage />} />
-            <Route path="/courses"    element={<TourPage />} />
-            <Route path="/my-routes"  element={<MyRoutesPage />} />  {/* 내 경로 (중앙 탭) */}
-            <Route path="/share"      element={<CourseSharePage />} />
-            <Route path="/profile"    element={<ProfilePage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </FuelProvider>
+    <ThemeProvider>
+      <FuelProvider>
+        <BrowserRouter>
+          <AuthListener />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/fuel-complete"   element={<FuelCompletePage />} />
+            {/* 독립 전체화면 — Layout(헤더·탭바) 없이 렌더 */}
+            <Route path="/route-planner"   element={<RoutePlanner />} />
+            <Route element={<Layout />}>
+              <Route path="/map"        element={<MapPage />} />
+              <Route path="/courses"    element={<TourPage />} />
+              <Route path="/my-routes"  element={<MyRoutesPage />} />
+              <Route path="/saved"      element={<SavedCoursesPage />} />
+              <Route path="/profile"    element={<ProfilePage />} />
+              <Route path="/settings"   element={<SettingsPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </FuelProvider>
+    </ThemeProvider>
   )
 }

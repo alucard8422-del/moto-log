@@ -1,10 +1,14 @@
 // MyRoutesPage.tsx — 내 경로 (사후 편집 모달 + 커뮤니티 공유 시트)
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../data/BadgesData'
+import BadgeAchievementModal, { checkRideDiaryBadge } from '../components/BadgeAchievementModal'
 import { MapContainer, TileLayer, Polyline } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   Route, Clock, Flag, Trash2, Navigation,
-  AlertTriangle, Image, Pencil, Share2, CheckCircle, X,
+  AlertTriangle, Image, Pencil, Share2, CheckCircle, X, MoreHorizontal, Plus,
 } from 'lucide-react'
 import {
   loadCourses, updateCourse, deleteCourse, shareToCommunity,
@@ -160,19 +164,22 @@ function ShareSheet({ title, onConfirm, onCancel }: { title: string; onConfirm: 
   )
 }
 
-// ── 사후 편집 모달 (사진 + 후기 작성) ────────────────────────────────────
+// ── 사후 편집 모달 (사진 슬라이더 + 액션 시트 + 후기 작성) ────────────────
 function EditModal({ course, onSave, onClose }: {
   course: SavedCourse
-  onSave: (id: string, diary: string, photo: string | null) => void
+  onSave: (id: string, diary: string, photos: string[]) => void
   onClose: () => void
 }) {
-  const [open, setOpen]   = useState(false)
-  const [diary, setDiary] = useState(course.diary ?? '')
-  const [photo, setPhoto] = useState<string | null>(course.coverPhoto ?? null)
-  const fileRef           = useRef<HTMLInputElement>(null)
+  const [open, setOpen]               = useState(false)
+  const [diary, setDiary]             = useState(course.diary ?? '')
+  // photos: 다중 사진 배열 (coverPhoto를 초기값으로)
+  const [photos, setPhotos]           = useState<string[]>(course.coverPhoto ? [course.coverPhoto] : [])
+  const [currentIdx, setCurrentIdx]   = useState(0)
+  const [showActionSheet, setShowActionSheet] = useState(false)
+  const fileRef  = useRef<HTMLInputElement>(null)
+  const touchX   = useRef(0)
 
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
-  // 모달 열림 동안 배경 스크롤 차단
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -182,9 +189,16 @@ function EditModal({ course, onSave, onClose }: {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => setPhoto(reader.result as string)
+    reader.onload = () => setPhotos(prev => [...prev, reader.result as string])
     reader.readAsDataURL(file)
     e.target.value = ''
+  }
+
+  const deleteCurrentPhoto = () => {
+    const next = photos.filter((_, i) => i !== currentIdx)
+    setPhotos(next)
+    setCurrentIdx(Math.max(0, Math.min(currentIdx, next.length - 1)))
+    setShowActionSheet(false)
   }
 
   return (
@@ -205,18 +219,60 @@ function EditModal({ course, onSave, onClose }: {
             </button>
           </div>
 
-          {/* 사진 첨부 */}
-          {photo ? (
-            <div className="relative mb-3 overflow-hidden rounded-2xl">
-              <img src={photo} alt="" className="h-36 w-full object-cover" />
-              <button onClick={() => setPhoto(null)}
-                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white/60 active:opacity-60">
-                <X size={12} strokeWidth={1.5} />
+          {/* 사진 슬라이더 or 첨부 버튼 */}
+          {photos.length > 0 ? (
+            <div
+              className="relative mb-3 h-36 overflow-hidden rounded-2xl"
+              onTouchStart={e => { touchX.current = e.touches[0].clientX }}
+              onTouchEnd={e => {
+                const dx = e.changedTouches[0].clientX - touchX.current
+                if (Math.abs(dx) < 40) return
+                if (dx < 0 && currentIdx < photos.length - 1) setCurrentIdx(i => i + 1)
+                if (dx > 0 && currentIdx > 0) setCurrentIdx(i => i - 1)
+              }}
+            >
+              {/* 슬라이드 스트립 */}
+              <div
+                className="flex h-full transition-transform duration-300 ease-out"
+                style={{
+                  width: `${photos.length * 100}%`,
+                  transform: `translateX(-${(currentIdx * 100) / photos.length}%)`,
+                }}
+              >
+                {photos.map((url, i) => (
+                  <div key={i} style={{ width: `${100 / photos.length}%` }} className="h-full shrink-0">
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+
+              {/* 우상단 ... 삼점 메뉴 */}
+              <button
+                onClick={() => setShowActionSheet(true)}
+                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white/70 backdrop-blur-sm active:opacity-60"
+              >
+                <MoreHorizontal size={14} strokeWidth={2} />
               </button>
+
+              {/* Dot 인디케이터 — 2장 이상일 때만 */}
+              {photos.length > 1 && (
+                <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+                  {photos.map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        i === currentIdx ? 'w-4 bg-white' : 'w-1.5 bg-white/40'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
-            <button onClick={() => fileRef.current?.click()}
-              className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] py-4 text-xs font-light text-white/30 active:opacity-60">
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/[0.03] py-4 text-xs font-light text-white/30 active:opacity-60"
+            >
               <Image size={13} strokeWidth={1.5} />대표 사진 첨부하기
             </button>
           )}
@@ -228,13 +284,48 @@ function EditModal({ course, onSave, onClose }: {
           <p className="mb-4 text-right text-[10px] font-light text-white/20">{diary.length}/200</p>
 
           {/* 저장 */}
-          <button onClick={() => onSave(course.id, diary, photo)}
+          <button onClick={() => onSave(course.id, diary, photos)}
             className="flex w-full items-center justify-center gap-2 rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 active:opacity-80">
             <CheckCircle size={15} strokeWidth={2} />저장하기
           </button>
         </div>
       </div>
+
+      {/* 파일 input */}
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+
+      {/* 액션 시트 — ... 버튼 */}
+      {showActionSheet && (
+        <>
+          <div className="fixed inset-0 z-[90] bg-black/50" onClick={() => setShowActionSheet(false)} />
+          <div className="fixed bottom-0 inset-x-0 z-[100]">
+            <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-4 pt-4 pb-10 backdrop-blur-xl">
+              <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+              <button
+                onClick={() => { setShowActionSheet(false); fileRef.current?.click() }}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-light text-white/70 active:bg-white/5"
+              >
+                <Image size={16} strokeWidth={1.5} className="text-teal-400" />
+                사진 추가하기
+              </button>
+              <button
+                onClick={deleteCurrentPhoto}
+                className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-light text-rose-400 active:bg-white/5"
+              >
+                <Trash2 size={16} strokeWidth={1.5} />
+                현재 사진 삭제하기
+              </button>
+              <div className="my-2 h-px bg-white/5" />
+              <button
+                onClick={() => setShowActionSheet(false)}
+                className="flex w-full items-center justify-center rounded-2xl px-4 py-3.5 text-sm font-light text-white/30 active:bg-white/5"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   )
 }
@@ -281,15 +372,21 @@ function RouteCard({ course, onDelete, onEdit, onShare }: RouteCardProps) {
           >
             <Pencil size={12} strokeWidth={1.5} />
           </button>
-          {/* 공유 */}
-          {!course.communityShared && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onShare(course) }}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/40 text-white/50 backdrop-blur-md active:bg-teal-400/20 active:text-teal-400"
-            >
-              <Share2 size={12} strokeWidth={1.5} />
-            </button>
-          )}
+          {/* 공유 — 미공유: Share2 활성 / 공유완료: CheckCircle 민트 disabled */}
+          <button
+            onClick={(e) => { e.stopPropagation(); if (!course.communityShared) onShare(course) }}
+            disabled={!!course.communityShared}
+            className={`flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur-md transition-colors duration-300 ${
+              course.communityShared
+                ? 'border-teal-400/30 bg-teal-400/10 text-teal-400'
+                : 'border-white/10 bg-black/40 text-white/50 active:bg-teal-400/20 active:text-teal-400'
+            }`}
+          >
+            {course.communityShared
+              ? <CheckCircle size={12} strokeWidth={2}   />
+              : <Share2      size={12} strokeWidth={1.5} />
+            }
+          </button>
           {/* 삭제 */}
           <button
             onClick={(e) => { e.stopPropagation(); setConfirmDelete(true) }}
@@ -349,13 +446,93 @@ function EmptyState() {
   )
 }
 
+// ── 경로 작성 FAB (토글 + 레이블 슬라이드) ─────────────────────────────────
+function RouteFab({ onNavigate }: { onNavigate: () => void }) {
+  const [open, setOpen] = useState(false)
+
+  // FAB 클릭: open → 닫기만 / closed → 열기만
+  // 실제 라우팅은 오직 레이블 칩 터치로만 발생
+  const handleFabClick = () => {
+    setOpen(prev => !prev)
+  }
+
+  // 외부 클릭 시 닫기 (배경 터치)
+  const handleBackdropClick = () => setOpen(false)
+
+  return (
+    <>
+      {/* 배경 딤 — 열린 상태에서만 노출, 터치 시 닫기 */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="fab-backdrop"
+            className="fixed inset-0 z-[48]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={handleBackdropClick}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* FAB 영역 */}
+      <div className="fixed bottom-28 right-5 z-[49] flex items-center gap-3">
+
+        {/* 레이블 칩 — 왼쪽에서 슬라이딩 등장 */}
+        <AnimatePresence>
+          {open && (
+            <motion.button
+              key="fab-label"
+              onClick={onNavigate}
+              className="flex items-center gap-1.5 rounded-full border border-teal-400/30 bg-slate-950/90 px-4 py-2.5 shadow-lg shadow-black/40 backdrop-blur-md"
+              initial={{ opacity: 0, x: 20, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 16, scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            >
+              {/* 점멸 인디케이터 */}
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-400" />
+              <span className="whitespace-nowrap text-sm font-bold text-teal-400">
+                경로 작성
+              </span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* + / × 회전 FAB 버튼 */}
+        <motion.button
+          onClick={handleFabClick}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-400 shadow-xl shadow-teal-900/50"
+          aria-label={open ? '메뉴 닫기' : '경로 직접 그리기'}
+          whileTap={{ scale: 0.88 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+          {/* + 아이콘 — open 시 45도 회전하여 × 형태로 변환 */}
+          <motion.span
+            className="flex items-center justify-center"
+            animate={{ rotate: open ? 45 : 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+          >
+            <Plus size={24} strokeWidth={2.5} className="text-slate-950" />
+          </motion.span>
+        </motion.button>
+      </div>
+    </>
+  )
+}
+
 // ── 메인 ─────────────────────────────────────────────────────────────────
 export default function MyRoutesPage() {
+  const navigate                       = useNavigate()
   const [courses, setCourses]         = useState<SavedCourse[]>([])
   const [editTarget, setEditTarget]   = useState<SavedCourse | null>(null)
   const [shareTarget, setShareTarget] = useState<SavedCourse | null>(null)
-  // toast: '' = 숨김 / 문자열 = 해당 메시지 노출
   const [toast, setToast]             = useState('')
+  // 배지 달성 팝업 큐 (연쇄 달성 순차 노출)
+  const [badgeQueue, setBadgeQueue]   = useState<Array<{ badgeId: string; tier: Tier }>>([])
+  const currentBadge                  = badgeQueue[0] ?? null
+  const dismissBadge                  = () => setBadgeQueue(prev => prev.slice(1))
 
   // 토스트 3초 후 자동 소멸
   useEffect(() => {
@@ -377,13 +554,17 @@ export default function MyRoutesPage() {
     setCourses(prev => prev.filter(c => c.id !== id))
   }
 
-  const handleSave = (id: string, diary: string, photo: string | null) => {
+  const handleSave = (id: string, diary: string, photos: string[]) => {
     const partial: Partial<SavedCourse> = { diary }
-    if (photo) partial.coverPhoto = photo
+    if (photos.length > 0) partial.coverPhoto = photos[0]
     if (!id.startsWith('mock-')) updateCourse(id, partial)
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
-    setEditTarget(null)           // 모달 즉시 닫힘
-    setToast('기록이 저장되었습니다')  // 토스트 트리거
+    setEditTarget(null)
+    setToast('기록이 저장되었습니다')
+
+    // 주행 기록 누적 배지 체크 → 달성 시 꽃가루 팝업 트리거
+    const { newlyUnlocked } = checkRideDiaryBadge()
+    if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
   }
 
   const handleShareConfirm = (id: string) => {
@@ -460,6 +641,26 @@ export default function MyRoutesPage() {
           onCancel={() => setShareTarget(null)}
         />
       )}
+
+      {/* 주행 기록 배지 달성 팝업 (티어별 이름·아이콘 오버라이드) */}
+      {currentBadge && (() => {
+        const base = BADGES.find(b => b.id === currentBadge.badgeId)
+        if (!base) return null
+        const meta = RIDE_DIARY_TIER_META[currentBadge.tier]
+        // BadgeDef의 name/description/icon을 티어에 맞게 오버라이드
+        const overridden = { ...base, name: meta.name, description: meta.description, icon: meta.icon }
+        return (
+          <BadgeAchievementModal
+            badge={overridden}
+            tier={currentBadge.tier}
+            isOpen={true}
+            onClose={dismissBadge}
+          />
+        )
+      })()}
+
+      {/* ── 경로 작성 FAB (토글 → 레이블 등장 → 이동) ── */}
+      <RouteFab onNavigate={() => navigate('/route-planner')} />
     </div>
   )
 }
