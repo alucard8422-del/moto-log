@@ -25,7 +25,9 @@ function HUDCol({ value, label }: { value: string; label: string }) {
         {value}
       </span>
       <span
-        className="text-[9px] font-medium uppercase tracking-widest text-white/50 [@media(orientation:landscape)]:text-[8px]"
+        // whitespace-nowrap: 좁은 화면에서 '현재속도' 등 라벨이 줄바꿈되지 않도록 강제
+        // tracking-tighter: 자간 축소로 좁은 폭에서도 한 줄 유지
+        className="whitespace-nowrap text-[9px] font-medium uppercase tracking-tighter text-white/50 [@media(orientation:landscape)]:text-[8px]"
         style={{ fontFamily: "'Urbanist', sans-serif" }}
       >
         {label}

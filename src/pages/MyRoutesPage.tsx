@@ -73,7 +73,8 @@ function KoreaRouteMap({ courses }: { courses: SavedCourse[] }) {
   const lines = courses.filter(c => c.gpxPoints.length >= 2)
     .map(c => c.gpxPoints.map(p => [p.lat, p.lng] as [number, number]))
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 220 }}>
+    // isolation:isolate → 독립 스택 컨텍스트: Leaflet 내부 z-index가 모달 위로 침범하지 않음
+    <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 220, isolation: 'isolate' }}>
       <div className="absolute inset-0 z-[500] touch-none pointer-events-none" />
       <MapContainer center={KOREA_CENTER} zoom={6} minZoom={KOREA_MIN_ZOOM}
         maxBounds={KOREA_BOUNDS} maxBoundsViscosity={1.0}
@@ -102,6 +103,11 @@ function KoreaRouteMap({ courses }: { courses: SavedCourse[] }) {
 function DeleteModal({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) {
   const [open, setOpen] = useState(false)
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
+  // 모달 열림 동안 배경 스크롤 차단
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
   return (
     <>
       <div className={`fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100':'opacity-0 pointer-events-none'}`} onClick={onCancel} />
@@ -126,6 +132,11 @@ function DeleteModal({ title, onConfirm, onCancel }: { title: string; onConfirm:
 function ShareSheet({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) {
   const [open, setOpen] = useState(false)
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
+  // 모달 열림 동안 배경 스크롤 차단
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
   return (
     <>
       <div className={`fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100':'opacity-0 pointer-events-none'}`} onClick={onCancel} />
@@ -161,6 +172,11 @@ function EditModal({ course, onSave, onClose }: {
   const fileRef           = useRef<HTMLInputElement>(null)
 
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
+  // 모달 열림 동안 배경 스크롤 차단
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -338,12 +354,13 @@ export default function MyRoutesPage() {
   const [courses, setCourses]         = useState<SavedCourse[]>([])
   const [editTarget, setEditTarget]   = useState<SavedCourse | null>(null)
   const [shareTarget, setShareTarget] = useState<SavedCourse | null>(null)
-  const [toast, setToast]             = useState(false)
+  // toast: '' = 숨김 / 문자열 = 해당 메시지 노출
+  const [toast, setToast]             = useState('')
 
   // 토스트 3초 후 자동 소멸
   useEffect(() => {
     if (!toast) return
-    const t = setTimeout(() => setToast(false), 3000)
+    const t = setTimeout(() => setToast(''), 3000)
     return () => clearTimeout(t)
   }, [toast])
 
@@ -365,7 +382,8 @@ export default function MyRoutesPage() {
     if (photo) partial.coverPhoto = photo
     if (!id.startsWith('mock-')) updateCourse(id, partial)
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
-    setEditTarget(null)
+    setEditTarget(null)           // 모달 즉시 닫힘
+    setToast('기록이 저장되었습니다')  // 토스트 트리거
   }
 
   const handleShareConfirm = (id: string) => {
@@ -374,8 +392,7 @@ export default function MyRoutesPage() {
     setShareTarget(null)
     // 전역 이벤트 → TourPage 공유 광장 즉시 갱신
     window.dispatchEvent(new CustomEvent('moto:community-updated'))
-    // 토스트 알림
-    setToast(true)
+    setToast('공유되었습니다')
   }
 
   return (
@@ -427,7 +444,7 @@ export default function MyRoutesPage() {
         }`}
       >
         <CheckCircle size={15} strokeWidth={2} className="text-slate-950" />
-        <span className="text-sm font-bold text-slate-950">공유되었습니다</span>
+        <span className="text-sm font-bold text-slate-950">{toast}</span>
       </div>
 
       {/* 편집 모달 */}
