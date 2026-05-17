@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import MapPage from './pages/MapPage'
 import TourPage from './pages/TourPage'
 import ProfilePage from './pages/ProfilePage'
+import CourseSharePage from './pages/CourseSharePage'
 import AuthListener from './components/AuthListener'
 import FuelCompletePage from './pages/FuelCompletePage'
 import { FuelProvider } from './context/FuelContext'
@@ -17,8 +18,9 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/fuel-complete" element={<FuelCompletePage />} />
         <Route element={<Layout />}>
-          <Route path="/map" element={<MapPage />} />
+          <Route path="/map"     element={<MapPage />} />
           <Route path="/courses" element={<TourPage />} />
+          <Route path="/share"   element={<CourseSharePage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
       </Routes>

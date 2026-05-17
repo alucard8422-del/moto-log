@@ -82,12 +82,12 @@ function RideCompleteSheet({
             ))}
           </div>
 
-          {/* CTA */}
+          {/* CTA → 공유 탭으로 전환 */}
           <button
             onClick={onGoToCourses}
             className="w-full rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
           >
-            코스 탭에서 기록 확인
+            기록 확인 및 공유하기
           </button>
         </div>
       </div>

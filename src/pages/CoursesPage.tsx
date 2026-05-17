@@ -20,83 +20,68 @@ function SessionSheet({ session, onClose }: { session: RideSession; onClose: () 
 
   const dismiss = () => {
     setOpen(false)
-    setTimeout(onClose, 300)
+    setTimeout(onClose, 500)
   }
 
   const avg = session.duration > 0 ? session.distance / (session.duration / 3600) : 0
   const dateLabel = new Date(session.startTime).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })
 
-  const stats = [
-    { icon: <Route size={12} strokeWidth={1.5} className="text-teal-400" />, value: session.distance.toFixed(2), unit: 'km', label: '주행거리' },
-    { icon: <Timer size={12} strokeWidth={1.5} className="text-teal-400" />, value: fmtDur(session.duration), unit: '', label: '주행시간' },
-    { icon: <Gauge size={12} strokeWidth={1.5} className="text-teal-400" />, value: avg.toFixed(0), unit: 'km/h', label: '평균속도' },
+  const rows = [
+    { icon: <Route size={14} strokeWidth={1.5} className="text-teal-400" />, label: '주행 거리', value: `${session.distance.toFixed(2)} km` },
+    { icon: <Timer size={14} strokeWidth={1.5} className="text-teal-400" />, label: '주행 시간', value: fmtDur(session.duration) },
+    { icon: <Gauge size={14} strokeWidth={1.5} className="text-teal-400" />, label: '평균 속도', value: `${avg.toFixed(0)} km/h` },
   ]
 
   return (
     <>
       {/* 백드롭 */}
       <div
-        className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+          open ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
         onClick={dismiss}
       />
 
       {/* 바텀 시트 */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-300 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 ease-out ${
+          open ? 'translate-y-0' : 'translate-y-full'
+        }`}
       >
-        <div className="mx-auto max-w-sm rounded-t-3xl border-t border-white/10 bg-[#111622]/95 px-5 pt-4 pb-12 backdrop-blur-xl">
-
+        <div className="mx-auto max-w-sm rounded-t-3xl bg-[#161B26]/98 px-6 pt-5 pb-12 backdrop-blur-xl">
           {/* 핸들바 */}
-          <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-white/20" />
+          <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/20" />
 
           {/* 헤더 */}
           <div className="mb-6 flex items-center gap-2">
             <Flag size={13} strokeWidth={1.5} className="text-teal-400" />
-            <span className="flex-1 text-xs font-bold uppercase tracking-widest text-white/70"
-              style={{ fontFamily: "'Urbanist', sans-serif" }}>
-              주행 완료
-            </span>
-            <span className="text-[10px] font-light text-white/30"
-              style={{ fontFamily: "'Urbanist', sans-serif" }}>
-              {dateLabel}
+            <span className="flex-1 text-[10px] font-light uppercase tracking-widest text-white/30">
+              {dateLabel} 주행 기록
             </span>
           </div>
 
-          {/* 스탯 3열 */}
-          <div className="mb-6 grid grid-cols-3 gap-2">
-            {stats.map(({ icon, value, unit, label }) => (
-              <div key={label} className="flex flex-col items-center gap-1.5 rounded-2xl bg-white/5 py-5">
-                {icon}
-                <span
-                  className="mt-0.5 text-xl font-bold leading-none text-[#2DD4BF]"
-                  style={{
-                    fontFamily: "'Orbitron', sans-serif",
-                    textShadow: '0 0 8px rgba(45,212,191,0.4)',
-                  }}
-                >
-                  {value}
-                </span>
-                {unit && (
-                  <span className="text-[9px] font-light text-teal-400/60"
-                    style={{ fontFamily: "'Urbanist', sans-serif" }}>
-                    {unit}
-                  </span>
-                )}
-                <span className="text-[9px] font-light uppercase tracking-wider text-white/30"
-                  style={{ fontFamily: "'Urbanist', sans-serif" }}>
-                  {label}
-                </span>
+          {/* 스탯 로우 */}
+          <div className="mb-6 flex flex-col gap-4 rounded-3xl bg-white/5 px-5 py-4">
+            {rows.map(({ icon, label, value }, i) => (
+              <div key={label}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {icon}
+                    <span className="text-sm font-light text-white/40">{label}</span>
+                  </div>
+                  <span className="text-sm font-bold text-teal-400">{value}</span>
+                </div>
+                {i < rows.length - 1 && <div className="mt-4 h-px bg-white/5" />}
               </div>
             ))}
           </div>
 
-          {/* 닫기 */}
+          {/* 확인 */}
           <button
             onClick={dismiss}
-            className="flex h-12 w-full items-center justify-center rounded-2xl bg-white/5 text-xs font-light tracking-widest text-white/30 transition-opacity active:opacity-60"
-            style={{ fontFamily: "'Urbanist', sans-serif" }}
+            className="w-full rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
           >
-            CLOSE
+            확인
           </button>
         </div>
       </div>

@@ -1,11 +1,12 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Map, Route, User, Bell, Navigation } from 'lucide-react'
+import { Map, Compass, Share2, User, Bell, Navigation } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 
 const TAB_ITEMS = [
-  { path: '/map', icon: Map, label: '지도' },
-  { path: '/courses', icon: Route, label: '코스' },
-  { path: '/profile', icon: User, label: '프로필' },
+  { path: '/map',     icon: Map,     label: '지도' },
+  { path: '/courses', icon: Compass, label: '추천 코스' },
+  { path: '/share',   icon: Share2,  label: '공유' },
+  { path: '/profile', icon: User,    label: '프로필' },
 ] as const
 
 export default function Layout() {
@@ -56,7 +57,7 @@ export default function Layout() {
               <button
                 key={path}
                 onClick={() => handleTabPress(path)}
-                className="flex flex-col items-center gap-1 px-5 py-1 transition-opacity active:opacity-60"
+                className="flex flex-col items-center gap-1 px-3 py-1 transition-opacity active:opacity-60"
               >
                 <Icon
                   size={22}

@@ -36,11 +36,14 @@ function HUDCol({ value, label }: { value: string; label: string }) {
 import { useGeolocation } from './map/useGeolocation'
 import MapDisplay from './map/MapDisplay'
 import ErgonomicController from './map/ErgonomicController'
+import NavigationCountdownPopup from '../components/NavigationCountdownPopup'
+import { buildGpxXml, saveCourse } from '../lib/courseStorage'
 import {
   NAVI_STORAGE_KEY,
+  NAVI_OPTIONS,
   type Location,
   type NavigationType,
-  type RideSession,
+
   type RideStatus,
 } from './map/types'
 
@@ -88,13 +91,15 @@ export default function MapPage() {
   const [path, setPath] = useState<Location[]>([])
   const [duration, setDuration] = useState(0)
   const [distance, setDistance] = useState(0)
-  const [session, setSession] = useState<RideSession | null>(null)
+
+  const [showCountdown, setShowCountdown] = useState(false)
 
   const rideWatchRef = useRef<number | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // timerRef 제거 → useEffect가 단일 인스턴스를 보장
   const startTimeRef = useRef<Date | null>(null)
   const prevPosRef = useRef<Location | null>(null)
   const distanceRef = useRef(0)
+  const durationRef = useRef(0)   // 동기 최신값 — state 큐 지연 없는 냉동 스냅샷용
   const mapRef = useRef<LeafletMap | null>(null)
 
   // 웹뷰 바운스/오버스크롤 방지
@@ -115,16 +120,40 @@ export default function MapPage() {
     }
   }, [])
 
+  // ── 타이머 단일 인스턴스 보장 ──────────────────────────────────
+  // status가 'riding'으로 바뀔 때만 interval 1개 생성.
+  // 리렌더링·Strict Mode 이중 실행 모두 cleanup → recreate 사이클로 처리되어
+  // 항상 단 하나의 interval만 활성 상태임이 보장된다.
+  useEffect(() => {
+    if (status !== 'riding') return
+
+    const id = setInterval(() => {
+      durationRef.current += 1          // ref: 동기 즉시 반영
+      setDuration(durationRef.current)  // state: UI 반영
+    }, 1000)
+
+    return () => clearInterval(id)      // status가 'riding'에서 벗어나면 즉시 소멸
+  }, [status])
+
+  // ▶ 플레이 버튼 → 카운트다운 팝업 먼저 표시
   const handleStart = () => {
+    setShowCountdown(true)
+  }
+
+  // 카운트다운 완료 → 내비 앱으로 이동 + 백그라운드 GPX 기록 시작
+  const handleCountdownLaunch = () => {
+    setShowCountdown(false)
     launchNavi(loadNaviPref())
 
+    // ref 초기화 (setStatus 전에 동기 처리)
     startTimeRef.current = new Date()
     prevPosRef.current = null
     distanceRef.current = 0
+    durationRef.current = 0
     setPath([])
     setDistance(0)
     setDuration(0)
-    setStatus('riding')
+    setStatus('riding')  // ← 이 변경이 위 useEffect를 트리거 → interval 1개 생성
 
     rideWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -149,39 +178,58 @@ export default function MapPage() {
       () => {},
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
     )
-
-    timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000)
+    // setInterval 직접 호출 없음 — useEffect가 단독 관리
   }
 
+  // 카운트다운 취소 → 팝업만 닫음, 이동·기록 모두 없던 일
+  const handleCountdownCancel = () => {
+    setShowCountdown(false)
+  }
+
+  // GPS 수집 중단 + GPX 저장 (내부 공통)
+  // ■ 정지 버튼 — 즉시 동결 후 종료
   const handleStop = () => {
+    // ① JS 싱글 스레드 보장: 이 라인에서 ref 값이 최종 확정됨
+    const frozenDuration = durationRef.current
+    const frozenDistance = distanceRef.current
+
+    // ② GPS watchPosition 즉시 중단
     if (rideWatchRef.current !== null) {
       navigator.geolocation.clearWatch(rideWatchRef.current)
       rideWatchRef.current = null
     }
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
+
+    // ③ GPX 저장 (frozen 값 사용)
     const endTime = new Date()
-    setSession({
+    const gpxPoints = path.map((p) => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp }))
+    saveCourse({
       id: crypto.randomUUID(),
-      startTime: startTimeRef.current ?? endTime,
-      endTime,
-      distance: distanceRef.current,
-      duration,
-      path,
+      title: `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
+      distanceKm: parseFloat(frozenDistance.toFixed(2)),
+      durationMin: Math.round(frozenDuration / 60),
+      gpxPoints,
+      gpxXml: buildGpxXml(gpxPoints),
+      createdAt: endTime.toISOString(),
+      isShared: false,
     })
+
+    // ④ state를 frozen 값으로 명시 고정 (interval 잔여 틱 덮어쓰기 차단)
+    setDuration(frozenDuration)
+    setDistance(frozenDistance)
+
+    // ⑤ status 변경 → 위 useEffect cleanup → clearInterval 실행 (단일 경로 보장)
     setStatus('finished')
   }
 
   const handleGoToCourses = () => {
-    navigate('/courses', { state: { completedSession: session } })
+    // 공유 탭으로 즉시 전환 — CourseSharePage가 loadCourses()로 최신 기록을 자동 로드
+    navigate('/share')
   }
 
+  // 언마운트 안전망 (페이지 이탈 시 GPS 누수 방지)
   useEffect(() => {
     return () => {
       if (rideWatchRef.current !== null) navigator.geolocation.clearWatch(rideWatchRef.current)
-      if (timerRef.current !== null) clearInterval(timerRef.current)
     }
   }, [])
 
@@ -234,6 +282,14 @@ export default function MapPage() {
         onStart={handleStart}
         onStop={handleStop}
         onGoToCourses={handleGoToCourses}
+      />
+
+      {/* 3초 내비 전환 팝업 */}
+      <NavigationCountdownPopup
+        isOpen={showCountdown}
+        naviLabel={NAVI_OPTIONS.find((o) => o.type === loadNaviPref())?.label ?? 'T map'}
+        onLaunch={handleCountdownLaunch}
+        onCancel={handleCountdownCancel}
       />
     </div>
   )
