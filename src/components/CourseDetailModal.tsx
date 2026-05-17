@@ -1,9 +1,13 @@
-// CourseDetailModal.tsx — 추천 코스 상세 + 내비 연동 + 3초 카운트다운
+// CourseDetailModal.tsx — 추천 코스 상세 + 내비 연동 + 3초 카운트다운 + 별점 + 댓글
 import { useState, useEffect } from 'react'
-import { X, MapPin, Gauge, Map, Navigation } from 'lucide-react'
+import { X, MapPin, Gauge, Map, Navigation, ThumbsUp, Heart, MessageCircle, Send } from 'lucide-react'
 import type { TourCardData } from './TourCard'
 import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../pages/map/types'
 import NavigationCountdownPopup from './NavigationCountdownPopup'
+import {
+  loadCourses, addComment,
+  type CourseComment,
+} from '../lib/courseStorage'
 
 const MOOD_COLOR: Record<NonNullable<TourCardData['mood']>, string> = {
   '여유로운': 'bg-emerald-400/15 text-emerald-300',
@@ -11,7 +15,7 @@ const MOOD_COLOR: Record<NonNullable<TourCardData['mood']>, string> = {
   '도전적인': 'bg-rose-400/15 text-rose-300',
 }
 
-// 딥링크 빌더 — 목적지를 코스 지역명으로 검색
+// ── 딥링크 빌더 ──────────────────────────────────────────────────────────
 function buildDeepLink(type: NavigationType, region: string): string {
   const encoded = encodeURIComponent(region)
   switch (type) {
@@ -24,25 +28,170 @@ function buildDeepLink(type: NavigationType, region: string): string {
 function launchNavi(type: NavigationType, region: string) {
   const opt = NAVI_OPTIONS.find((o) => o.type === type)
   window.location.href = buildDeepLink(type, region)
-  // 앱 미설치 시 스토어 fallback
   setTimeout(() => {
     if (opt) window.open(opt.fallback, '_blank')
   }, 1500)
 }
 
+// ── 따봉(추천) 버튼 — localStorage 영속 ─────────────────────────────────
+function ThumbsUpButton({ courseId, initialCount }: { courseId: string; initialCount: number }) {
+  const tk = `moto:thumbed:${courseId}`
+  const ck = `moto:thumbCount:${courseId}`
+  const [thumbed, setThumbed] = useState(() => localStorage.getItem(tk) === '1')
+  const [count, setCount]     = useState(() => {
+    const s = localStorage.getItem(ck)
+    return s !== null ? parseInt(s) : initialCount
+  })
+
+  const toggle = () => {
+    const next      = !thumbed
+    const nextCount = Math.max(0, count + (next ? 1 : -1))
+    localStorage.setItem(tk, next ? '1' : '0')
+    localStorage.setItem(ck, String(nextCount))
+    setThumbed(next)
+    setCount(nextCount)
+  }
+
+  return (
+    <button onClick={toggle} className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-2 transition-transform active:scale-90">
+      <ThumbsUp
+        size={22}
+        strokeWidth={1.5}
+        className={thumbed ? 'fill-teal-400 text-teal-400' : 'text-white/30'}
+      />
+      <span className={`text-sm font-bold tabular-nums ${thumbed ? 'text-teal-400' : 'text-white/30'}`}>
+        {count.toLocaleString()}
+      </span>
+      <span className="text-[9px] font-light text-white/25">가볼 만해요!</span>
+    </button>
+  )
+}
+
+// ── 하트(찜) 버튼 — localStorage 영속 ────────────────────────────────────
+function HeartButton({ courseId, initialCount }: { courseId: string; initialCount: number }) {
+  const lk = `moto:liked:${courseId}`
+  const ck = `moto:count:${courseId}`
+  const [liked, setLiked] = useState(() => localStorage.getItem(lk) === '1')
+  const [count, setCount] = useState(() => {
+    const s = localStorage.getItem(ck)
+    return s !== null ? parseInt(s) : initialCount
+  })
+
+  const toggle = () => {
+    const next      = !liked
+    const nextCount = Math.max(0, count + (next ? 1 : -1))
+    localStorage.setItem(lk, next ? '1' : '0')
+    localStorage.setItem(ck, String(nextCount))
+    setLiked(next)
+    setCount(nextCount)
+  }
+
+  return (
+    <button onClick={toggle} className="flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-2 transition-transform active:scale-90">
+      <Heart
+        size={22}
+        strokeWidth={1.5}
+        className={liked ? 'fill-rose-500 text-rose-500' : 'text-white/30'}
+      />
+      <span className={`text-sm font-bold tabular-nums ${liked ? 'text-rose-400' : 'text-white/30'}`}>
+        {count.toLocaleString()}
+      </span>
+      <span className="text-[9px] font-light text-white/25">보관함에 찜!</span>
+    </button>
+  )
+}
+
+// ── 댓글 섹션 ────────────────────────────────────────────────────────────
+function CommentsSection({ courseId }: { courseId: string }) {
+  const [comments, setComments] = useState<CourseComment[]>(() => {
+    return loadCourses().find((c) => c.id === courseId)?.comments ?? []
+  })
+  const [text, setText] = useState('')
+
+  const handleSubmit = () => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    addComment(courseId, trimmed)
+    const updated = loadCourses().find((c) => c.id === courseId)
+    setComments(updated?.comments ?? [])
+    setText('')
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* 헤더 */}
+      <div className="flex items-center gap-1.5">
+        <MessageCircle size={13} strokeWidth={1.5} className="text-white/30" />
+        <span className="text-[11px] font-light text-white/40">
+          댓글 {comments.length}
+        </span>
+      </div>
+
+      {/* 댓글 목록 */}
+      {comments.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-2xl bg-white/[0.03] p-3.5">
+          {comments.map((c, i) => (
+            <div key={c.id} className="flex flex-col gap-0.5">
+              <p className="text-xs font-light leading-relaxed text-white/70">{c.text}</p>
+              <p className="text-[9px] font-light text-white/25">
+                {new Date(c.createdAt).toLocaleDateString('ko-KR', {
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+              {i < comments.length - 1 && (
+                <div className="mt-2 h-px bg-white/5" />
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs font-light text-white/20">첫 번째 댓글을 남겨보세요!</p>
+      )}
+
+      {/* 입력창 */}
+      <div className="flex items-center gap-2 rounded-2xl border border-white/8 bg-white/[0.03] px-3.5 py-2.5">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+          placeholder="댓글을 입력하세요..."
+          maxLength={100}
+          className="flex-1 bg-transparent text-xs font-light text-white/70 placeholder-white/20 outline-none"
+        />
+        <button
+          onClick={handleSubmit}
+          disabled={!text.trim()}
+          className="shrink-0 text-teal-400 transition-colors disabled:text-white/20 active:scale-90"
+        >
+          <Send size={14} strokeWidth={1.5} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── 메인 모달 ────────────────────────────────────────────────────────────
 interface CourseDetailModalProps {
   course: TourCardData
   onClose: () => void
+  /** 커뮤니티 공유 코스의 실제 localStorage ID — 전달 시 별점·댓글 UI 활성화 */
+  savedCourseId?: string
 }
 
-export default function CourseDetailModal({ course, onClose }: CourseDetailModalProps) {
-  // 프로필에서 저장한 내비 설정 읽기 (localStorage 동기 초기값)
+export default function CourseDetailModal({
+  course,
+  onClose,
+  savedCourseId,
+}: CourseDetailModalProps) {
   const [naviType, setNaviType] = useState<NavigationType>(
     () => (localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType) ?? 'tmap'
   )
   const [showCountdown, setShowCountdown] = useState(false)
 
-  // 프로필 탭에서 설정이 바뀐 경우 모달이 열릴 때마다 최신값 반영
   useEffect(() => {
     const stored = localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType | null
     if (stored) setNaviType(stored)
@@ -50,18 +199,12 @@ export default function CourseDetailModal({ course, onClose }: CourseDetailModal
 
   const naviLabel = NAVI_OPTIONS.find((o) => o.type === naviType)?.label ?? 'T map'
 
-  const handleNavigatePress = () => {
-    setShowCountdown(true)
-  }
-
+  const handleNavigatePress = () => setShowCountdown(true)
   const handleCountdownLaunch = () => {
     setShowCountdown(false)
     launchNavi(naviType, course.region)
   }
-
-  const handleCountdownCancel = () => {
-    setShowCountdown(false)
-  }
+  const handleCountdownCancel = () => setShowCountdown(false)
 
   return (
     <>
@@ -74,11 +217,12 @@ export default function CourseDetailModal({ course, onClose }: CourseDetailModal
 
         {/* 모달 패널 */}
         <div
-          className="relative flex w-full max-w-sm flex-col rounded-t-3xl border border-white/10 bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-black/60 sm:rounded-3xl"
+          className="relative flex w-full max-w-sm flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-slate-900/90 backdrop-blur-xl shadow-2xl shadow-black/60 sm:rounded-3xl"
+          style={{ maxHeight: '90dvh' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 썸네일 배너 */}
-          <div className="relative h-44 w-full overflow-hidden rounded-t-3xl">
+          {/* ── 썸네일 배너 (고정 헤더) ── */}
+          <div className="relative h-44 w-full shrink-0 overflow-hidden rounded-t-3xl">
             {course.imageUrl ? (
               <img
                 src={course.imageUrl}
@@ -90,7 +234,7 @@ export default function CourseDetailModal({ course, onClose }: CourseDetailModal
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent" />
 
-            {/* 닫기 버튼 */}
+            {/* 닫기 */}
             <button
               onClick={onClose}
               className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-950/60 text-white/50 backdrop-blur-sm hover:text-white/80"
@@ -100,14 +244,25 @@ export default function CourseDetailModal({ course, onClose }: CourseDetailModal
 
             {/* 무드 배지 */}
             <div className="absolute left-4 top-4">
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-light backdrop-blur-sm ${MOOD_COLOR[course.mood]}`}>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[10px] font-light backdrop-blur-sm ${MOOD_COLOR[course.mood]}`}
+              >
                 {course.mood}
               </span>
             </div>
+
+            {/* 커뮤니티 배지 */}
+            {savedCourseId && (
+              <div className="absolute bottom-4 left-4">
+                <span className="rounded-full bg-teal-400/20 px-2.5 py-1 text-[10px] font-medium text-teal-300 backdrop-blur-sm">
+                  🤝 커뮤니티 공유 코스
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* 본문 */}
-          <div className="flex flex-col gap-5 px-5 pb-6 pt-4">
+          {/* ── 스크롤 가능 본문 (스크롤바 완전 숨김) ── */}
+          <div className="flex flex-col gap-5 overflow-y-auto px-5 pb-8 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 
             {/* 헤더 */}
             <div>
@@ -124,6 +279,19 @@ export default function CourseDetailModal({ course, onClose }: CourseDetailModal
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* ── 따봉 👍 + 하트 ❤️ 투트랙 피드백 바 ── */}
+            <div className="flex items-stretch gap-0 rounded-2xl border border-white/5 bg-white/[0.03] px-2">
+              <ThumbsUpButton
+                courseId={course.id}
+                initialCount={(course as unknown as { recommendCount?: number }).recommendCount ?? 0}
+              />
+              <div className="my-3 w-px bg-white/8" />
+              <HeartButton
+                courseId={course.id}
+                initialCount={0}
+              />
             </div>
 
             {/* 지도 자리 */}
@@ -155,19 +323,27 @@ export default function CourseDetailModal({ course, onClose }: CourseDetailModal
               </div>
             )}
 
-            {/* ── 주행 시작 버튼 (동적 내비 라벨) ── */}
+            {/* ── 커뮤니티 전용: 댓글 ── */}
+            {savedCourseId && (
+              <>
+                <div className="h-px bg-white/5" />
+                <CommentsSection courseId={savedCourseId} />
+              </>
+            )}
+
+            {/* ── 주행 시작 버튼 ── */}
             <button
               onClick={handleNavigatePress}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
             >
               <Navigation size={16} strokeWidth={2} />
-              {naviLabel}로 주행 시작
+              바로 여행하기
             </button>
           </div>
         </div>
       </div>
 
-      {/* 3초 카운트다운 팝업 — z-[70] 이므로 모달(z-50) 위에 렌더링 */}
+      {/* 3초 카운트다운 팝업 */}
       <NavigationCountdownPopup
         isOpen={showCountdown}
         naviLabel={naviLabel}

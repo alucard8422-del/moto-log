@@ -6,6 +6,10 @@ import 'leaflet/dist/leaflet.css'
 import { Navigation } from 'lucide-react'
 import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
 import type { Location } from './types'
+import {
+  KOREA_BOUNDS, KOREA_MIN_ZOOM,
+  DARK_TILE_URL, DARK_TILE_SUBDOMAINS, DARK_TILE_MAX_ZOOM,
+} from '../../lib/mapConfig'
 
 function useHeading(): number {
   const [heading, setHeading] = useState(0)
@@ -65,6 +69,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
       <MapContainer
         center={MOCK_CENTER_LATLNG}
         zoom={MOCK_ZOOM}
+        minZoom={KOREA_MIN_ZOOM}
+        maxBounds={KOREA_BOUNDS}
+        maxBoundsViscosity={1.0}   // 경계 밖으로 완전히 차단
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
         attributionControl={false}
@@ -72,9 +79,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         touchZoom={true}
       >
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          subdomains="abcd"
-          maxZoom={19}
+          url={DARK_TILE_URL}
+          subdomains={DARK_TILE_SUBDOMAINS}
+          maxZoom={DARK_TILE_MAX_ZOOM}
         />
 
         {/* 참고용 mock 루트 (흐릿한 점선) */}

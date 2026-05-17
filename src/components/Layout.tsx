@@ -1,26 +1,18 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Map, Compass, Share2, User, Bell, Navigation } from 'lucide-react'
+import { Map, Compass, Navigation2, Share2, User, Bell, Navigation } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 
 const TAB_ITEMS = [
-  { path: '/map',     icon: Map,     label: '지도' },
-  { path: '/courses', icon: Compass, label: '추천 코스' },
-  { path: '/share',   icon: Share2,  label: '공유' },
-  { path: '/profile', icon: User,    label: '프로필' },
+  { path: '/map',       icon: Map,         label: '지도' },
+  { path: '/courses',   icon: Compass,     label: '추천 코스' },
+  { path: '/my-routes', icon: Navigation2, label: '내 경로' },
+  { path: '/share',     icon: Share2,      label: '공유' },
+  { path: '/profile',   icon: User,        label: '프로필' },
 ] as const
 
 export default function Layout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-
-  const handleTabPress = (path: string) => {
-    navigate(path)
-  }
-
-  const handleNotification = () => {
-    console.log('[Layout] 알림 버튼 클릭')
-  }
-
   const isMapPage = pathname === '/map'
 
   return (
@@ -31,11 +23,7 @@ export default function Layout() {
             <Navigation size={18} strokeWidth={1.5} className="text-teal-400" />
             <span className="text-sm font-bold tracking-wider text-white">MOTO LOG</span>
           </div>
-
-          <button
-            onClick={handleNotification}
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/5 bg-white/5"
-          >
+          <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/5 bg-white/5">
             <Bell size={16} strokeWidth={1.5} className="text-white/60" />
             <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-teal-400" />
           </button>
@@ -48,7 +36,7 @@ export default function Layout() {
 
       <FuelCompleteSheet />
 
-      {/* z-30: 항상 지도·컨트롤러 위에 떠 있는 탭 바 */}
+      {/* 하단 탭 바 — 5탭 완전 균등 배치 */}
       <nav className="fixed bottom-6 left-1/2 z-30 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2">
         <div className="flex items-center justify-around rounded-3xl border border-white/5 bg-slate-900/80 px-2 py-3 shadow-lg shadow-black/40 backdrop-blur-md">
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
@@ -56,7 +44,7 @@ export default function Layout() {
             return (
               <button
                 key={path}
-                onClick={() => handleTabPress(path)}
+                onClick={() => navigate(path)}
                 className="flex flex-col items-center gap-1 px-3 py-1 transition-opacity active:opacity-60"
               >
                 <Icon

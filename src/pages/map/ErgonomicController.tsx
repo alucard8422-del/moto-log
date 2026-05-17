@@ -9,7 +9,7 @@ interface Props {
   distance: number
   onStart: () => void
   onStop: () => void
-  onGoToCourses: () => void
+  onGoToCourses: () => void  // '내 경로에 저장하기' 버튼 → /my-routes 이동
 }
 
 function fmt(s: number): string {
@@ -21,6 +21,7 @@ function fmt(s: number): string {
     : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
+// drag/swipe 제거 — 버튼 클릭으로만 닫힘
 function RideCompleteSheet({
   duration, distance, onGoToCourses,
 }: { duration: number; distance: number; onGoToCourses: () => void }) {
@@ -48,15 +49,15 @@ function RideCompleteSheet({
         }`}
       />
 
-      {/* 바텀 시트 */}
+      {/* 바텀 시트 — CSS 슬라이드만, drag 없음 */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 ease-out ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
         <div className="mx-auto max-w-sm rounded-t-3xl bg-[#161B26]/98 px-6 pt-5 pb-12 backdrop-blur-xl">
-          {/* 핸들바 */}
-          <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/20" />
+          {/* 핸들바 (장식용 — 드래그 기능 없음) */}
+          <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/15" />
 
           {/* 헤더 */}
           <div className="mb-6 flex items-center gap-2">
@@ -82,12 +83,12 @@ function RideCompleteSheet({
             ))}
           </div>
 
-          {/* CTA → 공유 탭으로 전환 */}
+          {/* CTA — 클릭만으로 저장·이동 */}
           <button
             onClick={onGoToCourses}
             className="w-full rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
           >
-            기록 확인 및 공유하기
+            내 경로에 저장하기
           </button>
         </div>
       </div>
@@ -95,14 +96,19 @@ function RideCompleteSheet({
   )
 }
 
-
 export default function ErgonomicController({
   status, duration, distance,
   onStart, onStop, onGoToCourses,
 }: Props) {
 
   if (status === 'finished') {
-    return <RideCompleteSheet duration={duration} distance={distance} onGoToCourses={onGoToCourses} />
+    return (
+      <RideCompleteSheet
+        duration={duration}
+        distance={distance}
+        onGoToCourses={onGoToCourses}
+      />
+    )
   }
 
   if (status === 'riding') {
@@ -121,18 +127,15 @@ export default function ErgonomicController({
   }
 
   return (
-    <>
-      <div className="absolute bottom-24 left-4 right-4 z-20 [@media(orientation:landscape)]:bottom-6 [@media(orientation:landscape)]:left-6 [@media(orientation:landscape)]:right-auto [@media(orientation:landscape)]:w-80">
-        <div className="rounded-2xl border border-white/5 bg-[#111622]/90 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
-          <button
-            onClick={onStart}
-            className="flex h-16 w-full items-center justify-center rounded-2xl bg-teal-400/10 transition-opacity active:opacity-75"
-          >
-            <Play size={28} strokeWidth={2} className="text-[#2DD4BF]" fill="#2DD4BF" />
-          </button>
-        </div>
+    <div className="absolute bottom-24 left-4 right-4 z-20 [@media(orientation:landscape)]:bottom-6 [@media(orientation:landscape)]:left-6 [@media(orientation:landscape)]:right-auto [@media(orientation:landscape)]:w-80">
+      <div className="rounded-2xl border border-white/5 bg-[#111622]/90 p-4 shadow-lg shadow-black/40 backdrop-blur-md">
+        <button
+          onClick={onStart}
+          className="flex h-16 w-full items-center justify-center rounded-2xl bg-teal-400/10 transition-opacity active:opacity-75"
+        >
+          <Play size={28} strokeWidth={2} className="text-[#2DD4BF]" fill="#2DD4BF" />
+        </button>
       </div>
-
-    </>
+    </div>
   )
 }

@@ -1,5 +1,5 @@
 // CourseCard.tsx
-import { MapPin, Clock, Star } from 'lucide-react'
+import { MapPin, Clock } from 'lucide-react'
 import type { TourCardData } from '../../components/TourCard'
 
 export interface CourseCardData extends TourCardData {
@@ -60,22 +60,6 @@ function MiniMap({ courseId }: { courseId: string }) {
   )
 }
 
-function StarRow({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Star
-          key={i}
-          size={9}
-          strokeWidth={1.5}
-          className={i <= rating ? 'fill-teal-400 text-teal-400' : 'text-white/15'}
-        />
-      ))}
-      <span className="ml-1 text-[9px] font-light text-white/30">{rating.toFixed(1)}</span>
-    </div>
-  )
-}
-
 interface Props {
   course: CourseCardData
   onPress: (c: CourseCardData) => void
@@ -83,7 +67,6 @@ interface Props {
 
 export default function CourseCard({ course, onPress }: Props) {
   const duration = course.durationMin ?? Math.round(course.distanceKm / 60 * 60)
-  const rating = course.rating ?? 4.0
 
   return (
     <button
@@ -122,7 +105,6 @@ export default function CourseCard({ course, onPress }: Props) {
           </span>
         </div>
 
-        <StarRow rating={rating} />
       </div>
     </button>
   )

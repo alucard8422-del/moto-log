@@ -222,9 +222,10 @@ export default function MapPage() {
   }
 
   const handleGoToCourses = () => {
-    // 공유 탭으로 즉시 전환 — CourseSharePage가 loadCourses()로 최신 기록을 자동 로드
-    navigate('/share')
+    // 내 경로 탭으로 이동 — 저장된 GPX 기록 확인 및 사후 편집
+    navigate('/my-routes')
   }
+
 
   // 언마운트 안전망 (페이지 이탈 시 GPS 누수 방지)
   useEffect(() => {
