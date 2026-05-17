@@ -1,22 +1,27 @@
-// MapDisplay.tsx
-import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
-import type { Map as LeafletMap } from 'leaflet'
-import 'leaflet/dist/leaflet.css'
+// MapDisplay.tsx — 카카오맵 기반 주행 지도
+import { useEffect, useRef, useState } from 'react'
 import { Navigation } from 'lucide-react'
-import { MOCK_ROUTE_COORDS, MOCK_CENTER, MOCK_ZOOM } from './mockData'
 import type { Location } from './types'
-import {
-  KOREA_BOUNDS, KOREA_MIN_ZOOM,
-  DARK_TILE_URL, DARK_TILE_SUBDOMAINS, DARK_TILE_MAX_ZOOM,
-} from '../../lib/mapConfig'
+
+const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
+
+declare global {
+  interface Window {
+    kakao: any
+  }
+}
+
+interface Props {
+  path: Location[]
+  currentPosition: Location | null
+  isRiding: boolean
+  mapRef?: React.MutableRefObject<any>
+}
 
 function useHeading(): number {
   const [heading, setHeading] = useState(0)
   useEffect(() => {
     const handler = (e: DeviceOrientationEvent) => {
-      // iOS: webkitCompassHeading (0=North, 시계방향 증가)
-      // Android: alpha (0=North 기준 반시계, 반전 필요)
       const h =
         typeof (e as any).webkitCompassHeading === 'number'
           ? (e as any).webkitCompassHeading
@@ -31,96 +36,112 @@ function useHeading(): number {
   return heading
 }
 
-interface Props {
-  path: Location[]
-  currentPosition: Location | null
-  isRiding: boolean
-  mapRef?: React.MutableRefObject<LeafletMap | null>
-}
-
-function MapRefSetter({ mapRef }: { mapRef?: React.MutableRefObject<LeafletMap | null> }) {
-  const map = useMap()
-  useEffect(() => {
-    if (mapRef) mapRef.current = map
-  }, [map, mapRef])
-  return null
-}
-
-// mockData는 [lng, lat] (Mapbox 관행) → Leaflet은 [lat, lng]
-const MOCK_ROUTE_LATLNG = MOCK_ROUTE_COORDS.map(([lng, lat]) => [lat, lng] as [number, number])
-const MOCK_CENTER_LATLNG: [number, number] = [MOCK_CENTER[1], MOCK_CENTER[0]]
-
-function CameraFollower({ position }: { position: Location | null }) {
-  const map = useMap()
-  useEffect(() => {
-    if (!position) return
-    map.panTo([position.lat, position.lng], { animate: true, duration: 0.8 })
-  }, [position, map])
-  return null
-}
-
 export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: Props) {
-  const ridePath = path.map((c) => [c.lat, c.lng] as [number, number])
-  const heading = useHeading()
+  const containerRef    = useRef<HTMLDivElement>(null)
+  const mapInstanceRef  = useRef<any>(null)
+  const glowLineRef     = useRef<any>(null)
+  const mainLineRef     = useRef<any>(null)
+  const heading         = useHeading()
+
+  // ── 1. 카카오맵 초기화 ───────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+
+    const doInit = () => {
+      if (cancelled || !containerRef.current) return
+      window.kakao.maps.load(() => {
+        if (cancelled || !containerRef.current) return
+        const map = new window.kakao.maps.Map(containerRef.current, {
+          center: new window.kakao.maps.LatLng(36.5, 127.8),
+          level: 8,
+        })
+        mapInstanceRef.current = map
+        if (mapRef) mapRef.current = map
+      })
+    }
+
+    const scriptId = 'kakao-map-script'
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+
+    if (window.kakao) {
+      doInit()
+    } else if (script) {
+      script.addEventListener('load', doInit)
+    } else {
+      script = document.createElement('script')
+      script.id = scriptId
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}&autoload=false`
+      script.addEventListener('load', doInit)
+      document.head.appendChild(script)
+    }
+
+    return () => {
+      cancelled = true
+      // 이전 맵 인스턴스 정리
+      mapInstanceRef.current = null
+    }
+  }, [])
+
+  // ── 2. 주행 경로 폴리라인 실시간 업데이트 ─────────────────────────
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.kakao?.maps) return
+
+    // 기존 선 제거
+    if (glowLineRef.current) glowLineRef.current.setMap(null)
+    if (mainLineRef.current)  mainLineRef.current.setMap(null)
+
+    if (path.length < 2) return
+
+    const linePath = path.map(p => new window.kakao.maps.LatLng(p.lat, p.lng))
+
+    // 글로우 (두껍고 반투명)
+    glowLineRef.current = new window.kakao.maps.Polyline({
+      path: linePath,
+      strokeWeight: 12,
+      strokeColor: '#2DD4BF',
+      strokeOpacity: 0.15,
+      strokeStyle: 'solid',
+    })
+    glowLineRef.current.setMap(mapInstanceRef.current)
+
+    // 선명한 메인 라인
+    mainLineRef.current = new window.kakao.maps.Polyline({
+      path: linePath,
+      strokeWeight: 4,
+      strokeColor: '#2DD4BF',
+      strokeOpacity: 0.9,
+      strokeStyle: 'solid',
+    })
+    mainLineRef.current.setMap(mapInstanceRef.current)
+  }, [path])
+
+  // ── 3. 현재 위치 따라가기 ─────────────────────────────────────────
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.kakao?.maps || !currentPosition) return
+    const latlng = new window.kakao.maps.LatLng(currentPosition.lat, currentPosition.lng)
+    mapInstanceRef.current.panTo(latlng)
+  }, [currentPosition])
 
   return (
-    /* 지도 컨테이너 — 터치 패닝/줌은 허용, 부모가 바운스 차단 */
-    <div className="h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
-      <MapContainer
-        center={MOCK_CENTER_LATLNG}
-        zoom={MOCK_ZOOM}
-        minZoom={KOREA_MIN_ZOOM}
-        maxBounds={KOREA_BOUNDS}
-        maxBoundsViscosity={1.0}   // 경계 밖으로 완전히 차단
-        style={{ height: '100%', width: '100%' }}
-        zoomControl={false}
-        attributionControl={false}
-        dragging={true}
-        touchZoom={true}
-      >
-        <TileLayer
-          url={DARK_TILE_URL}
-          subdomains={DARK_TILE_SUBDOMAINS}
-          maxZoom={DARK_TILE_MAX_ZOOM}
-        />
+    <div className="relative h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
 
-        {/* 참고용 mock 루트 (흐릿한 점선) */}
-        <Polyline
-          positions={MOCK_ROUTE_LATLNG}
-          pathOptions={{ color: '#2DD4BF', weight: 2, opacity: 0.2, dashArray: '5 7' }}
-        />
+      {/* 카카오맵 컨테이너 */}
+      <div
+        ref={containerRef}
+        style={{ position: 'absolute', inset: 0 }}
+      />
 
-        {/* 실제 주행 경로 glow */}
-        {ridePath.length > 1 && (
-          <Polyline
-            positions={ridePath}
-            pathOptions={{ color: '#2DD4BF', weight: 12, opacity: 0.12 }}
-          />
-        )}
-
-        {/* 실제 주행 경로 선명한 선 */}
-        {ridePath.length > 1 && (
-          <Polyline
-            positions={ridePath}
-            pathOptions={{ color: '#2DD4BF', weight: 3, opacity: 0.9 }}
-          />
-        )}
-
-        <CameraFollower position={currentPosition} />
-        <MapRefSetter mapRef={mapRef} />
-      </MapContainer>
-
-      {/* ── 나침반 방향 화살표 마커 — z-[999]로 Leaflet 타일(z-200)·오버레이(z-400) 위에 강제 격상 ── */}
+      {/* 현재 위치 방향 화살표 오버레이 (지도 중앙 고정) */}
       <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center">
         <div className="relative flex items-center justify-center">
-          {/* 외곽 글로우 펄스 */}
+          {/* 글로우 펄스 */}
           <span className="absolute inline-flex h-16 w-16 animate-ping rounded-full bg-teal-400/10 opacity-60" />
-          {/* 내부 글로우 */}
+          {/* 내부 블러 */}
           <span
             className="absolute inline-flex h-10 w-10 rounded-full bg-teal-400/15"
             style={{ filter: 'blur(6px)' }}
           />
-          {/* 화살표 아이콘 — heading 값에 따라 실시간 회전 */}
+          {/* 나침반 화살표 — heading 에 따라 회전 */}
           <div
             style={{
               transform: `rotate(${heading}deg)`,
@@ -133,8 +154,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         </div>
       </div>
 
-
-      {/* ── REC 인디케이터 (좌측 상단, 주행 중만) ── */}
+      {/* REC 인디케이터 (주행 중만) */}
       {isRiding && (
         <div className="absolute left-4 top-14 z-10 flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-2 backdrop-blur-md">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />

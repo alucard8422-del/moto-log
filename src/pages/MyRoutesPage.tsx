@@ -4,8 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../data/BadgesData'
 import BadgeAchievementModal, { checkRideDiaryBadge } from '../components/BadgeAchievementModal'
-import { MapContainer, TileLayer, Polyline } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
 import {
   Route, Clock, Flag, Trash2, Navigation,
   AlertTriangle, Image, Pencil, Share2, CheckCircle, X, MoreHorizontal, Plus,
@@ -14,10 +12,12 @@ import {
   loadCourses, updateCourse, deleteCourse, shareToCommunity,
   type SavedCourse,
 } from '../lib/courseStorage'
-import {
-  KOREA_BOUNDS, KOREA_CENTER, KOREA_MIN_ZOOM,
-  DARK_TILE_URL, DARK_TILE_SUBDOMAINS, DARK_TILE_MAX_ZOOM,
-} from '../lib/mapConfig'
+
+const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
+
+declare global {
+  interface Window { kakao: any }
+}
 
 // ── 포맷 ─────────────────────────────────────────────────────────────────
 function fmtDist(km: number) { return km < 1 ? `${(km * 1000).toFixed(0)}m` : `${km.toFixed(0)}km` }
@@ -50,7 +50,8 @@ function cityLabel(pts: SavedCourse['gpxPoints']): string {
   return s === e ? s : `${s} → ${e}`
 }
 
-// ── 모크 데이터 ───────────────────────────────────────────────────────────
+// ── 샘플 데이터 — 최초 1회 localStorage 시딩 전용 (이후 일반 코스와 동일 처리) ──
+const MOCK_SEED_KEY = 'moto:mock-seeded'
 const MOCK_COURSES: SavedCourse[] = [
   { id:'mock-1', title:'서울 → 강릉 동해안 투어', distanceKm:248, durationMin:195, isShared:false,
     createdAt: new Date(Date.now()-86400000*3).toISOString(), gpxXml:'',
@@ -72,31 +73,95 @@ const MOCK_COURSES: SavedCourse[] = [
       {lat:36.3504,lng:127.3845,timestamp:4}] },
 ]
 
-// ── 전국 누적 동선 지도 ───────────────────────────────────────────────────
+// ── 전국 누적 동선 지도 (카카오맵) ──────────────────────────────────────
 function KoreaRouteMap({ courses }: { courses: SavedCourse[] }) {
-  const lines = courses.filter(c => c.gpxPoints.length >= 2)
-    .map(c => c.gpxPoints.map(p => [p.lat, p.lng] as [number, number]))
+  const containerRef   = useRef<HTMLDivElement>(null)
+  const mapRef         = useRef<any>(null)
+  const polylinesRef   = useRef<any[]>([])
+  const [mapReady, setMapReady] = useState(false)
+
+  // 지도 초기화 (최초 1회)
+  useEffect(() => {
+    let cancelled = false
+
+    const scriptId = 'kakao-map-script'
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+
+    const doInit = () => {
+      if (cancelled || !containerRef.current) return
+      window.kakao.maps.load(() => {
+        if (cancelled || !containerRef.current) return
+        const map = new window.kakao.maps.Map(containerRef.current, {
+          center: new window.kakao.maps.LatLng(36.5, 127.8),
+          level: 9,
+        })
+        map.setZoomable(false)
+        map.setDraggable(false)
+        mapRef.current = map
+        setMapReady(true)
+      })
+    }
+
+    if (window.kakao) {
+      doInit()
+    } else if (script) {
+      script.addEventListener('load', doInit)
+    } else {
+      script = document.createElement('script')
+      script.id = scriptId
+      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}&autoload=false`
+      script.addEventListener('load', doInit)
+      document.head.appendChild(script)
+    }
+
+    return () => { cancelled = true; mapRef.current = null }
+  }, [])
+
+  // 경로 폴리라인 — 지도 준비 후 + courses 변경 시 재렌더
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !window.kakao?.maps) return
+
+    polylinesRef.current.forEach(p => p.setMap(null))
+    polylinesRef.current = []
+
+    courses
+      .filter(c => c.gpxPoints.length >= 2)
+      .forEach(course => {
+        const path = course.gpxPoints.map(p => new window.kakao.maps.LatLng(p.lat, p.lng))
+
+        const glow = new window.kakao.maps.Polyline({
+          path, strokeWeight: 10, strokeColor: '#2DD4BF', strokeOpacity: 0.12, strokeStyle: 'solid',
+        })
+        const main = new window.kakao.maps.Polyline({
+          path, strokeWeight: 2.5, strokeColor: '#2DD4BF', strokeOpacity: 0.85, strokeStyle: 'solid',
+        })
+        glow.setMap(mapRef.current)
+        main.setMap(mapRef.current)
+        polylinesRef.current.push(glow, main)
+      })
+  }, [courses, mapReady])
+
+  const lineCount = courses.filter(c => c.gpxPoints.length >= 2).length
+
   return (
-    // isolation:isolate → 독립 스택 컨텍스트: Leaflet 내부 z-index가 모달 위로 침범하지 않음
-    <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 220, isolation: 'isolate' }}>
-      <div className="absolute inset-0 z-[500] touch-none pointer-events-none" />
-      <MapContainer center={KOREA_CENTER} zoom={6} minZoom={KOREA_MIN_ZOOM}
-        maxBounds={KOREA_BOUNDS} maxBoundsViscosity={1.0}
-        style={{ height:'100%', width:'100%' }}
-        dragging={false} touchZoom={false} scrollWheelZoom={false}
-        doubleClickZoom={false} boxZoom={false} keyboard={false}
-        zoomControl={false} attributionControl={false}>
-        <TileLayer url={DARK_TILE_URL} subdomains={DARK_TILE_SUBDOMAINS} maxZoom={DARK_TILE_MAX_ZOOM} />
-        {lines.map((pos,i) => <Polyline key={`g${i}`} positions={pos} pathOptions={{ color:'#2DD4BF', weight:10, opacity:0.12 }} />)}
-        {lines.map((pos,i) => <Polyline key={`l${i}`} positions={pos} pathOptions={{ color:'#2DD4BF', weight:2.5, opacity:0.85 }} />)}
-      </MapContainer>
-      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-[600]" />
-      <div className="absolute left-4 top-4 z-[600] flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md pointer-events-none">
-        <span className="h-1.5 w-1.5 rounded-full bg-teal-400" /><span className="text-[10px] font-light text-white/60">누적 동선</span>
+    <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 220 }}>
+      {/* 카카오맵 컨테이너 */}
+      <div
+        ref={containerRef}
+        style={{ position: 'absolute', inset: 0 }}
+      />
+      {/* 터치 차단 */}
+      <div className="absolute inset-0 z-10 touch-none pointer-events-none" />
+      {/* 하단 그라데이션 */}
+      <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-20" />
+      {/* 누적 동선 뱃지 */}
+      <div className="absolute left-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md pointer-events-none">
+        <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+        <span className="text-[10px] font-light text-white/60">누적 동선</span>
       </div>
-      {lines.length > 0 && (
-        <div className="absolute bottom-4 right-4 z-[600] rounded-full border border-teal-400/20 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md pointer-events-none">
-          <span className="text-[10px] font-bold text-teal-400">{lines.length}개 경로</span>
+      {lineCount > 0 && (
+        <div className="absolute bottom-4 right-4 z-30 rounded-full border border-teal-400/20 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md pointer-events-none">
+          <span className="text-[10px] font-bold text-teal-400">{lineCount}개 경로</span>
         </div>
       )}
     </div>
@@ -542,22 +607,30 @@ export default function MyRoutesPage() {
   }, [toast])
 
   useEffect(() => {
-    const real = loadCourses()
-    // mock 아이디가 real에 없을 때만 prepend (중복 방지)
-    const realIds = new Set(real.map(c => c.id))
-    const mocks = MOCK_COURSES.filter(c => !realIds.has(c.id))
-    setCourses([...mocks, ...real])
+    const stored = loadCourses()
+
+    if (!localStorage.getItem(MOCK_SEED_KEY)) {
+      // 최초 1회: 샘플 데이터를 localStorage에 실제 코스로 시딩
+      // 이후 삭제·수정·공유 등 모든 CRUD가 일반 코스와 동일하게 작동
+      const seeded = [...MOCK_COURSES, ...stored]
+      localStorage.setItem('moto_my_courses', JSON.stringify(seeded))
+      localStorage.setItem(MOCK_SEED_KEY, '1')
+      setCourses(seeded)
+    } else {
+      // 2회차 이후: localStorage만 신뢰 — 삭제 결과가 영속됨
+      setCourses(stored)
+    }
   }, [])
 
   const handleDelete = (id: string) => {
-    if (!id.startsWith('mock-')) deleteCourse(id)
+    deleteCourse(id)                                   // mock 포함 모두 localStorage에서 제거
     setCourses(prev => prev.filter(c => c.id !== id))
   }
 
   const handleSave = (id: string, diary: string, photos: string[]) => {
     const partial: Partial<SavedCourse> = { diary }
     if (photos.length > 0) partial.coverPhoto = photos[0]
-    if (!id.startsWith('mock-')) updateCourse(id, partial)
+    updateCourse(id, partial)
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
     setEditTarget(null)
     setToast('기록이 저장되었습니다')
@@ -568,7 +641,7 @@ export default function MyRoutesPage() {
   }
 
   const handleShareConfirm = (id: string) => {
-    if (!id.startsWith('mock-')) shareToCommunity(id)
+    shareToCommunity(id)
     setCourses(prev => prev.map(c => c.id === id ? { ...c, communityShared: true, isShared: true } : c))
     setShareTarget(null)
     // 전역 이벤트 → TourPage 공유 광장 즉시 갱신

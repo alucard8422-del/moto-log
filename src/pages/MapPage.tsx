@@ -1,7 +1,6 @@
 // MapPage.tsx
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Map as LeafletMap } from 'leaflet'
 
 function fmtTime(s: number): string {
   const h = Math.floor(s / 3600)
@@ -102,7 +101,7 @@ export default function MapPage() {
   const prevPosRef = useRef<Location | null>(null)
   const distanceRef = useRef(0)
   const durationRef = useRef(0)   // 동기 최신값 — state 큐 지연 없는 냉동 스냅샷용
-  const mapRef = useRef<LeafletMap | null>(null)
+  const mapRef = useRef<any>(null)
 
   // 웹뷰 바운스/오버스크롤 방지
   useEffect(() => {

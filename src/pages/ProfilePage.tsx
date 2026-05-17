@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import mopedBase from '../assets/images/moped_base.png'
 import { Settings, Gauge, LogOut, FlaskConical, Check, Trophy, Zap, ChevronRight } from 'lucide-react'
 import { BIKE_LINEUP, LP_KEY, OWNED_BIKES_KEY } from '../data/VehicleShopData'
 import { BADGES, TIER_STYLES, type Tier } from '../data/BadgesData'
@@ -147,54 +148,18 @@ function BadgeGrid({
   )
 }
 
-// ── 50cc 픽셀 아트 스쿠터 SVG ────────────────────────────────────────────
+// ── 50cc 도트 그래픽 바이크 이미지 ──────────────────────────────────────────
+// moped_base.png: src/assets/images/ 에서 import
+// image-rendering: pixelated → 픽셀 경계가 뭉개지지 않고 선명하게 유지
 function PixelBike50cc() {
   return (
-    <svg viewBox="0 0 160 90" width="160" height="90"
-      style={{ imageRendering: 'pixelated' }}>
-      {/* 그림자 */}
-      <ellipse cx="80" cy="86" rx="54" ry="4" fill="rgba(0,0,0,0.5)" />
-      {/* 뒷바퀴 */}
-      <circle cx="116" cy="66" r="19" fill="#1E293B" />
-      <circle cx="116" cy="66" r="13" fill="#0F172A" />
-      <circle cx="116" cy="66" r="6"  fill="#334155" />
-      <circle cx="116" cy="66" r="2.5" fill="#1E293B" />
-      {/* 앞바퀴 */}
-      <circle cx="34"  cy="66" r="16" fill="#1E293B" />
-      <circle cx="34"  cy="66" r="10" fill="#0F172A" />
-      <circle cx="34"  cy="66" r="5"  fill="#334155" />
-      <circle cx="34"  cy="66" r="2"  fill="#1E293B" />
-      {/* 앞 포크 */}
-      <rect x="42" y="28" width="5" height="38" fill="#475569" rx="2" />
-      {/* 핸들바 */}
-      <rect x="30" y="24" width="22" height="6" fill="#334155" rx="2" />
-      <rect x="28" y="22" width="6"  height="8" fill="#64748B" rx="1" />
-      <rect x="46" y="22" width="6"  height="8" fill="#64748B" rx="1" />
-      {/* 앞 카울 */}
-      <rect x="26" y="30" width="18" height="32" fill="#2DD4BF" rx="3" />
-      {/* 헤드라이트 */}
-      <rect x="16" y="40" width="12" height="8"  fill="#FCD34D" rx="2" />
-      <rect x="14" y="42" width="4"  height="4"  fill="#FBBF24" rx="1" />
-      {/* 메인 바디 */}
-      <rect x="42" y="34" width="62" height="26" fill="#2DD4BF" rx="4" />
-      {/* 언더 카울 */}
-      <rect x="40" y="56" width="66" height="12" fill="#0D9488" rx="2" />
-      {/* 시트 */}
-      <rect x="58" y="20" width="46" height="16" fill="#1E293B" rx="4" />
-      <rect x="60" y="22" width="42" height="12" fill="#1F2937" rx="3" />
-      {/* 리어 카울 */}
-      <rect x="102" y="36" width="18" height="18" fill="#2DD4BF" rx="3" />
-      {/* 테일라이트 */}
-      <rect x="116" y="42" width="8"  height="7"  fill="#F87171" rx="2" />
-      {/* 배기구 */}
-      <rect x="96"  cy="64" x1="96" y="64" width="20" height="4" fill="#94A3B8" rx="2" />
-      <rect x="114" y="62" width="8"  height="6"  fill="#475569" rx="2" />
-      {/* 엔진 */}
-      <rect x="60"  y="52" width="34" height="10" fill="#0D9488" rx="2" />
-      {/* 포인트 도트 장식 */}
-      <rect x="56"  y="36" width="4"  height="4"  fill="#99F6E4" rx="1" />
-      <rect x="88"  y="36" width="4"  height="4"  fill="#99F6E4" rx="1" />
-    </svg>
+    <img
+      src={mopedBase}
+      alt="50cc 스쿠터"
+      style={{ imageRendering: 'pixelated' }}
+      className="h-36 w-auto object-contain drop-shadow-lg"
+      draggable={false}
+    />
   )
 }
 
