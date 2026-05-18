@@ -1,166 +1,100 @@
-// MapPage.tsx
+// MapPage.tsx — 기록 메뉴 메인 (상태 관리 + 레이아웃)
+// UI 수정 → map/ 폴더 각 파일 / 로직 수정 → 이 파일
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-function fmtTime(s: number): string {
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const sec = s % 60
-  return h > 0
-    ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
-    : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
-}
-
-function HUDCol({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="flex flex-col items-center gap-0.5">
-      <span
-        className="text-3xl font-bold leading-none text-[#2DD4BF] md:text-5xl [@media(orientation:landscape)]:text-2xl"
-        style={{
-          fontFamily: "'Orbitron', sans-serif",
-          textShadow: '0 0 10px rgba(45,212,191,0.5)',
-        }}
-      >
-        {value}
-      </span>
-      <span
-        // whitespace-nowrap: 좁은 화면에서 '현재속도' 등 라벨이 줄바꿈되지 않도록 강제
-        // tracking-tighter: 자간 축소로 좁은 폭에서도 한 줄 유지
-        className="whitespace-nowrap text-[9px] font-medium uppercase tracking-tighter text-white/50 [@media(orientation:landscape)]:text-[8px]"
-        style={{ fontFamily: "'Urbanist', sans-serif" }}
-      >
-        {label}
-      </span>
-    </div>
-  )
-}
-import { useGeolocation } from './map/useGeolocation'
-import MapDisplay from './map/MapDisplay'
-import ErgonomicController from './map/ErgonomicController'
-import NavigationCountdownPopup from '../components/NavigationCountdownPopup'
-import { buildGpxXml, saveCourse } from '../lib/courseStorage'
+import { useGeolocation }            from './map/useGeolocation'
+import MapDisplay                    from './map/MapDisplay'
+import RideHUD                       from './map/RideHUD'
+import ErgonomicController           from './map/ErgonomicController'
+import NavigationCountdownPopup      from '../components/NavigationCountdownPopup'
+import { loadNaviPref, launchNavi }  from './map/naviUtils'
+import { buildGpxXml, saveCourse }   from '../lib/courseStorage'
 import {
-  NAVI_STORAGE_KEY,
   NAVI_OPTIONS,
   type Location,
-  type NavigationType,
-
   type RideStatus,
 } from './map/types'
 
+// ── 하버사인 거리 계산 (km) ────────────────────────────────────────────
 function haversine(a: Location, b: Location): number {
-  const R = 6371
+  const R   = 6371
   const dLat = ((b.lat - a.lat) * Math.PI) / 180
   const dLon = ((b.lng - a.lng) * Math.PI) / 180
-  const h =
+  const h   =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2
+    Math.cos((b.lat * Math.PI) / 180) *
+    Math.sin(dLon / 2) ** 2
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
-function loadNaviPref(): NavigationType {
-  return (localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType) ?? 'tmap'
-}
-
-const NAVI_SCHEMES: Record<NavigationType, string> = {
-  tmap:  'tmap://search?name=%ED%98%84%EC%9E%AC%EC%9C%84%EC%B9%98',
-  kakao: 'kakaonavi://search?name=%ED%98%84%EC%9E%AC%EC%9C%84%EC%B9%98',
-  atlan: 'atlan://search?name=%ED%98%84%EC%9E%AC%EC%9C%84%EC%B9%98',
-}
-
-const NAVI_STORE_FALLBACK: Record<NavigationType, string> = {
-  tmap:  'https://apps.apple.com/kr/app/tmap/id431589174',
-  kakao: 'https://apps.apple.com/kr/app/id668182711',
-  atlan: 'https://apps.apple.com/kr/app/id681663516',
-}
-
-function launchNavi(type: NavigationType) {
-  window.location.href = NAVI_SCHEMES[type]
-  // 앱 미설치 시 스토어로 이동 (1.5s 이후 앱이 열렸으면 무시됨)
-  setTimeout(() => {
-    window.open(NAVI_STORE_FALLBACK[type], '_blank')
-  }, 1500)
-}
-
 export default function MapPage() {
-  const navigate = useNavigate()
-  const { position } = useGeolocation()
+  const navigate        = useNavigate()
+  const { position }   = useGeolocation()
 
-  const [status, setStatus] = useState<RideStatus>('idle')
-  const [path, setPath] = useState<Location[]>([])
-  const [duration, setDuration] = useState(0)
-  const [distance, setDistance] = useState(0)
-
+  const [status,       setStatus]       = useState<RideStatus>('idle')
+  const [path,         setPath]         = useState<Location[]>([])
+  const [duration,     setDuration]     = useState(0)
+  const [distance,     setDistance]     = useState(0)
   const [showCountdown, setShowCountdown] = useState(false)
 
-  const rideWatchRef = useRef<number | null>(null)
-  // timerRef 제거 → useEffect가 단일 인스턴스를 보장
-  const startTimeRef = useRef<Date | null>(null)
-  const prevPosRef = useRef<Location | null>(null)
-  const distanceRef = useRef(0)
-  const durationRef = useRef(0)   // 동기 최신값 — state 큐 지연 없는 냉동 스냅샷용
-  const mapRef = useRef<any>(null)
+  const rideWatchRef  = useRef<number | null>(null)
+  const startTimeRef  = useRef<Date | null>(null)
+  const prevPosRef    = useRef<Location | null>(null)
+  const distanceRef   = useRef(0)
+  const durationRef   = useRef(0)
+  const mapRef        = useRef<any>(null)
 
-  // 웹뷰 바운스/오버스크롤 방지
+  // ── 웹뷰 바운스/오버스크롤 방지 ─────────────────────────────────────
   useEffect(() => {
     const prev = {
-      overflow: document.documentElement.style.overflow,
-      overscrollBehavior: document.documentElement.style.overscrollBehavior,
+      overflow:            document.documentElement.style.overflow,
+      overscrollBehavior:  document.documentElement.style.overscrollBehavior,
     }
-    document.documentElement.style.overflow = 'hidden'
+    document.documentElement.style.overflow           = 'hidden'
     document.documentElement.style.overscrollBehavior = 'none'
-    document.body.style.overflow = 'hidden'
-    document.body.style.overscrollBehavior = 'none'
+    document.body.style.overflow                      = 'hidden'
+    document.body.style.overscrollBehavior            = 'none'
     return () => {
-      document.documentElement.style.overflow = prev.overflow
+      document.documentElement.style.overflow           = prev.overflow
       document.documentElement.style.overscrollBehavior = prev.overscrollBehavior
-      document.body.style.overflow = ''
-      document.body.style.overscrollBehavior = ''
+      document.body.style.overflow                      = ''
+      document.body.style.overscrollBehavior            = ''
     }
   }, [])
 
-  // ── 타이머 단일 인스턴스 보장 ──────────────────────────────────
-  // status가 'riding'으로 바뀔 때만 interval 1개 생성.
-  // 리렌더링·Strict Mode 이중 실행 모두 cleanup → recreate 사이클로 처리되어
-  // 항상 단 하나의 interval만 활성 상태임이 보장된다.
+  // ── 주행 타이머 (riding 상태일 때만 1초 interval) ────────────────────
   useEffect(() => {
     if (status !== 'riding') return
-
     const id = setInterval(() => {
-      durationRef.current += 1          // ref: 동기 즉시 반영
-      setDuration(durationRef.current)  // state: UI 반영
+      durationRef.current += 1
+      setDuration(durationRef.current)
     }, 1000)
-
-    return () => clearInterval(id)      // status가 'riding'에서 벗어나면 즉시 소멸
+    return () => clearInterval(id)
   }, [status])
 
-  // ▶ 플레이 버튼 → 카운트다운 팝업 먼저 표시
-  const handleStart = () => {
-    setShowCountdown(true)
-  }
+  // ── 출발 버튼 → 카운트다운 팝업 ─────────────────────────────────────
+  const handleStart = () => setShowCountdown(true)
 
-  // 카운트다운 완료 → 내비 앱으로 이동 + 백그라운드 GPX 기록 시작
+  // ── 카운트다운 완료 → 내비 앱 실행 + GPS 기록 시작 ──────────────────
   const handleCountdownLaunch = () => {
     setShowCountdown(false)
     launchNavi(loadNaviPref())
 
-    // ref 초기화 (setStatus 전에 동기 처리)
-    startTimeRef.current = new Date()
-    prevPosRef.current = null
-    distanceRef.current = 0
-    durationRef.current = 0
+    startTimeRef.current  = new Date()
+    prevPosRef.current    = null
+    distanceRef.current   = 0
+    durationRef.current   = 0
     setPath([])
     setDistance(0)
     setDuration(0)
-    setStatus('riding')  // ← 이 변경이 위 useEffect를 트리거 → interval 1개 생성
+    setStatus('riding')
 
     rideWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const loc: Location = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
+          lat:       pos.coords.latitude,
+          lng:       pos.coords.longitude,
           timestamp: pos.timestamp,
         }
         const prev = prevPosRef.current
@@ -179,72 +113,55 @@ export default function MapPage() {
       () => {},
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
     )
-    // setInterval 직접 호출 없음 — useEffect가 단독 관리
   }
 
-  // 카운트다운 취소 → 팝업만 닫음, 이동·기록 모두 없던 일
-  const handleCountdownCancel = () => {
-    setShowCountdown(false)
-  }
+  // ── 카운트다운 취소 ──────────────────────────────────────────────────
+  const handleCountdownCancel = () => setShowCountdown(false)
 
-  // GPS 수집 중단 + GPX 저장 (내부 공통)
-  // ■ 정지 버튼 — 즉시 동결 후 종료
+  // ── 정지 버튼 → GPS 중단 + GPX 저장 ─────────────────────────────────
   const handleStop = () => {
-    // ① JS 싱글 스레드 보장: 이 라인에서 ref 값이 최종 확정됨
     const frozenDuration = durationRef.current
     const frozenDistance = distanceRef.current
 
-    // ② GPS watchPosition 즉시 중단
     if (rideWatchRef.current !== null) {
       navigator.geolocation.clearWatch(rideWatchRef.current)
       rideWatchRef.current = null
     }
 
-    // ③ GPX 저장 (frozen 값 사용)
-    const endTime = new Date()
+    const endTime  = new Date()
     const gpxPoints = path.map((p) => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp }))
     saveCourse({
-      id: crypto.randomUUID(),
-      title: `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
-      distanceKm: parseFloat(frozenDistance.toFixed(2)),
+      id:          crypto.randomUUID(),
+      title:       `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
+      distanceKm:  parseFloat(frozenDistance.toFixed(2)),
       durationMin: Math.round(frozenDuration / 60),
       gpxPoints,
-      gpxXml: buildGpxXml(gpxPoints),
-      createdAt: endTime.toISOString(),
-      isShared: false,
+      gpxXml:      buildGpxXml(gpxPoints),
+      createdAt:   endTime.toISOString(),
+      isShared:    false,
     })
 
-    // ④ state를 frozen 값으로 명시 고정 (interval 잔여 틱 덮어쓰기 차단)
     setDuration(frozenDuration)
     setDistance(frozenDistance)
-
-    // ⑤ status 변경 → 위 useEffect cleanup → clearInterval 실행 (단일 경로 보장)
     setStatus('finished')
   }
 
-  const handleGoToCourses = () => {
-    // 내 경로 탭으로 이동 — 저장된 GPX 기록 확인 및 사후 편집
-    navigate('/my-routes')
-  }
-
-
-  // 언마운트 안전망 (페이지 이탈 시 GPS 누수 방지)
+  // ── 언마운트 안전망 (GPS 누수 방지) ─────────────────────────────────
   useEffect(() => {
     return () => {
-      if (rideWatchRef.current !== null) navigator.geolocation.clearWatch(rideWatchRef.current)
+      if (rideWatchRef.current !== null)
+        navigator.geolocation.clearWatch(rideWatchRef.current)
     }
   }, [])
 
+  const handleGoToCourses = () => navigate('/my-routes')
+
   return (
-    /*
-     * [루트] relative + NO z-index → 스태킹 컨텍스트 미생성 → 자식 z-index가 루트 기준으로 비교됨
-     * 레이어 순서: 지도(z-0) < 타이틀(z-10) < 컨트롤러(z-20) < Layout nav(z-30) < NaviSheet(z-40/50)
-     */
     <div
       className="relative w-screen overflow-hidden bg-[#0B0F19] touch-none"
       style={{ height: '100dvh', overscrollBehavior: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
     >
-      {/* [0층] 지도 엔진 — fixed + z-0 으로 완전히 바닥에 격리 */}
+      {/* [0층] 지도 */}
       <div className="fixed inset-0 w-full h-full z-0">
         <MapDisplay
           path={path}
@@ -254,29 +171,12 @@ export default function MapPage() {
         />
       </div>
 
-      {/* [1층] 주행 중 HUD — 상단 정중앙, 우측 패딩 없음 */}
-      {status === 'riding' && (() => {
-        const avg = duration > 0 ? distance / (duration / 3600) : 0
-        return (
-          <div className="pointer-events-none fixed top-8 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-3 [@media(orientation:landscape)]:top-3">
-            <div className="flex items-center justify-center gap-x-10 md:gap-x-16">
-              <HUDCol value={fmtTime(duration)} label="주행시간" />
-              <HUDCol value={distance.toFixed(2)} label="주행거리" />
-              <HUDCol value={avg.toFixed(0)} label="현재속도" />
-            </div>
-            <p className="text-xs font-medium text-[#2DD4BF] animate-pulse drop-shadow-[0_0_5px_rgba(45,212,191,0.6)]">
-              • 경로를 기록중입니다
-            </p>
-          </div>
-        )
-      })()}
+      {/* [1층] 주행 중 HUD */}
+      {status === 'riding' && (
+        <RideHUD duration={duration} distance={distance} />
+      )}
 
-      {/*
-       * [2층] 제어 바 — 루트 직계 자식으로 배치 (핵심)
-       * · ErgonomicController 내부 absolute(z-20): 루트 기준 z-20 → nav(z-30) 아래, 지도(z-0) 위 ✓
-       * · NaviSheet 내부 fixed(z-40/50): 루트 기준 z-40/50 → nav(z-30) 위 ✓
-       *   → z-10 div 안에 넣으면 NaviSheet가 z-10 컨텍스트에 갇혀 nav 뒤로 숨는 버그 발생하므로 반드시 분리
-       */}
+      {/* [2층] 하단 컨트롤러 */}
       <ErgonomicController
         status={status}
         duration={duration}
@@ -286,7 +186,7 @@ export default function MapPage() {
         onGoToCourses={handleGoToCourses}
       />
 
-      {/* 3초 내비 전환 팝업 */}
+      {/* 카운트다운 팝업 */}
       <NavigationCountdownPopup
         isOpen={showCountdown}
         naviLabel={NAVI_OPTIONS.find((o) => o.type === loadNaviPref())?.label ?? 'T map'}

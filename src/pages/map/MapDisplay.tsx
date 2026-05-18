@@ -1,7 +1,9 @@
 // MapDisplay.tsx — 카카오맵 기반 주행 지도
 import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Navigation } from 'lucide-react'
 import type { Location } from './types'
+import RoadviewModal from '../../components/RoadviewModal'
 
 const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
 
@@ -42,6 +44,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
   const glowLineRef     = useRef<any>(null)
   const mainLineRef     = useRef<any>(null)
   const heading         = useHeading()
+  const [roadviewPos, setRoadviewPos] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── 1. 카카오맵 초기화 ───────────────────────────────────────────
   useEffect(() => {
@@ -57,6 +60,42 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         })
         mapInstanceRef.current = map
         if (mapRef) mapRef.current = map
+
+        // ── 롱프레스 → 로드뷰 ──────────────────────────────────────
+        let downX = 0, downY = 0
+        let lpTimer: ReturnType<typeof setTimeout> | null = null
+        const cancelLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null } }
+
+        const startLP = (cx: number, cy: number) => {
+          cancelLP(); downX = cx; downY = cy
+          lpTimer = setTimeout(() => {
+            lpTimer = null
+            if (navigator.vibrate) navigator.vibrate(40)
+            try {
+              const rect = containerRef.current!.getBoundingClientRect()
+              const proj = map.getProjection()
+              const ll   = proj.coordsFromContainerPoint(
+                new window.kakao.maps.Point(cx - rect.left, cy - rect.top)
+              )
+              setRoadviewPos({ lat: ll.getLat(), lng: ll.getLng() })
+            } catch {}
+          }, 600)
+        }
+        const moveLP = (cx: number, cy: number) => {
+          if (Math.abs(cx - downX) > 10 || Math.abs(cy - downY) > 10) cancelLP()
+        }
+
+        containerRef.current!.addEventListener('mousedown', e => startLP(e.clientX, e.clientY))
+        containerRef.current!.addEventListener('mousemove', e => moveLP(e.clientX, e.clientY))
+        containerRef.current!.addEventListener('mouseup',   cancelLP)
+        containerRef.current!.addEventListener('touchstart', e => {
+          const t = e.touches[0]; startLP(t.clientX, t.clientY)
+        }, { passive: true })
+        containerRef.current!.addEventListener('touchmove', e => {
+          const t = e.touches[0]; moveLP(t.clientX, t.clientY)
+        }, { passive: true })
+        containerRef.current!.addEventListener('touchend',   cancelLP)
+        containerRef.current!.addEventListener('touchcancel', cancelLP)
       })
     }
 
@@ -122,8 +161,26 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
     mapInstanceRef.current.panTo(latlng)
   }, [currentPosition])
 
+  // ── 4. 주행 중 지도 잠금 (드래그·줌 비활성화) ────────────────────
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+    mapInstanceRef.current.setDraggable(!isRiding)
+    mapInstanceRef.current.setZoomable(!isRiding)
+  }, [isRiding])
+
   return (
     <div className="relative h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+
+      {/* 로드뷰 팝업 */}
+      <AnimatePresence>
+        {roadviewPos && (
+          <RoadviewModal
+            lat={roadviewPos.lat}
+            lng={roadviewPos.lng}
+            onClose={() => setRoadviewPos(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 카카오맵 컨테이너 */}
       <div

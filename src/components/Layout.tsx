@@ -1,12 +1,12 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { CircleDot, Route, Compass, Bookmark, User, Bell, Navigation } from 'lucide-react'
+import { CircleDot, Route, Compass, User, Bell, Navigation, Warehouse } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'      },
   { path: '/my-routes', icon: Route,     label: '내 경로'   },
   { path: '/courses',   icon: Compass,   label: '추천 코스'  },
-  { path: '/saved',     icon: Bookmark,  label: '저장 장소'  },
+  { path: '/garage',    icon: Warehouse, label: '내 차고'   },
   { path: '/profile',   icon: User,      label: '프로필'    },
 ] as const
 
