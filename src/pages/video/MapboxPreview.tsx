@@ -296,7 +296,7 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
           type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
           tileSize: 512, maxzoom: 14,
         })
-        try { map.setTerrain({ source: 'mapbox-dem', exaggeration: 2.5 }) } catch {}
+        try { map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.0 }) } catch {}
 
         // 안개 완전 제거 — 스타일 내장 안개도 초기화
         try {
