@@ -15,9 +15,10 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
 // 15 = speed=1 일 때 실제 라이딩 시간의 15배속
 const BASE_PREVIEW_RATE = 15
 
-const BRG_LERP    = 0.12   // 방위각 LERP (높을수록 빠르게 추적)
-const SPLINE_SEGS = 20     // 세그먼트당 보간 포인트 수 (높을수록 곡선이 부드러움)
-const SMOOTH_R    = 10     // 방위각 가우시안 스무딩 반경
+const BRG_LERP    = 0.05   // 방위각 LERP — 낮을수록 부드러운 추적 (60fps 기준 ~1.5s lag)
+const SPLINE_SEGS = 20     // 세그먼트당 보간 포인트 수
+const SMOOTH_R    = 40     // 방위각 가우시안 스무딩 반경 (클수록 커브가 부드럽게 사전 처리됨)
+const TGT_SMOOTH  = 0.06   // 이중 EMA 1단계: targetBrg 자체를 먼저 스무딩
 
 // ── 수학 헬퍼 ────────────────────────────────────────────────────────────────
 
@@ -520,23 +521,25 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
       }
 
       // ── 애니메이션 상태 — seekFn 과 tick 이 같은 closure 를 공유 ──────────
-      let camPitch    = view.pitch
-      let camBrg      = sampler.bearingAt(0)
-      let orbitBrg    = camBrg
-      let lastViewId  = view.id
-      let smoothedKmh = 0
-      let hasEnded    = false   // onEnd 는 1회만 호출
+      let camPitch          = view.pitch
+      let camBrg            = sampler.bearingAt(0)
+      let smoothedTargetBrg = camBrg   // 이중 EMA 1단계 버퍼 (target을 먼저 부드럽게)
+      let orbitBrg          = camBrg
+      let lastViewId        = view.id
+      let smoothedKmh       = 0
+      let hasEnded          = false   // onEnd 는 1회만 호출
 
       // 탐색 함수 — progress bar 포인터 이벤트에서 호출됨
       // fraction: 0~1 (0 = 시작, 1 = 끝)
       const seekFn = (fraction: number) => {
         const clamped = Math.max(0, Math.min(1, fraction))
         accRideMsRef.current = clamped * sampler.journeyMs
-        // 카메라 방위각을 탐색 위치로 즉시 스냅
-        camBrg      = sampler.bearingAt(clamped)
-        orbitBrg    = camBrg
-        smoothedKmh = 0   // 속도 표시 리셋
-        if (clamped < 1) hasEnded = false   // 재생 재개 허용
+        // 카메라 방위각을 탐색 위치로 즉시 스냅 (버퍼도 함께 리셋 → 스냅 후 부드럽게)
+        camBrg            = sampler.bearingAt(clamped)
+        smoothedTargetBrg = camBrg
+        orbitBrg          = camBrg
+        smoothedKmh       = 0
+        if (clamped < 1) hasEnded = false
       }
       onSeekReady?.(seekFn)
 
@@ -630,9 +633,15 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
             default:      targetBrg = tBrg
           }
 
-          camBrg   = v.animStyle === 'orbit'
-            ? orbitBrg
-            : lerpBearing(camBrg, targetBrg, BRG_LERP)
+          if (v.animStyle === 'orbit') {
+            camBrg = orbitBrg
+          } else {
+            // 이중 EMA: GPS 노이즈와 급격한 커브 모두 완충
+            // 1단계: rawTarget → smoothedTargetBrg (느린 추적으로 방향 전환 자체를 부드럽게)
+            smoothedTargetBrg = lerpBearing(smoothedTargetBrg, targetBrg, TGT_SMOOTH)
+            // 2단계: smoothedTarget → camBrg (카메라가 스무딩된 목표를 천천히 따라감)
+            camBrg = lerpBearing(camBrg, smoothedTargetBrg, BRG_LERP)
+          }
           camPitch = camPitch + (v.pitch - camPitch) * 0.06
 
           if (v.id !== lastViewId) {
