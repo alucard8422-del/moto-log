@@ -314,10 +314,10 @@ export default function RoutePlanner() {
       {showExitConfirm && (
         <>
           <div
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[2000] bg-black/60 backdrop-blur-sm"
             onClick={cancelExit}
           />
-          <div className="fixed inset-x-0 bottom-0 z-[210]">
+          <div className="fixed inset-x-0 bottom-0 z-[2010]">
             <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
               <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
               <p className="mb-1 text-center text-sm font-bold text-white">경로 작성을 종료할까요?</p>
