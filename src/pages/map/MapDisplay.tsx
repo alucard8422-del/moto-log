@@ -1,12 +1,11 @@
 // MapDisplay.tsx — 카카오맵 기반 주행 지도
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Navigation } from 'lucide-react'
+import { LocateFixed } from 'lucide-react'
 import type { Location } from './types'
 import RoadviewModal from '../../components/RoadviewModal'
 
 const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
-const MIN_SPEED_MS  = 1.5   // 이 속도(m/s, 약 5km/h) 이상일 때만 heading 갱신
 
 declare global {
   interface Window {
@@ -21,34 +20,55 @@ interface Props {
   mapRef?: React.MutableRefObject<any>
 }
 
-// GPS heading 기반 지도 회전각 — 저속/정지 시 마지막 값 유지
-function useGpsHeading(currentPosition: Location | null): number {
-  const [heading, setHeading] = useState(0)
-  const lastHeadingRef = useRef(0)
-
-  useEffect(() => {
-    if (!currentPosition) return
-    const { speed, heading: h } = currentPosition
-    if (h == null || isNaN(h)) return          // GPS heading 없으면 무시
-    if (speed != null && speed < MIN_SPEED_MS) return  // 저속 정지 시 유지
-
-    // 원형 보간 — 0↔360 경계 처리
-    const prev = lastHeadingRef.current
-    const diff = ((h - prev + 540) % 360) - 180
-    const next = (prev + diff + 360) % 360
-    lastHeadingRef.current = next
-    setHeading(Math.round(next))
-  }, [currentPosition])
-
-  return heading
+// 현재 위치 CustomOverlay HTML — 카카오맵 좌표에 고정
+function makeArrowContent(): HTMLElement {
+  const wrap = document.createElement('div')
+  wrap.style.cssText = `
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative; pointer-events: none;
+  `
+  wrap.innerHTML = `
+    <span style="
+      position:absolute; width:56px; height:56px;
+      border-radius:50%; background:rgba(45,212,191,0.10);
+      animation: moto-ping 1.8s cubic-bezier(0,0,0.2,1) infinite;
+    "></span>
+    <span style="
+      position:absolute; width:32px; height:32px;
+      border-radius:50%; background:rgba(45,212,191,0.15);
+      filter:blur(5px);
+    "></span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+      fill="#2DD4BF" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+      style="filter:drop-shadow(0 0 7px #2dd4bf) drop-shadow(0 0 14px #2dd4bf88); position:relative;">
+      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+    </svg>
+  `
+  // ping 애니메이션 — 글로벌 style 한 번만 삽입
+  if (!document.getElementById('moto-ping-style')) {
+    const s = document.createElement('style')
+    s.id = 'moto-ping-style'
+    s.textContent = `
+      @keyframes moto-ping {
+        0%   { transform: scale(0.9); opacity: 0.7; }
+        70%  { transform: scale(1.6); opacity: 0;   }
+        100% { transform: scale(0.9); opacity: 0;   }
+      }
+    `
+    document.head.appendChild(s)
+  }
+  return wrap
 }
 
 export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: Props) {
-  const containerRef    = useRef<HTMLDivElement>(null)
-  const mapInstanceRef  = useRef<any>(null)
-  const glowLineRef     = useRef<any>(null)
-  const mainLineRef     = useRef<any>(null)
-  const heading         = useGpsHeading(currentPosition)
+  const containerRef      = useRef<HTMLDivElement>(null)
+  const mapInstanceRef    = useRef<any>(null)
+  const glowLineRef       = useRef<any>(null)
+  const mainLineRef       = useRef<any>(null)
+  const arrowOverlayRef   = useRef<any>(null)
+  const hasCenteredRef    = useRef(false)          // 최초 1회 내 위치로 이동
+  const currentPosRef     = useRef<Location | null>(null)
   const [roadviewPos, setRoadviewPos] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── 1. 카카오맵 초기화 ───────────────────────────────────────────
@@ -70,6 +90,26 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         requestAnimationFrame(() => { try { map.relayout() } catch {} })
         const onResize = () => { try { map.relayout() } catch {} }
         window.addEventListener('resize', onResize)
+
+        // 위치 화살표 CustomOverlay 생성 (초기 위치는 지도 중심)
+        const overlay = new window.kakao.maps.CustomOverlay({
+          position: new window.kakao.maps.LatLng(36.5, 127.8),
+          content:  makeArrowContent(),
+          xAnchor:  0.5,
+          yAnchor:  0.5,
+          zIndex:   10,
+        })
+        overlay.setMap(map)
+        arrowOverlayRef.current = overlay
+
+        // GPS 위치가 이미 수신된 경우 즉시 반영
+        if (currentPosRef.current) {
+          const { lat, lng } = currentPosRef.current
+          const ll = new window.kakao.maps.LatLng(lat, lng)
+          overlay.setPosition(ll)
+          map.setCenter(ll)
+          hasCenteredRef.current = true
+        }
 
         // ── 롱프레스 → 로드뷰 ──────────────────────────────────────
         let downX = 0, downY = 0
@@ -95,16 +135,16 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
           if (Math.abs(cx - downX) > 10 || Math.abs(cy - downY) > 10) cancelLP()
         }
 
-        containerRef.current!.addEventListener('mousedown', e => startLP(e.clientX, e.clientY))
-        containerRef.current!.addEventListener('mousemove', e => moveLP(e.clientX, e.clientY))
-        containerRef.current!.addEventListener('mouseup',   cancelLP)
-        containerRef.current!.addEventListener('touchstart', e => {
+        containerRef.current!.addEventListener('mousedown',   e => startLP(e.clientX, e.clientY))
+        containerRef.current!.addEventListener('mousemove',   e => moveLP(e.clientX, e.clientY))
+        containerRef.current!.addEventListener('mouseup',     cancelLP)
+        containerRef.current!.addEventListener('touchstart',  e => {
           const t = e.touches[0]; startLP(t.clientX, t.clientY)
         }, { passive: true })
-        containerRef.current!.addEventListener('touchmove', e => {
+        containerRef.current!.addEventListener('touchmove',   e => {
           const t = e.touches[0]; moveLP(t.clientX, t.clientY)
         }, { passive: true })
-        containerRef.current!.addEventListener('touchend',   cancelLP)
+        containerRef.current!.addEventListener('touchend',    cancelLP)
         containerRef.current!.addEventListener('touchcancel', cancelLP)
       })
     }
@@ -126,8 +166,8 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
 
     return () => {
       cancelled = true
-      // 이전 맵 인스턴스 정리
       mapInstanceRef.current = null
+      arrowOverlayRef.current = null
     }
   }, [])
 
@@ -135,7 +175,6 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
   useEffect(() => {
     if (!mapInstanceRef.current || !window.kakao?.maps) return
 
-    // 기존 선 제거
     if (glowLineRef.current) glowLineRef.current.setMap(null)
     if (mainLineRef.current)  mainLineRef.current.setMap(null)
 
@@ -143,40 +182,53 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
 
     const linePath = path.map(p => new window.kakao.maps.LatLng(p.lat, p.lng))
 
-    // 글로우 (두껍고 반투명)
     glowLineRef.current = new window.kakao.maps.Polyline({
-      path: linePath,
-      strokeWeight: 12,
-      strokeColor: '#2DD4BF',
-      strokeOpacity: 0.15,
-      strokeStyle: 'solid',
+      path: linePath, strokeWeight: 12,
+      strokeColor: '#2DD4BF', strokeOpacity: 0.15, strokeStyle: 'solid',
     })
     glowLineRef.current.setMap(mapInstanceRef.current)
 
-    // 선명한 메인 라인
     mainLineRef.current = new window.kakao.maps.Polyline({
-      path: linePath,
-      strokeWeight: 4,
-      strokeColor: '#2DD4BF',
-      strokeOpacity: 0.9,
-      strokeStyle: 'solid',
+      path: linePath, strokeWeight: 4,
+      strokeColor: '#2DD4BF', strokeOpacity: 0.9, strokeStyle: 'solid',
     })
     mainLineRef.current.setMap(mapInstanceRef.current)
   }, [path])
 
-  // ── 3. 현재 위치 따라가기 ─────────────────────────────────────────
+  // ── 3. GPS 위치 업데이트 → 화살표 이동 + 조건부 panTo ─────────────
   useEffect(() => {
-    if (!mapInstanceRef.current || !window.kakao?.maps || !currentPosition) return
-    const latlng = new window.kakao.maps.LatLng(currentPosition.lat, currentPosition.lng)
-    mapInstanceRef.current.panTo(latlng)
-  }, [currentPosition])
+    currentPosRef.current = currentPosition
+    if (!currentPosition || !window.kakao?.maps) return
 
-  // ── 4. 주행 중 지도 잠금 (드래그·줌 비활성화) ────────────────────
+    const latlng = new window.kakao.maps.LatLng(currentPosition.lat, currentPosition.lng)
+
+    // 화살표 오버레이 위치 갱신
+    if (arrowOverlayRef.current) {
+      arrowOverlayRef.current.setPosition(latlng)
+    }
+
+    if (!mapInstanceRef.current) return
+
+    // 최초 1회 또는 주행 중 → 지도 따라가기
+    if (!hasCenteredRef.current || isRiding) {
+      mapInstanceRef.current.panTo(latlng)
+      hasCenteredRef.current = true
+    }
+  }, [currentPosition, isRiding])
+
+  // ── 4. 주행 중 지도 잠금 ──────────────────────────────────────────
   useEffect(() => {
     if (!mapInstanceRef.current) return
     mapInstanceRef.current.setDraggable(!isRiding)
     mapInstanceRef.current.setZoomable(!isRiding)
   }, [isRiding])
+
+  // ── 현재위치 버튼 핸들러 ──────────────────────────────────────────
+  const handleLocate = () => {
+    if (!mapInstanceRef.current || !currentPosRef.current || !window.kakao?.maps) return
+    const { lat, lng } = currentPosRef.current
+    mapInstanceRef.current.panTo(new window.kakao.maps.LatLng(lat, lng))
+  }
 
   return (
     <div className="relative h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
@@ -192,40 +244,8 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         )}
       </AnimatePresence>
 
-      {/* 카카오맵 컨테이너 — GPS heading 기반 heading-up 회전 */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-        <div
-          ref={containerRef}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            transform: `rotate(${-heading}deg) scale(1.5)`,
-            transition: 'transform 0.6s ease-out',
-            transformOrigin: 'center center',
-          }}
-        />
-      </div>
-
-      {/* 현재 위치 방향 화살표 오버레이 (지도 중앙 고정) */}
-      <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center">
-        <div className="relative flex items-center justify-center">
-          {/* 글로우 펄스 */}
-          <span className="absolute inline-flex h-16 w-16 animate-ping rounded-full bg-teal-400/10 opacity-60" />
-          {/* 내부 블러 */}
-          <span
-            className="absolute inline-flex h-10 w-10 rounded-full bg-teal-400/15"
-            style={{ filter: 'blur(6px)' }}
-          />
-          {/* 위치 화살표 — 지도가 heading-up 이므로 항상 위(진행방향) 고정 */}
-          <div
-            style={{
-              filter: 'drop-shadow(0 0 8px #2dd4bf) drop-shadow(0 0 16px #2dd4bf88)',
-            }}
-          >
-            <Navigation size={36} strokeWidth={2} className="text-teal-400" fill="#2DD4BF" />
-          </div>
-        </div>
-      </div>
+      {/* 카카오맵 컨테이너 */}
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
       {/* REC 인디케이터 (주행 중만) */}
       {isRiding && (
@@ -234,6 +254,14 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
           <span className="text-[10px] font-bold tracking-widest text-rose-400">REC</span>
         </div>
       )}
+
+      {/* 현재위치 버튼 — 우하단 */}
+      <button
+        onClick={handleLocate}
+        className="absolute bottom-36 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900/80 shadow-lg backdrop-blur-md active:opacity-70"
+      >
+        <LocateFixed size={20} strokeWidth={1.8} className="text-teal-400" />
+      </button>
     </div>
   )
 }
