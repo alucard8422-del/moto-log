@@ -1,7 +1,7 @@
 // bikeUtils.ts — 차고 바이크 ↔ 맵박스 아이콘 연동 유틸리티
 // 차고에서 업그레이드할 때마다 맵 위 바이크 색상이 자동으로 바뀝니다.
 
-import { BIKE_LINEUP, OWNED_BIKES_KEY } from '../data/VehicleShopData'
+import { BIKE_LINEUP, OWNED_BIKES_KEY } from '../constants/VehicleShopData'
 
 // ── 현재 차고 바이크 조회 ────────────────────────────────────────────────────
 export function getCurrentBike() {

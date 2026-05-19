@@ -68,7 +68,7 @@ export function cityLabel(pts: SavedCourse['gpxPoints']): string {
 }
 
 // ── 샘플 데이터 (최초 1회 localStorage 시딩) ──────────────────────────────
-import { YUSONG_SEOUL_POINTS, YUSONG_SEOUL_GPX_XML } from '../../data/sampleGpxData'
+import { YUSONG_SEOUL_POINTS, YUSONG_SEOUL_GPX_XML } from '../../constants/sampleGpxData'
 
 export const MOCK_SEED_KEY = 'moto:mock-seeded-v3'   // 이화령 실도로 GPX 샘플로 교체
 

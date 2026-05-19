@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { Trophy } from 'lucide-react'
-import { BADGES, TIER_STYLES, type Tier } from '../../data/BadgesData'
+import { BADGES, TIER_STYLES, type Tier } from '../../constants/BadgesData'
 
 // ── 배지 달성 티어 계산 ─────────────────────────────────────────────────────
 export function getEarnedTier(badgeId: string): Tier | null {

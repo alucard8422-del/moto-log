@@ -2,7 +2,7 @@
 // UI 수정 → map/ 폴더 각 파일 / 로직 수정 → 이 파일
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useGeolocation }            from './map/useGeolocation'
+import { useGeolocation }            from '../hooks/useGeolocation'
 import MapDisplay                    from './map/MapDisplay'
 import RideHUD                       from './map/RideHUD'
 import ErgonomicController           from './map/ErgonomicController'

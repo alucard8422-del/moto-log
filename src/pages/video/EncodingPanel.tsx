@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import MapboxRecorder from './MapboxRecorder'
 import type { ViewOption } from './videoTypes'
-import type { GpxPoint } from '../../data/sampleGpxData'
+import type { GpxPoint } from '../../constants/sampleGpxData'
 
 interface Props {
   points:     GpxPoint[] | Array<{ lat: number; lng: number; timestamp: number }>

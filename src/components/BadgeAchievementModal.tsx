@@ -7,7 +7,7 @@ import {
   BADGES, TIER_STYLES, NAVI_BADGE_MAP, HIDDEN_NAVI_BADGE_ID,
   RIDE_DIARY_BADGE_ID,
   type Tier, type BadgeDef,
-} from '../data/BadgesData'
+} from '../constants/BadgesData'
 
 // ── 내비게이션 배지 달성 체크 & 연쇄 해금 로직 ─────────────────────────────
 export interface NaviBadgeUnlockResult {

@@ -11,13 +11,13 @@ import SavedTab                       from './profile/SavedTab'
 
 // ── 공용 컴포넌트·서비스 ──────────────────────────────────────────────────
 import BadgeAchievementModal from '../components/BadgeAchievementModal'
-import GarageEditModal, { type GarageData } from '../components/GarageEditModal'
+import GarageEditModal, { type GarageData } from './garage/GarageEditModal'
 import FuelLogTab                     from '../components/FuelLogTab'
 import FuelConfirmPopup               from '../components/FuelConfirmPopup'
 import { fetchProfile, upsertProfile } from '../lib/profileService'
 import { useFuel }                    from '../context/FuelContext'
 import { NAVI_STORAGE_KEY, type NavigationType } from './map/types'
-import { BADGES, type Tier }          from '../data/BadgesData'
+import { BADGES, type Tier }          from '../constants/BadgesData'
 
 type Tab = 'garage' | 'saved' | 'fuel'
 

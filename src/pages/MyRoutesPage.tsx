@@ -3,7 +3,7 @@
 import { useState, useEffect }     from 'react'
 import { useNavigate }             from 'react-router-dom'
 import { CheckCircle }             from 'lucide-react'
-import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../data/BadgesData'
+import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../constants/BadgesData'
 import BadgeAchievementModal, { checkRideDiaryBadge } from '../components/BadgeAchievementModal'
 
 // ── routes/ 서브 컴포넌트 ──────────────────────────────────────────────────

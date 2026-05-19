@@ -4,11 +4,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { loadCourses } from '../../lib/courseStorage'
-import { parseGpxPoints } from '../../data/sampleGpxData'
+import { parseGpxPoints } from '../../constants/sampleGpxData'
 import EncodingPanel from './EncodingPanel'
 import VideoPreviewModal from './VideoPreviewModal'
 import { VIEW_OPTIONS, type ViewOption } from './videoTypes'
-import type { GpxPoint } from '../../data/sampleGpxData'
+import type { GpxPoint } from '../../constants/sampleGpxData'
 
 export default function VideoCreatorPage() {
   const { courseId }   = useParams<{ courseId: string }>()

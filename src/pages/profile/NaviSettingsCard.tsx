@@ -4,7 +4,7 @@
 import { Check } from 'lucide-react'
 import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../map/types'
 import { checkAndUnlockNaviBadge } from '../../components/BadgeAchievementModal'
-import type { Tier } from '../../data/BadgesData'
+import type { Tier } from '../../constants/BadgesData'
 
 interface Props {
   naviType:   NavigationType

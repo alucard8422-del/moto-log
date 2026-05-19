@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { Zap, ChevronRight } from 'lucide-react'
 import GarageScene from './GarageScene'
-import { BIKE_LINEUP, LP_KEY, OWNED_BIKES_KEY } from '../../data/VehicleShopData'
+import { BIKE_LINEUP, LP_KEY, OWNED_BIKES_KEY } from '../../constants/VehicleShopData'
 
 export default function GaragePage() {
   const [lp, setLp] = useState(() =>
