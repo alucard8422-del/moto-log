@@ -23,7 +23,13 @@ export function useGeolocation(): UseGeolocationReturn {
 
   const onSuccess = useCallback((pos: GeolocationPosition) => {
     setState({
-      position: { lat: pos.coords.latitude, lng: pos.coords.longitude, timestamp: pos.timestamp },
+      position: {
+        lat:       pos.coords.latitude,
+        lng:       pos.coords.longitude,
+        timestamp: pos.timestamp,
+        speed:     pos.coords.speed   ?? undefined,
+        heading:   pos.coords.heading ?? undefined,
+      },
       errorCode: null,
       loading: false,
     })

@@ -6,6 +6,7 @@ import type { Location } from './types'
 import RoadviewModal from '../../components/RoadviewModal'
 
 const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
+const MIN_SPEED_MS  = 1.5   // 이 속도(m/s, 약 5km/h) 이상일 때만 heading 갱신
 
 declare global {
   interface Window {
@@ -20,37 +21,25 @@ interface Props {
   mapRef?: React.MutableRefObject<any>
 }
 
-function useHeading(): number {
+// GPS heading 기반 지도 회전각 — 저속/정지 시 마지막 값 유지
+function useGpsHeading(currentPosition: Location | null): number {
   const [heading, setHeading] = useState(0)
-  const smoothedRef = useRef(0)
+  const lastHeadingRef = useRef(0)
 
   useEffect(() => {
-    const ALPHA = 0.08  // 낮을수록 부드럽고 반응이 느림 (0.05~0.15 권장)
+    if (!currentPosition) return
+    const { speed, heading: h } = currentPosition
+    if (h == null || isNaN(h)) return          // GPS heading 없으면 무시
+    if (speed != null && speed < MIN_SPEED_MS) return  // 저속 정지 시 유지
 
-    const handler = (e: DeviceOrientationEvent) => {
-      const raw =
-        typeof (e as any).webkitCompassHeading === 'number'
-          ? (e as any).webkitCompassHeading
-          : e.alpha !== null
-          ? (360 - e.alpha) % 360
-          : null
-      if (raw === null) return
+    // 원형 보간 — 0↔360 경계 처리
+    const prev = lastHeadingRef.current
+    const diff = ((h - prev + 540) % 360) - 180
+    const next = (prev + diff + 360) % 360
+    lastHeadingRef.current = next
+    setHeading(Math.round(next))
+  }, [currentPosition])
 
-      // 원형 EMA — 0↔360 경계 wrap-around 처리
-      const prev = smoothedRef.current
-      const diff = ((raw - prev + 540) % 360) - 180   // 최단 각도 차이
-      const next = (prev + diff * ALPHA + 360) % 360
-      smoothedRef.current = next
-
-      // 1° 이상 바뀔 때만 setState → 불필요한 리렌더 방지
-      if (Math.abs(diff * ALPHA) >= 1) {
-        setHeading(Math.round(next))
-      }
-    }
-
-    window.addEventListener('deviceorientation', handler, true)
-    return () => window.removeEventListener('deviceorientation', handler, true)
-  }, [])
   return heading
 }
 
@@ -59,7 +48,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
   const mapInstanceRef  = useRef<any>(null)
   const glowLineRef     = useRef<any>(null)
   const mainLineRef     = useRef<any>(null)
-  const heading         = useHeading()
+  const heading         = useGpsHeading(currentPosition)
   const [roadviewPos, setRoadviewPos] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── 1. 카카오맵 초기화 ───────────────────────────────────────────
@@ -203,11 +192,19 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         )}
       </AnimatePresence>
 
-      {/* 카카오맵 컨테이너 */}
-      <div
-        ref={containerRef}
-        style={{ position: 'absolute', inset: 0 }}
-      />
+      {/* 카카오맵 컨테이너 — GPS heading 기반 heading-up 회전 */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            transform: `rotate(${-heading}deg) scale(1.5)`,
+            transition: 'transform 0.6s ease-out',
+            transformOrigin: 'center center',
+          }}
+        />
+      </div>
 
       {/* 현재 위치 방향 화살표 오버레이 (지도 중앙 고정) */}
       <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center">
@@ -219,11 +216,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
             className="absolute inline-flex h-10 w-10 rounded-full bg-teal-400/15"
             style={{ filter: 'blur(6px)' }}
           />
-          {/* 나침반 화살표 — heading 에 따라 회전 */}
+          {/* 위치 화살표 — 지도가 heading-up 이므로 항상 위(진행방향) 고정 */}
           <div
             style={{
-              transform: `rotate(${heading}deg)`,
-              transition: 'transform 0.3s ease-out',
               filter: 'drop-shadow(0 0 8px #2dd4bf) drop-shadow(0 0 16px #2dd4bf88)',
             }}
           >
