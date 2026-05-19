@@ -18,6 +18,26 @@ export default function RoadviewModal({ lat, lng, onClose }: Props) {
   const rvRef   = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>('loading')
 
+  // ── 모바일 하드웨어 뒤로가기 가로채기 ──────────────────────────────────
+  // 모달이 열릴 때 히스토리를 1개 추가 → 뒤로가기 시 popstate 발생 → onClose
+  useEffect(() => {
+    // 현재 URL 그대로 새 항목 추가 (실제 경로 변경 없음)
+    history.pushState({ roadview: true }, '')
+
+    const handlePop = () => { onClose() }
+    window.addEventListener('popstate', handlePop)
+
+    return () => {
+      window.removeEventListener('popstate', handlePop)
+      // 모달이 X 버튼으로 닫힐 때는 직접 pushState한 항목을 제거
+      // (뒤로가기로 닫힌 경우 이미 pop됐으므로 state가 없음)
+      if (history.state?.roadview) {
+        history.back()
+      }
+    }
+  }, [onClose])
+
+  // ── 카카오 로드뷰 초기화 ───────────────────────────────────────────────
   useEffect(() => {
     if (!rvRef.current || !window.kakao?.maps) return
 
