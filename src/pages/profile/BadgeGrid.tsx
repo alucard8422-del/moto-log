@@ -33,25 +33,37 @@ export default function BadgeGrid({ onBadgePress }: Props) {
   const earnedCount = BADGES.filter(b => getEarnedTier(b.id) !== null).length
 
   return (
-    <div className="flex flex-col gap-4 rounded-3xl bg-white/5 p-5">
+    <div
+      className="flex flex-col gap-4 rounded-[20px] p-5"
+      style={{
+        background:           'var(--glass-bg)',
+        backdropFilter:       'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        border:               '1px solid var(--glass-border)',
+        boxShadow:            'var(--glass-shadow)',
+      }}
+    >
       {/* 섹션 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Trophy size={14} strokeWidth={1.5} className="text-amber-400" />
-          <span className="text-sm font-bold text-white">나의 업적 배지</span>
+          <Trophy size={14} strokeWidth={1.5} className="text-amber-500" />
+          <span className="text-sm font-bold text-main">나의 업적 배지</span>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-white/5 px-3 py-1">
-          <span className="text-xs font-bold text-teal-400">{earnedCount}</span>
-          <span className="text-[10px] font-light text-white/30">/ {BADGES.length}</span>
+        <div
+          className="flex items-center gap-1 rounded-full px-3 py-1"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+        >
+          <span className="text-xs font-bold text-brand">{earnedCount}</span>
+          <span className="text-[10px] text-muted">/ {BADGES.length}</span>
         </div>
       </div>
 
       {/* 4열 그리드 */}
       <div className="grid grid-cols-4 gap-3">
         {BADGES.map(badge => {
-          const Icon          = badge.icon
-          const tier          = getEarnedTier(badge.id)
-          const style         = tier ? TIER_STYLES[tier] : null
+          const Icon           = badge.icon
+          const tier           = getEarnedTier(badge.id)
+          const style          = tier ? TIER_STYLES[tier] : null
           const isHiddenLocked = badge.isHidden && !tier
 
           return (
@@ -61,35 +73,29 @@ export default function BadgeGrid({ onBadgePress }: Props) {
                 setSelected(prev => prev === badge.id ? null : badge.id)
                 if (tier) onBadgePress(badge.id, tier)
               }}
-              className={`flex flex-col items-center gap-1.5 transition-transform duration-200 active:scale-90 ${
-                !tier && !isHiddenLocked ? 'opacity-40 grayscale' : ''
-              }`}
+              className="flex flex-col items-center gap-1.5 transition-transform duration-200 active:scale-90"
+              style={!tier && !isHiddenLocked ? { opacity: 0.25, filter: 'grayscale(100%)' } : undefined}
             >
               <div
-                className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
-                  style             ? `${style.bg} ${style.border}`
-                  : isHiddenLocked ? 'bg-white/5 ring-1 ring-dashed ring-white/20'
-                  : 'bg-white/5 ring-1 ring-white/10'
-                }`}
-                style={style ? { boxShadow: style.glow } : undefined}
+                className={`flex h-14 w-14 items-center justify-center rounded-2xl ${style ? `${style.bg} ${style.border}` : ''}`}
+                style={{
+                  ...(style ? { boxShadow: style.glow } : {}),
+                  ...(!style ? { background: 'var(--bg-elevated)', border: '1px solid var(--border)' } : {}),
+                }}
               >
                 {isHiddenLocked ? (
-                  <span className="text-xl font-bold text-white/20">?</span>
+                  <span className="text-xl font-bold text-muted">?</span>
                 ) : (
-                  <Icon size={26} strokeWidth={1.3} className={style ? style.text : 'text-white/30'} />
+                  <Icon size={26} strokeWidth={1.3} className={style ? style.text : 'text-muted'} />
                 )}
               </div>
 
-              <span className={`text-center text-[9px] font-light leading-tight ${
-                style ? 'text-white/70' : 'text-white/25'
-              }`}>
+              <span className={`text-center text-[9px] leading-tight ${style ? 'font-medium text-sub' : 'font-normal text-muted'}`}>
                 {isHiddenLocked ? '???' : badge.name}
               </span>
 
               {tier && style && (
-                <span className={`text-[8px] font-bold tracking-wider ${style.text}`}>
-                  {tier}
-                </span>
+                <span className={`text-[8px] font-bold tracking-wider ${style.text}`}>{tier}</span>
               )}
             </button>
           )
@@ -103,22 +109,19 @@ export default function BadgeGrid({ onBadgePress }: Props) {
         const tier  = getEarnedTier(badge.id)
         const style = tier ? TIER_STYLES[tier] : null
         return (
-          <div className={`rounded-2xl border p-3.5 transition-all duration-300 ${
-            style ? `border-white/10 ${style.bg}` : 'border-white/5 bg-white/[0.03]'
-          }`}>
-            <p className={`mb-1 text-[11px] font-bold ${style ? style.text : 'text-white/40'}`}>
+          <div
+            className={`rounded-[20px] p-4 transition-all duration-300 ${style ? `${style.bg} ${style.border}` : ''}`}
+            style={!style ? { background: 'var(--bg-elevated)', border: '1px solid var(--border)' } : undefined}
+          >
+            <p className={`mb-1 text-[11px] font-bold ${style ? style.text : 'text-muted'}`}>
               {badge.name} {tier ? `— ${tier}` : '(미달성)'}
             </p>
-            <p className="mb-2 text-[10px] font-light text-white/40">{badge.description}</p>
+            <p className="mb-2 text-[10px] text-muted">{badge.description}</p>
             <div className="flex gap-3">
               {(['BRONZE','SILVER','GOLD','PLATINUM'] as Tier[]).map(t => (
                 <div key={t} className="flex flex-col items-center gap-0.5">
-                  <span className={`text-[9px] font-bold ${TIER_STYLES[t].text} ${tier === t ? '' : 'opacity-40'}`}>
-                    {t[0]}
-                  </span>
-                  <span className="text-[9px] font-light text-white/30">
-                    {badge.thresholds[t]}
-                  </span>
+                  <span className={`text-[9px] font-bold ${TIER_STYLES[t].text} ${tier === t ? '' : 'opacity-40'}`}>{t[0]}</span>
+                  <span className="text-[9px] text-muted">{badge.thresholds[t]}</span>
                 </div>
               ))}
             </div>

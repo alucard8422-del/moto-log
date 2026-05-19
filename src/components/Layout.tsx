@@ -69,13 +69,14 @@ export default function Layout() {
         style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
       >
         <div
-          className="flex items-center justify-around rounded-[28px] px-1 py-2"
+          className="flex items-center justify-around rounded-[28px] px-1"
           style={{
-            background:            'var(--glass-bg)',
-            backdropFilter:        'var(--glass-blur)',
-            WebkitBackdropFilter:  'var(--glass-blur)',
-            border:                '1px solid var(--glass-border)',
-            boxShadow:             'var(--glass-shadow)',
+            height:                84,
+            background:            'rgba(255,255,255,0.80)',
+            backdropFilter:        'blur(12px)',
+            WebkitBackdropFilter:  'blur(12px)',
+            border:                '1px solid rgba(0,0,0,0.06)',
+            boxShadow:             '0 8px 32px 0 rgba(31,38,135,0.04)',
           }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
@@ -84,27 +85,18 @@ export default function Layout() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className="flex flex-1 flex-col items-center gap-1 py-1 transition-opacity active:opacity-60"
+                className="flex flex-1 flex-col items-center gap-1.5 py-4 transition-opacity active:opacity-60"
               >
-                <div
-                  className="flex items-center justify-center rounded-2xl transition-all duration-200"
-                  style={{
-                    width:           40,
-                    height:          32,
-                    backgroundColor: isActive ? 'var(--brand-soft)' : 'transparent',
-                  }}
-                >
-                  <Icon
-                    size={20}
-                    strokeWidth={isActive ? 2.2 : 1.6}
-                    style={{ color: isActive ? 'var(--brand)' : 'var(--text-muted)' }}
-                  />
-                </div>
+                <Icon
+                  size={22}
+                  strokeWidth={isActive ? 2.2 : 1.6}
+                  style={{ color: isActive ? 'var(--tab-active)' : 'var(--tab-inactive)' }}
+                />
                 <span
                   className="text-[10px]"
                   style={{
                     fontWeight: isActive ? 700 : 400,
-                    color:      isActive ? 'var(--brand)' : 'var(--text-muted)',
+                    color:      isActive ? 'var(--tab-active)' : 'var(--tab-inactive)',
                   }}
                 >
                   {label}

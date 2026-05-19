@@ -248,38 +248,44 @@ function BestCoursesCarousel({ courses, onPress }: { courses: RankedCourse[]; on
           <button
             key={course.id}
             onClick={() => onPress(course)}
-            className="group relative h-52 w-44 shrink-0 overflow-hidden rounded-3xl transition-transform duration-200 active:scale-[0.97]"
-            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
+            className="group w-44 shrink-0 overflow-hidden transition-transform duration-200 active:scale-[0.97] flex flex-col"
+            style={{
+              borderRadius:  'var(--card-radius)',
+              background:    'var(--glass-bg)',
+              backdropFilter: 'var(--glass-blur)',
+              WebkitBackdropFilter: 'var(--glass-blur)',
+              border:        '1px solid var(--glass-border)',
+              boxShadow:     'var(--glass-shadow)',
+            }}
           >
-            {course.imageUrl ? (
-              <img src={course.imageUrl} alt={course.title}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-            ) : (
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, var(--bg-elevated) 0%, color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)) 100%)' }}
-              >
-                <span className="text-3xl opacity-30">🏍</span>
+            {/* 이미지 — 위 절반 */}
+            <div className="relative h-32 w-full overflow-hidden">
+              {course.imageUrl ? (
+                <img src={course.imageUrl} alt={course.title}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center bg-elevated">
+                  <span className="text-3xl opacity-20">🏍</span>
+                </div>
+              )}
+              {/* 순위 뱃지 */}
+              <div className={`absolute left-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold
+                ${rank === 0 ? 'bg-amber-400 text-amber-950'
+                : rank === 1 ? 'bg-slate-300 text-slate-700'
+                : rank === 2 ? 'bg-orange-600 text-white'
+                : 'bg-black/30 text-white'}`}>
+                {rank + 1}
               </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-
-            {/* 순위 뱃지 */}
-            <div className={`absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold
-              ${rank === 0 ? 'bg-amber-400 text-amber-950'
-              : rank === 1 ? 'bg-slate-200 text-slate-800'
-              : rank === 2 ? 'bg-orange-700/90 text-white'
-              : 'bg-black/20 text-white/70'}`}>
-              {rank + 1}
             </div>
 
-            <div className="absolute bottom-0 inset-x-0 p-3">
-              <p className="text-left text-[12px] font-bold text-white line-clamp-2">{course.title}</p>
-              <p className="mt-0.5 flex items-center gap-0.5 text-[10px] text-white/60">
+            {/* 정보 — 아래 흰 영역 */}
+            <div className="flex flex-col gap-1 px-3 py-3">
+              <p className="text-left text-[12px] font-bold text-main line-clamp-2 leading-snug">{course.title}</p>
+              <p className="flex items-center gap-0.5 text-[10px] text-muted">
                 <MapPin size={8} strokeWidth={1.5} />{course.region}
               </p>
-              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-bold" style={{ color: 'var(--brand-muted)' }}>
-                <ThumbsUp size={10} strokeWidth={1.5} />
+              <p className="flex items-center gap-1 text-[11px] font-bold text-brand">
+                <ThumbsUp size={9} strokeWidth={2} />
                 {course.score.toLocaleString()}
               </p>
             </div>

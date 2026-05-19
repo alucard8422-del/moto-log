@@ -12,25 +12,25 @@ export default function GarageScene() {
     <Canvas
       shadows
       camera={{ position: [3, 2, 3.5], fov: 48 }}
-      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', background: '#F8F9FA' }}
       gl={{ antialias: true }}
     >
-      {/* ── 기본 조명 ── */}
-      <ambientLight intensity={0.25} />
+      {/* ── 전시관 조명 — 밝고 균일하게 ── */}
+      <ambientLight intensity={1.8} color="#FFFFFF" />
 
       {/* ── 메인 스팟 (천장 정중앙) ── */}
       <spotLight
-        position={[0, 5, 0]}
-        intensity={3}
-        angle={0.55}
-        penumbra={0.7}
+        position={[0, 6, 0]}
+        intensity={2.5}
+        angle={0.6}
+        penumbra={0.8}
         castShadow
         shadow-mapSize={[1024, 1024]}
-        color="#E2E8F0"
+        color="#FFFFFF"
       />
 
       {/* ── 보조 포인트라이트 (앞쪽 fill) ── */}
-      <pointLight position={[3, 3, 4]} intensity={0.6} color="#E2E8F0" />
+      <pointLight position={[3, 3, 4]} intensity={1.0} color="#F8F9FA" />
 
       {/* ── 씬 ── */}
       <Suspense fallback={null}>
