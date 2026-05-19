@@ -2,7 +2,7 @@
 // 재생 중 뷰 각도·배속 실시간 변경 / 화면 탭으로 일시정지·재생
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams, useBlocker } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Clapperboard, RotateCcw } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { loadCourses } from '../../lib/courseStorage'
@@ -56,12 +56,29 @@ export default function VideoPreviewPage() {
   const [speed,           setSpeed]          = useState(0.25)
   const [previewKey,      setPreviewKey]     = useState(0)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const exitingRef = useRef(false)   // confirmExit 후 popstate 핸들러 재차단 방지
 
-  // 뒤로가기 차단 — 코스 로드 후 활성화 (points 가 있을 때만)
-  const blocker = useBlocker(points.length >= 2)
+  // ── 하드웨어 백버튼 차단 (pushState 센티넬) ─────────────────────────────────
+  // BrowserRouter 환경에서 useBlocker 는 동작하지 않으므로 raw history API 사용
   useEffect(() => {
-    if (blocker.state === 'blocked') setShowExitConfirm(true)
-  }, [blocker.state])
+    exitingRef.current = false
+    window.history.pushState({ motoPreviewSentinel: true }, '')   // 센티넬 추가
+
+    const onPop = () => {
+      if (exitingRef.current) return    // 종료 허용 상태 — 재차단 안 함
+      window.history.pushState({ motoPreviewSentinel: true }, '') // 다시 차단
+      setShowExitConfirm(true)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])   // 마운트 1회
+
+  function confirmExit() {
+    exitingRef.current = true
+    setShowExitConfirm(false)
+    window.history.go(-2)   // 센티넬(-1) + 실제 페이지(-1) 두 칸 뒤로
+  }
+  function cancelExit() { setShowExitConfirm(false) }
 
   // 일시정지 상태
   const [currentKmh, setCurrentKmh] = useState(0)
@@ -509,7 +526,7 @@ export default function VideoPreviewPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => { blocker.reset?.(); setShowExitConfirm(false) }}
+              onClick={cancelExit}
             />
 
             {/* 바텀시트 */}
@@ -532,13 +549,13 @@ export default function VideoPreviewPage() {
               {/* 버튼 */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => { blocker.reset?.(); setShowExitConfirm(false) }}
+                  onClick={cancelExit}
                   className="flex-1 rounded-2xl border border-white/15 bg-white/8 py-3.5 text-sm font-semibold text-white/70 active:opacity-70"
                 >
                   계속 보기
                 </button>
                 <button
-                  onClick={() => { blocker.proceed?.() }}
+                  onClick={confirmExit}
                   className="flex-[1.2] rounded-2xl bg-red-500/85 py-3.5 text-sm font-bold text-white active:opacity-80"
                 >
                   종료
