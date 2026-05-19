@@ -36,7 +36,8 @@ export default function MapPage() {
   const [path,         setPath]         = useState<Location[]>([])
   const [duration,     setDuration]     = useState(0)
   const [distance,     setDistance]     = useState(0)
-  const [showCountdown, setShowCountdown] = useState(false)
+  const [showCountdown,    setShowCountdown]    = useState(false)
+  const [showExitConfirm,  setShowExitConfirm]  = useState(false)
 
   const rideWatchRef  = useRef<number | null>(null)
   const startTimeRef  = useRef<Date | null>(null)
@@ -44,6 +45,34 @@ export default function MapPage() {
   const distanceRef   = useRef(0)
   const durationRef   = useRef(0)
   const mapRef        = useRef<any>(null)
+  const exitingRef    = useRef(false)
+
+  // ── 하드웨어 뒤로가기 → 종료 확인 모달 ──────────────────────────────
+  useEffect(() => {
+    exitingRef.current = false
+    window.history.pushState({ mapPageSentinel: true }, '')
+    const onPop = () => {
+      if (exitingRef.current) return
+      setTimeout(() => {
+        if (!exitingRef.current)
+          window.history.pushState({ mapPageSentinel: true }, '')
+      }, 0)
+      setShowExitConfirm(true)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function confirmExit() {
+    exitingRef.current = true
+    setShowExitConfirm(false)
+    navigate('/my-routes', { replace: true })
+  }
+  function cancelExit() {
+    setShowExitConfirm(false)
+    if (!window.history.state?.mapPageSentinel)
+      window.history.pushState({ mapPageSentinel: true }, '')
+  }
 
   // ── 웹뷰 바운스/오버스크롤 방지 ─────────────────────────────────────
   useEffect(() => {
@@ -193,6 +222,37 @@ export default function MapPage() {
         onLaunch={handleCountdownLaunch}
         onCancel={handleCountdownCancel}
       />
+
+      {/* 종료 확인 모달 */}
+      {showExitConfirm && (
+        <>
+          <div
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            onClick={cancelExit}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-[210]">
+            <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
+              <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+              <p className="mb-1 text-center text-sm font-bold text-white">기록을 종료할까요?</p>
+              <p className="mb-6 text-center text-xs font-light text-white/40">진행 중인 기록이 저장되지 않을 수 있습니다</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={cancelExit}
+                  className="flex flex-1 items-center justify-center rounded-3xl border border-white/10 bg-white/5 py-4 text-sm font-bold text-white/70 active:opacity-70"
+                >
+                  계속하기
+                </button>
+                <button
+                  onClick={confirmExit}
+                  className="flex flex-[1.4] items-center justify-center rounded-3xl bg-rose-500/80 py-4 text-sm font-bold text-white active:opacity-80"
+                >
+                  종료
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
