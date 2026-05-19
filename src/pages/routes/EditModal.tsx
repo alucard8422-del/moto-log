@@ -244,7 +244,7 @@ export default function EditModal({ course, onSave, onClose }: Props) {
         </div>
       </div>
 
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif" className="hidden" onChange={handleFile} />
 
       {/* 액션 시트 (사진 메뉴) */}
       {showActionSheet && (

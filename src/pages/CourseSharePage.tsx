@@ -184,7 +184,7 @@ function DiarySheet({ course, onClose, onPublish }: DiarySheetProps) {
         </div>
       </div>
 
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.heic,.heif" className="hidden" onChange={handleFile} />
     </>
   )
 }
