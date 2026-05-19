@@ -198,12 +198,14 @@ interface Props {
   pins?:                MemoryPin[]
   onCoordLookupReady?:  (fn: (clientX: number, clientY: number) => { lat: number; lng: number } | null) => void
   onPosition?:          (lat: number, lng: number) => void
-  onPinTapCheckReady?:  (fn: (clientX: number, clientY: number) => MemoryPin | null) => void
+  onPinTapCheckReady?:   (fn: (clientX: number, clientY: number) => MemoryPin | null) => void
+  // ── 정지 중 수동 카메라 회전 ───────────────────────────────────────────────
+  onManualRotateReady?: (fn: (deltaBrg: number) => void) => void
 }
 
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12'
 
-export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition, onPinTapCheckReady }: Props) {
+export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition, onPinTapCheckReady, onManualRotateReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef       = useRef<mapboxgl.Map | null>(null)
   const rafRef       = useRef(0)
@@ -528,6 +530,7 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
       let lastViewId        = view.id
       let smoothedKmh       = 0
       let hasEnded          = false   // onEnd 는 1회만 호출
+      let manualBrgOffset   = 0       // 정지 중 슬라이드로 회전한 누적 오프셋
 
       // 탐색 함수 — progress bar 포인터 이벤트에서 호출됨
       // fraction: 0~1 (0 = 시작, 1 = 끝)
@@ -538,10 +541,16 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
         camBrg            = sampler.bearingAt(clamped)
         smoothedTargetBrg = camBrg
         orbitBrg          = camBrg
+        manualBrgOffset   = 0   // 탐색 시 수동 회전 오프셋 초기화
         smoothedKmh       = 0
         if (clamped < 1) hasEnded = false
       }
       onSeekReady?.(seekFn)
+
+      // 수동 회전 콜백 등록 — VideoPreviewPage 슬라이드 제스처에서 호출
+      onManualRotateReady?.((deltaBrg: number) => {
+        manualBrgOffset += deltaBrg
+      })
 
       // ref 에 저장 → 스타일 교체 useEffect 에서 재호출
       addLayersRef.current = addLayers
@@ -650,6 +659,11 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
           }
           currentZoom += (viewZoomTarget - currentZoom) * 0.04
 
+          // 재생 중 수동 회전 오프셋 감쇠 (정지 해제 후 서서히 경로 방위로 복귀)
+          if (!isPausedRef.current) {
+            manualBrgOffset *= 0.95   // ~60프레임(1s) 만에 절반 감쇠
+          }
+
           // 스타일 교체 중에는 소스가 일시적으로 없을 수 있음 → ?. 로 안전하게 처리
           ;(map.getSource('route-done') as mapboxgl.GeoJSONSource | undefined)?.setData({
             type: 'Feature', properties: {},
@@ -659,7 +673,8 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
             bikeGeoJSON(tLng, tLat, tBrg)
           )
 
-          map.jumpTo({ center: [tLng, tLat], bearing: camBrg, pitch: camPitch, zoom: currentZoom })
+          const displayBrg = (camBrg + manualBrgOffset + 360) % 360
+          map.jumpTo({ center: [tLng, tLat], bearing: displayBrg, pitch: camPitch, zoom: currentZoom })
 
           // seekFn 을 위해 종료 이후에도 루프 유지 (isPaused 중에도 카메라 계속 업데이트)
           rafRef.current = requestAnimationFrame(tick)

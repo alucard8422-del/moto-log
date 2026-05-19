@@ -76,12 +76,18 @@ export default function VideoPreviewPage() {
   const pinTapCheckRef     = useRef<((x: number, y: number) => MemoryPin | null) | null>(null)
   const isPausedRef        = useRef(isPaused)
   const pctRef             = useRef(pct)
+  const endedRef           = useRef(ended)
   const pointerDownPos     = useRef<{ x: number; y: number } | null>(null)
   const longPressTimer     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const longPressTriggered = useRef(false)
-  useEffect(() => { pinsRef.current    = pins     }, [pins])
+  // ── 슬라이드 카메라 회전 ────────────────────────────────────────────────────
+  const manualRotateFnRef  = useRef<((delta: number) => void) | null>(null)
+  const isDragRotating     = useRef(false)
+  const dragRotatePrevX    = useRef(0)
+  useEffect(() => { pinsRef.current     = pins     }, [pins])
   useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
-  useEffect(() => { pctRef.current     = pct      }, [pct])
+  useEffect(() => { pctRef.current      = pct      }, [pct])
+  useEffect(() => { endedRef.current    = ended    }, [ended])
 
   useEffect(() => {
     const courses = loadCourses()
@@ -121,8 +127,9 @@ export default function VideoPreviewPage() {
     setIsPaused(prev => !prev)
   }
 
-  // ── 지도 롱프레스 → 추억 핀 팝업 ────────────────────────────────────────────
+  // ── 지도 롱프레스 → 추억 핀 팝업 / 슬라이드 → 카메라 회전 ────────────────────
   function handleMapPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    isDragRotating.current     = false
     pointerDownPos.current     = { x: e.clientX, y: e.clientY }
     longPressTriggered.current = false
     longPressTimer.current     = setTimeout(() => {
@@ -135,12 +142,30 @@ export default function VideoPreviewPage() {
   }
 
   function handleMapPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    // ── 드래그 회전 진행 중 ───────────────────────────────────────────────────
+    if (isDragRotating.current) {
+      const delta = (e.clientX - dragRotatePrevX.current) * 0.35   // 0.35°/px
+      dragRotatePrevX.current = e.clientX
+      manualRotateFnRef.current?.(delta)
+      return
+    }
+
     if (!pointerDownPos.current) return
     const dx = e.clientX - pointerDownPos.current.x
     const dy = e.clientY - pointerDownPos.current.y
-    if (Math.hypot(dx, dy) > 10) {
+
+    if (Math.hypot(dx, dy) > 8) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = undefined
+
+      // 정지·종료 상태 + 수평 방향이면 드래그 회전 모드 진입
+      if ((isPausedRef.current || endedRef.current) && Math.abs(dx) >= Math.abs(dy)) {
+        isDragRotating.current  = true
+        dragRotatePrevX.current = e.clientX
+        pointerDownPos.current  = null
+        return
+      }
+
       pointerDownPos.current = null
     }
   }
@@ -148,6 +173,15 @@ export default function VideoPreviewPage() {
   function handleMapPointerUp() {
     clearTimeout(longPressTimer.current)
     longPressTimer.current = undefined
+
+    // 드래그 회전 종료 — 탭 처리 없이 그냥 종료
+    if (isDragRotating.current) {
+      isDragRotating.current = false
+      pointerDownPos.current = null
+      longPressTriggered.current = false
+      return
+    }
+
     if (!longPressTriggered.current && pointerDownPos.current) {
       // 핀 탭 우선 확인 → 핀이면 카드 표시, 빈 곳이면 재생/일시정지
       const pos       = pointerDownPos.current
@@ -233,6 +267,7 @@ export default function VideoPreviewPage() {
         onCoordLookupReady={(fn) => { coordLookupRef.current = fn }}
         onPosition={handlePosition}
         onPinTapCheckReady={(fn) => { pinTapCheckRef.current = fn }}
+        onManualRotateReady={(fn) => { manualRotateFnRef.current = fn }}
       />
 
       {/* 탭·롱프레스 감지 오버레이 (컨트롤 영역 제외) */}
@@ -244,6 +279,15 @@ export default function VideoPreviewPage() {
         onPointerUp={handleMapPointerUp}
         onPointerCancel={handleMapPointerUp}
       />
+
+      {/* 정지 중 회전 힌트 */}
+      {isPaused && !pinPopup && !nearbyPin && (
+        <div className="pointer-events-none absolute inset-x-0 z-10 flex justify-center" style={{ bottom: '238px' }}>
+          <div className="flex items-center gap-1.5 rounded-full bg-black/40 px-3 py-1 backdrop-blur-sm">
+            <span className="text-[10px] font-light text-white/40">← 슬라이드로 시점 회전 →</span>
+          </div>
+        </div>
+      )}
 
       {/* 상단 헤더 */}
       <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-3 px-4 pt-safe-top pb-3 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
