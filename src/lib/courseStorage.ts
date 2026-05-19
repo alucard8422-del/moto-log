@@ -11,7 +11,7 @@ export interface SavedCourse {
   title: string
   distanceKm: number
   durationMin: number
-  gpxPoints: Array<{ lat: number; lng: number; timestamp: number; altitude?: number }>
+  gpxPoints: Array<{ lat: number; lng: number; timestamp: number; altitude?: number; speed?: number; heading?: number }>
   gpxXml: string
   createdAt: string
   isShared: boolean
@@ -29,17 +29,26 @@ const STORAGE_KEY = 'moto_my_courses'
 
 // ── GPX XML 빌더 ──────────────────────────────────────────────
 export function buildGpxXml(
-  points: Array<{ lat: number; lng: number; timestamp: number; altitude?: number }>
+  points: Array<{ lat: number; lng: number; timestamp: number; altitude?: number; speed?: number; heading?: number }>
 ): string {
   const trkpts = points
     .map((p) => {
       const iso = new Date(p.timestamp).toISOString()
       const ele = p.altitude != null ? `<ele>${p.altitude.toFixed(1)}</ele>` : ''
-      return `    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}">${ele}<time>${iso}</time></trkpt>`
+      const ext = (p.speed != null || p.heading != null)
+        ? `<extensions><gpxtpx:TrackPointExtension>${
+            p.speed   != null ? `<gpxtpx:speed>${p.speed.toFixed(2)}</gpxtpx:speed>` : ''
+          }${
+            p.heading != null ? `<gpxtpx:course>${p.heading.toFixed(1)}</gpxtpx:course>` : ''
+          }</gpxtpx:TrackPointExtension></extensions>`
+        : ''
+      return `    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}">${ele}<time>${iso}</time>${ext}</trkpt>`
     })
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Moto-Log" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Moto-Log"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
   <trk><name>Moto-Log Ride</name><trkseg>
 ${trkpts}
   </trkseg></trk>

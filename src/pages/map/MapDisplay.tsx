@@ -203,11 +203,19 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         )}
       </AnimatePresence>
 
-      {/* 카카오맵 컨테이너 */}
-      <div
-        ref={containerRef}
-        style={{ position: 'absolute', inset: 0 }}
-      />
+      {/* 카카오맵 컨테이너 — heading-up: 지도를 반대 방향으로 회전 */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+        <div
+          ref={containerRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            transform: `rotate(${-heading}deg) scale(1.5)`,
+            transition: 'transform 0.3s ease-out',
+            transformOrigin: 'center center',
+          }}
+        />
+      </div>
 
       {/* 현재 위치 방향 화살표 오버레이 (지도 중앙 고정) */}
       <div className="pointer-events-none absolute inset-0 z-[999] flex items-center justify-center">
@@ -219,11 +227,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
             className="absolute inline-flex h-10 w-10 rounded-full bg-teal-400/15"
             style={{ filter: 'blur(6px)' }}
           />
-          {/* 나침반 화살표 — heading 에 따라 회전 */}
+          {/* 나침반 화살표 — 지도가 heading-up 으로 회전하므로 항상 위(북) 방향 */}
           <div
             style={{
-              transform: `rotate(${heading}deg)`,
-              transition: 'transform 0.3s ease-out',
               filter: 'drop-shadow(0 0 8px #2dd4bf) drop-shadow(0 0 16px #2dd4bf88)',
             }}
           >

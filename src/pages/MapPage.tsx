@@ -96,7 +96,9 @@ export default function MapPage() {
           lat:       pos.coords.latitude,
           lng:       pos.coords.longitude,
           timestamp: pos.timestamp,
-          altitude:  pos.coords.altitude ?? undefined,
+          altitude:  pos.coords.altitude   ?? undefined,
+          speed:     pos.coords.speed      ?? undefined,  // m/s
+          heading:   pos.coords.heading    ?? undefined,  // 0~360°
         }
         const prev = prevPosRef.current
         if (prev) {
@@ -130,7 +132,7 @@ export default function MapPage() {
     }
 
     const endTime  = new Date()
-    const gpxPoints = path.map((p) => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp, altitude: p.altitude }))
+    const gpxPoints = path.map((p) => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp, altitude: p.altitude, speed: p.speed, heading: p.heading }))
     saveCourse({
       id:          crypto.randomUUID(),
       title:       `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
