@@ -28,26 +28,28 @@ export default function RoutePlanner() {
   const navigate = useNavigate()
 
   const [showExitConfirm, setShowExitConfirm] = useState(false)
-  const exitingRef = useRef(false)
+  const exitingRef    = useRef(false)
+  const repushingRef  = useRef(false)   // 중복 repush 방지
 
   // ── 하드웨어 뒤로가기 → 종료 확인 모달 ──────────────────────────────
   useEffect(() => {
-    exitingRef.current = false
+    exitingRef.current   = false
+    repushingRef.current = false
     window.history.pushState({ routePlannerSentinel: true }, '')
-
-    const repush = () => {
-      if (!exitingRef.current)
-        window.history.pushState({ routePlannerSentinel: true }, '')
-    }
 
     const onPop = () => {
       if (exitingRef.current) return
-      // capture 단계에서 먼저 잡고, 50ms 지연으로 Android 안정성 확보
-      setTimeout(repush, 0)
-      setTimeout(repush, 50)
       setShowExitConfirm(true)
+      // sentinel 1회만 재삽입 (중복 방지)
+      if (!repushingRef.current) {
+        repushingRef.current = true
+        setTimeout(() => {
+          repushingRef.current = false
+          if (!exitingRef.current)
+            window.history.pushState({ routePlannerSentinel: true }, '')
+        }, 50)
+      }
     }
-    // capture:true — Kakao SDK 등 서드파티 리스너보다 먼저 실행
     window.addEventListener('popstate', onPop, true)
     return () => window.removeEventListener('popstate', onPop, true)
   }, [])
@@ -55,12 +57,14 @@ export default function RoutePlanner() {
   function confirmExit() {
     exitingRef.current = true
     setShowExitConfirm(false)
-    navigate(-1)
+    // replace:true — sentinel 자리를 /my-routes 로 교체 → 스택에 sentinel 잔존 없음
+    navigate('/my-routes', { replace: true })
   }
   function cancelExit() {
     setShowExitConfirm(false)
-    // 조건 없이 항상 sentinel 재삽입 (타이밍 레이스 방지)
-    window.history.pushState({ routePlannerSentinel: true }, '')
+    // sentinel 이 없을 때만 보충 (setTimeout 이 아직 안 돌았을 경우 대비)
+    if (!window.history.state?.routePlannerSentinel && !repushingRef.current)
+      window.history.pushState({ routePlannerSentinel: true }, '')
   }
 
   // ── 경유지 + 경로 세그먼트 ────────────────────────────────────────────────
