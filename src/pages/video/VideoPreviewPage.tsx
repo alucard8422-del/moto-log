@@ -80,8 +80,9 @@ export default function VideoPreviewPage() {
   const pointerDownPos     = useRef<{ x: number; y: number } | null>(null)
   const longPressTimer     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const longPressTriggered = useRef(false)
-  // ── 슬라이드 카메라 회전 ────────────────────────────────────────────────────
+  // ── 슬라이드 카메라 회전 + 시점 리셋 ───────────────────────────────────────
   const manualRotateFnRef  = useRef<((delta: number) => void) | null>(null)
+  const viewResetFnRef     = useRef<(() => void) | null>(null)
   const isDragRotating     = useRef(false)
   const dragRotatePrevX    = useRef(0)
   useEffect(() => { pinsRef.current     = pins     }, [pins])
@@ -268,6 +269,7 @@ export default function VideoPreviewPage() {
         onPosition={handlePosition}
         onPinTapCheckReady={(fn) => { pinTapCheckRef.current = fn }}
         onManualRotateReady={(fn) => { manualRotateFnRef.current = fn }}
+        onViewResetReady={(fn)   => { viewResetFnRef.current   = fn }}
       />
 
       {/* 탭·롱프레스 감지 오버레이 (컨트롤 영역 제외) */}
@@ -350,7 +352,7 @@ export default function VideoPreviewPage() {
             return (
               <button
                 key={v.id}
-                onClick={() => setView(v)}
+                onClick={() => { setView(v); viewResetFnRef.current?.() }}
                 className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 transition-colors active:opacity-70 ${
                   active ? 'bg-teal-400 text-slate-950' : 'bg-white/8 border border-white/10'
                 }`}

@@ -201,11 +201,13 @@ interface Props {
   onPinTapCheckReady?:   (fn: (clientX: number, clientY: number) => MemoryPin | null) => void
   // ── 정지 중 수동 카메라 회전 ───────────────────────────────────────────────
   onManualRotateReady?: (fn: (deltaBrg: number) => void) => void
+  // ── 시점 버튼 → 커스텀 초기화 ─────────────────────────────────────────────
+  onViewResetReady?:   (fn: () => void) => void
 }
 
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12'
 
-export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition, onPinTapCheckReady, onManualRotateReady }: Props) {
+export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition, onPinTapCheckReady, onManualRotateReady, onViewResetReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef       = useRef<mapboxgl.Map | null>(null)
   const rafRef       = useRef(0)
@@ -552,6 +554,14 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
         manualBrgOffset += deltaBrg
       })
 
+      // 시점 버튼 클릭 → 커스텀(회전·줌) 초기화 콜백
+      // camBrg에 offset을 먼저 흡수시키고 0으로 리셋 → 부드럽게 기본 시점으로 복귀
+      onViewResetReady?.(() => {
+        camBrg          = (camBrg + manualBrgOffset + 360) % 360
+        manualBrgOffset = 0
+        viewZoomTarget  = viewRef.current.zoom
+      })
+
       // ref 에 저장 → 스타일 교체 useEffect 에서 재호출
       addLayersRef.current = addLayers
 
@@ -654,15 +664,14 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
           camPitch = camPitch + (v.pitch - camPitch) * 0.06
 
           if (v.id !== lastViewId) {
-            lastViewId     = v.id
-            viewZoomTarget = v.zoom
+            // 다른 시점 버튼 클릭 — 기본값으로 초기화 (onViewResetReady 경로와 동일)
+            camBrg          = (camBrg + manualBrgOffset + 360) % 360
+            manualBrgOffset = 0
+            lastViewId      = v.id
+            viewZoomTarget  = v.zoom
           }
           currentZoom += (viewZoomTarget - currentZoom) * 0.04
-
-          // 재생 중 수동 회전 오프셋 감쇠 (정지 해제 후 서서히 경로 방위로 복귀)
-          if (!isPausedRef.current) {
-            manualBrgOffset *= 0.95   // ~60프레임(1s) 만에 절반 감쇠
-          }
+          // manualBrgOffset 는 의도적으로 감쇠하지 않음 → 재생 재개 후에도 커스텀 시점 유지
 
           // 스타일 교체 중에는 소스가 일시적으로 없을 수 있음 → ?. 로 안전하게 처리
           ;(map.getSource('route-done') as mapboxgl.GeoJSONSource | undefined)?.setData({
