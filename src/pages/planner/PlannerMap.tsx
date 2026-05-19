@@ -155,6 +155,9 @@ export default function PlannerMap({
           const t = e.touches[0]; moveLP(t.clientX, t.clientY)
         }, { passive: true })
         el.addEventListener('touchend', e => {
+          // preventDefault: 터치 후 브라우저가 합성하는 mousedown/mouseup을 차단
+          // → "마커 추가 직후 삭제 팝업" 이중 이벤트 버그 방지
+          e.preventDefault()
           const wasShort = lpTimer !== null
           cancelLP()
           const t = e.changedTouches[0]
