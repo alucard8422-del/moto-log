@@ -37,9 +37,9 @@ export default function Layout() {
         <header
           className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
           style={{
-            background:            'rgba(10, 20, 34, 0.75)',
-            backdropFilter:        'blur(24px)',
-            WebkitBackdropFilter:  'blur(24px)',
+            background:            'var(--glass-bg)',
+            backdropFilter:        'var(--glass-blur)',
+            WebkitBackdropFilter:  'var(--glass-blur)',
             borderBottom:          '1px solid var(--glass-border)',
           }}
         >

@@ -99,9 +99,9 @@ export default function MyRoutesPage() {
     <div className="min-h-screen bg-app pb-32">
 
       {/* ── 상단 ── */}
-      <div className="px-5 pb-5 pt-5">
-        <p className="mb-0.5 text-xs font-medium text-muted">My Routes</p>
-        <h2 className="text-[26px] font-extrabold tracking-tight text-main">내 경로</h2>
+      <div className="px-5 pb-5 pt-6">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">My Routes</p>
+        <h2 className="text-[28px] font-extrabold tracking-tight text-main">내 경로</h2>
       </div>
 
       {/* ── 요약 통계 ── */}
@@ -123,11 +123,11 @@ export default function MyRoutesPage() {
           ].map(({ value, label }, i) => (
             <div
               key={label}
-              className="flex-1 py-4 text-center"
+              className="flex-1 py-5 text-center"
               style={{ borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}
             >
-              <p className="text-[22px] font-extrabold tracking-tight text-brand">{value}</p>
-              <p className="mt-0.5 text-[11px] text-muted">{label}</p>
+              <p className="text-[24px] font-extrabold tracking-tight text-brand">{value}</p>
+              <p className="mt-0.5 text-[11px] font-medium text-muted">{label}</p>
             </div>
           ))}
         </div>

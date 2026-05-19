@@ -506,9 +506,9 @@ export default function TourPage() {
     <div className="flex flex-col gap-6 px-4 pt-5 pb-32 bg-app min-h-screen">
 
       {/* ── 페이지 헤더 ── */}
-      <div>
-        <p className="mb-0.5 text-xs font-medium text-muted">Explore Courses</p>
-        <h2 className="text-[26px] font-extrabold tracking-tight text-main">추천 코스</h2>
+      <div className="pt-1">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted">Explore Courses</p>
+        <h2 className="text-[28px] font-extrabold tracking-tight text-main">추천 코스</h2>
       </div>
 
       {/* ══════════════════════════════════════════════════════

@@ -111,30 +111,30 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
         </div>
 
         {/* ── 하단 정보 ── */}
-        <div className="px-4 pb-4 pt-3">
+        <div className="px-[18px] pb-[18px] pt-4">
           {!course.coverPhoto && (
-            <p className="mb-1.5 text-[15px] font-bold text-main">{label}</p>
+            <p className="mb-1 text-[16px] font-extrabold tracking-tight text-main">{label}</p>
           )}
           {course.diary && (
-            <p className="mb-2 line-clamp-1 text-[12px] text-muted">{course.diary}</p>
+            <p className="mb-3 line-clamp-1 text-[12px] font-normal text-muted">{course.diary}</p>
           )}
 
           <div className="flex items-center justify-between">
             {/* 스탯 */}
             <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1 text-[12px] text-sub">
-                <Route size={11} strokeWidth={1.8} className="text-muted" />
+              <span className="flex items-center gap-1 text-[12px] font-semibold text-sub">
+                <Route size={11} strokeWidth={2} className="text-muted" />
                 {fmtDist(course.distanceKm)}
               </span>
-              <span className="flex items-center gap-1 text-[12px] text-sub">
-                <Clock size={11} strokeWidth={1.8} className="text-muted" />
+              <span className="flex items-center gap-1 text-[12px] font-semibold text-sub">
+                <Clock size={11} strokeWidth={2} className="text-muted" />
                 {fmtDur(course.durationMin)}
               </span>
-              <span className="text-[12px] text-muted">{fmtDate(course.createdAt)}</span>
+              <span className="text-[11px] font-normal text-muted">{fmtDate(course.createdAt)}</span>
               {hasGpx && (
                 <span
                   className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                  style={{ background: 'rgba(139,92,246,0.18)', color: '#A78BFA' }}
+                  style={{ background: 'rgba(99,102,241,0.10)', color: '#6366F1' }}
                 >
                   <FileDown size={8} strokeWidth={2} />GPX
                 </span>
@@ -147,7 +147,7 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                 <button
                   onClick={e => { e.stopPropagation(); onVideoCreate?.(course) }}
                   className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-sub active:opacity-70"
-                  style={{ background: 'var(--bg-elevated)' }}
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
                 >
                   <Clapperboard size={11} strokeWidth={1.8} />영상
                 </button>
