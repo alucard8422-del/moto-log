@@ -61,7 +61,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         if (cancelled || !containerRef.current) return
         const map = new window.kakao.maps.Map(containerRef.current, {
           center: new window.kakao.maps.LatLng(36.5, 127.8),
-          level: 8,
+          level: 3,
         })
         mapInstanceRef.current = map
         if (mapRef) mapRef.current = map
