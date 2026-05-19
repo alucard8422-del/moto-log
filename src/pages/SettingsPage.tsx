@@ -14,9 +14,9 @@ const THEME_OPTIONS: Array<{
   preview: string
   accent:  string
 }> = [
-  { value: 'dark',  label: '다크',  sub: '심해 네이비 — 야간 주행 최적',   icon: Moon,     preview: '#0F172A', accent: '#2DD4BF' },
-  { value: 'light', label: '라이트', sub: '연회색 미니멀 — 낮 환경 최적',   icon: Sun,      preview: '#F8FAFC', accent: '#14B8A6' },
-  { value: 'white', label: '화이트', sub: '순백 고대비 — 햇빛 아래 선명',   icon: Contrast, preview: '#FFFFFF', accent: '#0D9488' },
+  { value: 'light', label: '라이트', sub: '연회색 미니멀 — 낮 환경 최적',   icon: Sun,      preview: '#F8F9FA', accent: '#F97316' },
+  { value: 'navy',  label: '네이비', sub: '심해 네이비 — 야간 주행 최적',   icon: Moon,     preview: '#0F172A', accent: '#2DD4BF' },
+  { value: 'warm',  label: '웜',     sub: '따뜻한 크림 — 감성 라이딩',      icon: Contrast, preview: '#FDF6EC', accent: '#D97706' },
 ]
 
 function ThemeSelectModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
