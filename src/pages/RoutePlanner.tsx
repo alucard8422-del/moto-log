@@ -248,7 +248,7 @@ export default function RoutePlanner() {
       <AnimatePresence>
         {routing && (
           <motion.div
-            className="absolute left-1/2 top-20 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-4 py-2 backdrop-blur-md"
+            className="absolute left-1/2 bottom-28 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-4 py-2 backdrop-blur-md"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
