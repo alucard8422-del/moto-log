@@ -1,0 +1,112 @@
+# Blender 3.4.0 MTL File: 'Model.blend'
+# www.blender.org
+
+newmtl 167eed80_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_Kd textures/texture_0047.dds
+map_d textures/texture_0047.dds
+
+newmtl 34f51967_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/texture_0025.dds
+
+newmtl 455b1069_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_Kd textures/texture_0029.dds
+map_d textures/texture_0029.dds
+
+newmtl 51cfbb3e_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_Kd textures/texture_0049.dds
+map_d textures/texture_0049.dds
+
+newmtl 536252c3_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/texture_0023.dds
+
+newmtl 6499c196_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/texture_0014.dds
+
+newmtl 7fbbd01b_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 0.300000
+illum 6
+map_Kd textures/texture_0001.dds
+
+newmtl 8cc76db5_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/texture_0020.dds
+
+newmtl b7119972_dds
+Ns 250.000000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+illum 3
+map_Kd textures/texture_0037.dds
+map_d textures/texture_0037.dds
+
+newmtl e92a4eb8_dds
+Ns 10.000005
+Ka 1.000000 1.000000 1.000000
+Ks 0.100000 0.100000 0.100000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd textures/texture_0018.dds
+
+newmtl e960aa6a_dds
+Ns 562.500000
+Ka 0.500000 0.500000 0.500000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd textures/texture_0018.dds
