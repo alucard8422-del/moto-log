@@ -80,8 +80,15 @@ export default function EditModal({ course, onSave, onClose }: Props) {
     isDraggingRef.current = false
 
     if (currentDragY.current > 80) {
-      // 임계값 초과 → 닫기
-      onClose()
+      // 임계값 초과 → 화면 밖으로 쭉 밀어낸 뒤 닫기
+      if (sheetWrapRef.current) {
+        const h = sheetWrapRef.current.offsetHeight
+        sheetWrapRef.current.style.transition = 'transform 320ms ease-in'
+        sheetWrapRef.current.style.transform  = `translateY(${h}px)`
+        setTimeout(onClose, 320)
+      } else {
+        onClose()
+      }
     } else {
       // 스냅 백
       if (sheetWrapRef.current) {
