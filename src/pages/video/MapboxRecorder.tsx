@@ -26,8 +26,7 @@ import type { ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
 import { loadBikeImage } from '../../lib/bikeUtils'
 
-mapboxgl.accessToken =
-  'pk.eyJ1IjoiYmliaW1iYmFwIiwiYSI6ImNtcGFydHg3aDEyZzcycnB3OGxwZDNnaGoifQ.fT7vDiAmteI35w1qlZz3jQ'
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  ① 설정 상수

@@ -8,8 +8,7 @@ import type { ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
 import { loadBikeImage } from '../../lib/bikeUtils'
 
-mapboxgl.accessToken =
-  'pk.eyJ1IjoiYmliaW1iYmFwIiwiYSI6ImNtcGFydHg3aDEyZzcycnB3OGxwZDNnaGoifQ.fT7vDiAmteI35w1qlZz3jQ'
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
 
 // ── 기준 재생 배율 ────────────────────────────────────────────────────────────
 // 15 = speed=1 일 때 실제 라이딩 시간의 15배속
