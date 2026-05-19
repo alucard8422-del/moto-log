@@ -41,6 +41,9 @@ export default function KoreaRouteMap({ courses }: Props) {
         mapRef.current = map
         setMapReady(true)
 
+        // 컨테이너 크기 재계산 — SDK가 초기화 시 높이를 잘못 읽는 버그 방지
+        requestAnimationFrame(() => { try { map.relayout() } catch {} })
+
         // ── 롱프레스 → 로드뷰 ──────────────────────────────────────
         let downX = 0, downY = 0
         let lpTimer: ReturnType<typeof setTimeout> | null = null

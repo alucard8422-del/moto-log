@@ -71,8 +71,8 @@ export default function Layout() {
       {/* 주행 세션 전역 UI (재개 팝업·다음 구간 시트·카운트다운) */}
       <DriveSessionOverlay />
 
-      {/* 하단 탭 바 — 경로 작성 페이지에서는 숨김 (ConfirmPanel과 겹침 방지) */}
-      <nav className={`fixed bottom-6 left-1/2 z-30 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2 ${isPlanner ? 'hidden' : ''}`}>
+      {/* 하단 탭 바 — 전체화면(기록·경로작성) 페이지에서는 숨김 */}
+      <nav className={`fixed bottom-6 left-1/2 z-30 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2 ${isFullScreen ? 'hidden' : ''}`}>
         <div
           className="flex items-center justify-around rounded-3xl border px-2 py-3 shadow-lg shadow-black/20 backdrop-blur-md"
           style={{

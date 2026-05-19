@@ -61,6 +61,11 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         mapInstanceRef.current = map
         if (mapRef) mapRef.current = map
 
+        // 컨테이너 크기 재계산 — SDK가 초기화 시 높이를 잘못 읽는 버그 방지
+        requestAnimationFrame(() => { try { map.relayout() } catch {} })
+        const onResize = () => { try { map.relayout() } catch {} }
+        window.addEventListener('resize', onResize)
+
         // ── 롱프레스 → 로드뷰 ──────────────────────────────────────
         let downX = 0, downY = 0
         let lpTimer: ReturnType<typeof setTimeout> | null = null
