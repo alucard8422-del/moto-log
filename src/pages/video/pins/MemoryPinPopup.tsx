@@ -3,7 +3,7 @@
 
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Camera, MapPin, X, Save, Loader2 } from 'lucide-react'
+import { ImagePlus, MapPin, X, Save, Loader2 } from 'lucide-react'
 import { compressPhoto } from '../../../lib/memoryPins'
 import type { MemoryPin } from './pinTypes'
 
@@ -96,22 +96,26 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={handleFileChange}
           />
           {photo ? (
-            <div className="relative mb-1">
+            /* 사진 선택됨 — 소형 인디케이터 (대형 미리보기 대신) */
+            <div className="flex items-center gap-3 rounded-2xl border border-teal-400/25 bg-teal-400/8 px-3 py-2.5">
               <img
                 src={photo}
-                alt="선택된 사진"
-                className="h-32 w-full rounded-2xl object-cover"
+                alt=""
+                className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-white/15"
               />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-teal-400">사진 선택됨</p>
+                <p className="text-[10px] font-light text-white/35 mt-0.5">핀 아이콘에 표시됩니다</p>
+              </div>
               <button
                 onClick={() => setPhoto(undefined)}
-                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm active:opacity-70"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/8 active:opacity-70"
               >
-                <X size={12} strokeWidth={2} className="text-white" />
+                <X size={12} strokeWidth={2} className="text-white/50" />
               </button>
             </div>
           ) : (
@@ -122,10 +126,10 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
             >
               {loading
                 ? <Loader2 size={16} strokeWidth={1.5} className="animate-spin text-teal-400" />
-                : <Camera size={16} strokeWidth={1.5} className="text-white/40" />
+                : <ImagePlus size={16} strokeWidth={1.5} className="text-white/40" />
               }
               <span className="text-[11px] font-light text-white/40">
-                {loading ? '압축 중…' : '사진 추가 (선택)'}
+                {loading ? '압축 중…' : '갤러리에서 사진 추가 (선택)'}
               </span>
             </button>
           )}

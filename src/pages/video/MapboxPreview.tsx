@@ -229,16 +229,53 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
     markersRef.current.forEach(m => m.remove())
     markersRef.current = (pinsRef.current).map(pin => {
       const el = document.createElement('div')
-      Object.assign(el.style, {
-        width:         '13px',
-        height:        '13px',
-        borderRadius:  '50%',
-        background:    '#2dd4bf',
-        border:        '2.5px solid #fff',
-        boxShadow:     '0 0 8px rgba(45,212,191,0.6)',
-        pointerEvents: 'none',
-      })
-      return new mapboxgl.Marker({ element: el })
+      el.style.pointerEvents = 'none'
+
+      if (pin.photo) {
+        // ── 사진 핀: 원형 썸네일 + 하단 삼각 포인터 ─────────────────────
+        Object.assign(el.style, {
+          display:        'flex',
+          flexDirection:  'column',
+          alignItems:     'center',
+          width:          '42px',
+          height:         '54px',
+        })
+        const thumb = document.createElement('div')
+        Object.assign(thumb.style, {
+          width:           '40px',
+          height:          '40px',
+          borderRadius:    '50%',
+          border:          '2.5px solid #fff',
+          boxShadow:       '0 3px 12px rgba(0,0,0,0.5)',
+          backgroundImage: `url('${pin.photo}')`,
+          backgroundSize:     'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat:   'no-repeat',
+          flexShrink:      '0',
+        })
+        const tip = document.createElement('div')
+        Object.assign(tip.style, {
+          width:         '0',
+          height:        '0',
+          borderLeft:    '7px solid transparent',
+          borderRight:   '7px solid transparent',
+          borderTop:     '11px solid #fff',
+          marginTop:     '-2px',
+          filter:        'drop-shadow(0 2px 3px rgba(0,0,0,0.25))',
+        })
+        el.appendChild(thumb)
+        el.appendChild(tip)
+      } else {
+        // ── 기본 핀: SVG 수직 핀 모양 ────────────────────────────────────
+        Object.assign(el.style, { width: '22px', height: '32px' })
+        el.innerHTML = `<svg width="22" height="32" viewBox="0 0 22 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 0C4.925 0 0 4.925 0 11c0 7.7 11 21 11 21S22 18.7 22 11C22 4.925 17.075 0 11 0z"
+                fill="#2dd4bf" stroke="white" stroke-width="1.5"/>
+          <circle cx="11" cy="11" r="4" fill="white"/>
+        </svg>`
+      }
+
+      return new mapboxgl.Marker({ element: el, anchor: 'bottom' })
         .setLngLat([pin.lng, pin.lat])
         .addTo(map)
     })
