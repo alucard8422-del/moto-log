@@ -213,9 +213,9 @@ function savedToCard(c: SavedCourse): CourseCardData {
 
 // ── 무드 색상 ──────────────────────────────────────────────────────────────
 const MOOD_CHIP: Record<CourseCardData['mood'], string> = {
-  '여유로운': 'text-emerald-400 bg-emerald-400/15',
-  '감성적인': 'text-violet-400 bg-violet-400/15',
-  '도전적인': 'text-rose-400   bg-rose-400/15',
+  '여유로운': 'text-emerald-600 bg-emerald-50',
+  '감성적인': 'text-violet-600  bg-violet-50',
+  '도전적인': 'text-rose-600    bg-rose-50',
 }
 
 // ── Section 1: 오늘의 베스트 코스 캐러셀 (👍 내림차순) ───────────────────
@@ -234,9 +234,9 @@ function BestCoursesCarousel({ courses, onPress }: { courses: RankedCourse[]; on
       <div className="flex items-center justify-between px-0.5">
         <div className="flex items-center gap-2">
           <span className="text-base">🏆</span>
-          <span className="text-sm font-bold text-white">오늘의 베스트 코스</span>
+          <span className="text-sm font-bold text-main">오늘의 베스트 코스</span>
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-light text-white/25">
+        <div className="flex items-center gap-1 text-[10px] text-muted">
           <ThumbsUp size={9} strokeWidth={1.5} />
           <span>순</span>
         </div>
@@ -249,32 +249,36 @@ function BestCoursesCarousel({ courses, onPress }: { courses: RankedCourse[]; on
             key={course.id}
             onClick={() => onPress(course)}
             className="group relative h-52 w-44 shrink-0 overflow-hidden rounded-3xl transition-transform duration-200 active:scale-[0.97]"
+            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.10)' }}
           >
             {course.imageUrl ? (
               <img src={course.imageUrl} alt={course.title}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
-              <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
-                <span className="text-3xl opacity-20">🏍</span>
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+              >
+                <span className="text-3xl opacity-30">🏍</span>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
 
             {/* 순위 뱃지 */}
             <div className={`absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold
-              ${rank === 0 ? 'bg-amber-400 text-slate-950'
-              : rank === 1 ? 'bg-slate-300 text-slate-950'
-              : rank === 2 ? 'bg-amber-700/80 text-white'
-              : 'bg-white/10 text-white/60'}`}>
+              ${rank === 0 ? 'bg-amber-400 text-amber-950'
+              : rank === 1 ? 'bg-slate-200 text-slate-800'
+              : rank === 2 ? 'bg-orange-700/90 text-white'
+              : 'bg-black/20 text-white/70'}`}>
               {rank + 1}
             </div>
 
             <div className="absolute bottom-0 inset-x-0 p-3">
               <p className="text-left text-[12px] font-bold text-white line-clamp-2">{course.title}</p>
-              <p className="mt-0.5 flex items-center gap-0.5 text-[10px] font-light text-white/50">
+              <p className="mt-0.5 flex items-center gap-0.5 text-[10px] text-white/60">
                 <MapPin size={8} strokeWidth={1.5} />{course.region}
               </p>
-              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-teal-400">
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] font-bold" style={{ color: 'var(--brand-muted)' }}>
                 <ThumbsUp size={10} strokeWidth={1.5} />
                 {course.score.toLocaleString()}
               </p>
@@ -290,9 +294,9 @@ function BestCoursesCarousel({ courses, onPress }: { courses: RankedCourse[]; on
 function Divider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 px-0.5">
-      <div className="h-px flex-1 bg-white/5" />
-      <span className="text-[10px] font-light text-white/20">{label}</span>
-      <div className="h-px flex-1 bg-white/5" />
+      <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+      <span className="text-[10px] text-muted">{label}</span>
+      <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
     </div>
   )
 }
@@ -318,13 +322,13 @@ function CommunityGrid({ courses, onPress }: CommunityGridProps) {
       {/* 섹션 헤더 */}
       <div className="flex items-center justify-between px-0.5">
         <div className="flex items-center gap-2">
-          <Flame size={14} strokeWidth={1.5} className="text-orange-400" />
-          <span className="text-sm font-bold text-white">라이더 공유 광장</span>
-          <span className="rounded-full bg-orange-400/15 px-2 py-0.5 text-[9px] font-bold text-orange-400">
+          <Flame size={14} strokeWidth={1.5} className="text-brand" />
+          <span className="text-sm font-bold text-main">라이더 공유 광장</span>
+          <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[9px] font-bold text-brand">
             LIVE
           </span>
         </div>
-        <span className="text-[10px] font-light text-white/25">최신순</span>
+        <span className="text-[10px] text-muted">최신순</span>
       </div>
 
       {/* 2열 그리드 */}
@@ -336,45 +340,48 @@ function CommunityGrid({ courses, onPress }: CommunityGridProps) {
               key={saved.id}
               onClick={() => onPress(card, saved.id)}
               className="group relative h-44 overflow-hidden rounded-3xl active:scale-[0.97] transition-transform duration-200"
+              style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}
             >
               {/* 배경 사진 */}
               {card.imageUrl ? (
                 <img src={card.imageUrl} alt={card.title}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
               ) : (
-                <div className="absolute inset-0 bg-[#0b1120] flex items-center justify-center">
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+                >
                   <span className="text-3xl opacity-30">🏍</span>
                 </div>
               )}
 
-              {/* 하단 강그라데이션 */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+              {/* 하단 그라디언트 */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
 
               {/* NEW 뱃지 */}
               {isNew(saved.createdAt) && (
-                <div className="absolute left-2.5 top-2.5 rounded-full bg-teal-400 px-2 py-0.5">
-                  <span className="text-[9px] font-bold text-slate-950">NEW</span>
+                <div className="absolute left-2.5 top-2.5 rounded-full bg-brand px-2 py-0.5">
+                  <span className="text-[9px] font-bold text-white">NEW</span>
                 </div>
               )}
-
 
               {/* 하단 텍스트 */}
               <div className="absolute bottom-0 inset-x-0 p-3">
                 <p className="text-left text-[12px] font-bold leading-snug text-white line-clamp-2">
                   {card.title}
                 </p>
-                <p className="mt-0.5 text-left text-[10px] font-light text-white/50">
+                <p className="mt-0.5 text-left text-[10px] text-white/60">
                   {card.region}
                 </p>
                 {/* 일기 미리보기 */}
                 {card.description && (
-                  <p className="mt-1 text-left text-[9px] font-light text-white/35 line-clamp-1">
+                  <p className="mt-1 text-left text-[9px] text-white/40 line-clamp-1">
                     {card.description}
                   </p>
                 )}
                 {/* 댓글 수 */}
                 {(saved.comments?.length ?? 0) > 0 && (
-                  <p className="mt-1 text-left text-[9px] font-light text-teal-400/60">
+                  <p className="mt-1 text-left text-[9px]" style={{ color: 'var(--brand-muted)' }}>
                     💬 {saved.comments!.length}개의 댓글
                   </p>
                 )}
@@ -395,10 +402,14 @@ function ChipBar({ active, onChange }: { active: FilterId; onChange: (id: Filter
         const on = f.id === active
         return (
           <button key={f.id} onClick={() => onChange(f.id)}
-            className={`shrink-0 rounded-full px-4 py-2 text-[12px] backdrop-blur-xl transition-all duration-200 active:scale-95 ${
-              on ? 'border border-[#2DD4BF] bg-[#2DD4BF]/10 font-medium text-[#2DD4BF]'
-                 : 'border border-white/8 bg-[#161B26]/60 font-light text-white/40'
-            }`}>
+            className={`shrink-0 rounded-full px-4 py-2 text-[12px] transition-all duration-200 active:scale-95 ${
+              on ? 'bg-brand-soft text-brand font-semibold'
+                 : 'bg-elevated text-muted font-normal'
+            }`}
+            style={{
+              border: on ? '1px solid color-mix(in srgb, var(--brand) 35%, transparent)'
+                         : '1px solid var(--border)',
+            }}>
             {f.label}
           </button>
         )
@@ -412,40 +423,44 @@ function CourseListItem({ course, onPress }: { course: RankedCourse; onPress: (c
   return (
     <button
       onClick={() => onPress(course)}
-      className="flex w-full items-center gap-3.5 rounded-2xl border border-white/5 bg-white/[0.03] p-3 transition-colors active:bg-white/[0.06]"
+      className="flex w-full items-center gap-3.5 rounded-2xl bg-surface p-3 transition-opacity active:opacity-80"
+      style={{ border: '1px solid var(--border)', boxShadow: '0 1px 8px rgba(0,0,0,0.05)' }}
     >
       {/* 썸네일 */}
       <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl">
         {course.imageUrl ? (
           <img src={course.imageUrl} alt={course.title} className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full bg-slate-800 flex items-center justify-center">
-            <span className="text-lg opacity-30">🏍</span>
+          <div
+            className="h-full w-full flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+          >
+            <span className="text-lg opacity-40">🏍</span>
           </div>
         )}
       </div>
 
       {/* 정보 */}
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-[13px] font-bold text-white line-clamp-1">{course.title}</p>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-light text-white/40">
-          <MapPin size={9} strokeWidth={1.5} />
+        <p className="text-[13px] font-bold text-main line-clamp-1">{course.title}</p>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-sub">
+          <MapPin size={9} strokeWidth={1.5} className="text-muted" />
           <span className="truncate">{course.region}</span>
-          <span>·</span>
+          <span className="text-muted">·</span>
           <span>{course.distanceKm}km</span>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <span className="flex items-center gap-0.5 text-[10px] font-light text-white/30">
+          <span className="flex items-center gap-0.5 text-[10px] text-muted">
             <Clock size={9} strokeWidth={1.5} />
             {course.durationMin}분
           </span>
-          <span className={`rounded-full px-2 py-0.5 text-[9px] font-light ${MOOD_CHIP[course.mood]}`}>
+          <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${MOOD_CHIP[course.mood]}`}>
             {course.mood}
           </span>
         </div>
       </div>
 
-      <ChevronRight size={14} strokeWidth={1.5} className="shrink-0 text-white/20" />
+      <ChevronRight size={14} strokeWidth={1.5} className="shrink-0 text-muted" />
     </button>
   )
 }
@@ -482,12 +497,12 @@ export default function TourPage() {
   const handleClose           = () => { setSelected(null); setSelectedSavedId(undefined); setCommunityKey((k) => k + 1) }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-5 pb-32">
+    <div className="flex flex-col gap-6 px-4 pt-5 pb-32 bg-app min-h-screen">
 
       {/* ── 페이지 헤더 ── */}
       <div>
-        <p className="text-xs font-light text-white/30">라이더가 검증한 코스</p>
-        <h2 className="text-xl font-bold text-white">추천 코스</h2>
+        <p className="mb-0.5 text-xs font-medium text-muted">Explore Courses</p>
+        <h2 className="text-[26px] font-extrabold tracking-tight text-main">추천 코스</h2>
       </div>
 
       {/* ══════════════════════════════════════════════════════
@@ -504,9 +519,12 @@ export default function TourPage() {
         <CommunityGrid courses={communityCourses} onPress={handleSelectCommunity} />
       ) : (
         /* 공유된 코스 없을 때 넛지 메시지 */
-        <div className="flex flex-col items-center gap-2 rounded-3xl border border-dashed border-white/8 py-8 text-center">
-          <p className="text-sm font-bold text-white/20">아직 공유된 코스가 없어요</p>
-          <p className="text-xs font-light text-white/15">
+        <div
+          className="flex flex-col items-center gap-2 rounded-3xl py-8 text-center"
+          style={{ border: '1.5px dashed var(--border)' }}
+        >
+          <p className="text-sm font-bold text-muted">아직 공유된 코스가 없어요</p>
+          <p className="text-xs leading-relaxed text-muted">
             내 경로에서 주행 후기를 작성하고<br />공유해보세요
           </p>
         </div>
@@ -520,8 +538,8 @@ export default function TourPage() {
       <div className="flex flex-col gap-4">
         {/* 섹션 헤더 */}
         <div className="flex items-center justify-between px-0.5">
-          <span className="text-sm font-bold text-white">전체 코스 탐색</span>
-          <span className="text-[10px] font-light text-white/25">{filtered.length}개</span>
+          <span className="text-sm font-bold text-main">전체 코스 탐색</span>
+          <span className="text-[10px] text-muted">{filtered.length}개</span>
         </div>
 
         {/* 필터 칩 바 */}
@@ -536,9 +554,10 @@ export default function TourPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm font-bold text-white/30">해당 카테고리의 코스가 없어요</p>
+            <p className="text-sm font-bold text-muted">해당 카테고리의 코스가 없어요</p>
             <button onClick={() => setActiveFilter('all')}
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-light text-white/40 active:opacity-60">
+              className="rounded-full bg-elevated px-4 py-2 text-xs text-sub active:opacity-60"
+              style={{ border: '1px solid var(--border)' }}>
               전체 보기
             </button>
           </div>
