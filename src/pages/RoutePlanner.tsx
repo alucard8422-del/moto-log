@@ -169,7 +169,7 @@ export default function RoutePlanner() {
 
   // ── 렌더 ──────────────────────────────────────────────────────────────────
   return (
-    <div className="relative" style={{ height: '100svh', overflow: 'hidden' }}>
+    <div className="relative" style={{ height: '100dvh', overflow: 'hidden' }}>
 
       {/* ── 카카오맵 ── */}
       <PlannerMap
