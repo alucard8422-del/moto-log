@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { CircleDot, Route, Compass, User, Bell, Navigation, Warehouse } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
+import DriveSessionOverlay from './DriveSessionOverlay'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'      },
@@ -65,6 +66,9 @@ export default function Layout() {
       </main>
 
       <FuelCompleteSheet />
+
+      {/* 주행 세션 전역 UI (재개 팝업·다음 구간 시트·카운트다운) */}
+      <DriveSessionOverlay />
 
       {/* 하단 탭 바 — 5탭 균등 배치 */}
       <nav className="fixed bottom-6 left-1/2 z-30 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2">

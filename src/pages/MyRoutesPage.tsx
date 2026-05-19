@@ -21,6 +21,8 @@ import {
   loadCourses, updateCourse, deleteCourse, shareToCommunity,
   type SavedCourse,
 } from '../lib/courseStorage'
+import { saveDriveSession } from '../lib/driveSession'
+import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
 
 export default function MyRoutesPage() {
   const navigate = useNavigate()
@@ -72,6 +74,27 @@ export default function MyRoutesPage() {
 
     const { newlyUnlocked } = checkRideDiaryBadge()
     if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
+  }
+
+  // ── 주행하기 ──────────────────────────────────────────────────────────
+  const handleDrive = (course: SavedCourse) => {
+    const naviType = loadNaviPref()
+    const waypoints = getCourseNavWaypoints(course)
+    if (waypoints.length < 1) return
+
+    const segments = splitIntoSegments(waypoints, naviType)
+
+    const session = {
+      courseId:          course.id,
+      courseTitle:       course.title,
+      naviType,
+      segments,
+      currentSegmentIdx: 0,
+      startedAt:         new Date().toISOString(),
+    }
+    saveDriveSession(session)
+    // DriveSessionOverlay가 이 이벤트를 받아 카운트다운 시작
+    window.dispatchEvent(new CustomEvent('moto:startDrive', { detail: session }))
   }
 
   const handleShareConfirm = (id: string) => {
@@ -131,6 +154,7 @@ export default function MyRoutesPage() {
                 onEdit={setEditTarget}
                 onShare={setShareTarget}
                 onVideoCreate={setVideoTarget}
+                onDrive={handleDrive}
               />
             ))}
           </div>

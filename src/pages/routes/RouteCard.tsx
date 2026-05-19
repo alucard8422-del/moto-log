@@ -2,7 +2,7 @@
 // GPX 있으면: 도시 레이블 옆 GPX 뱃지 + 우하단 '영상 만들기' 버튼 표시
 
 import { useState } from 'react'
-import { Route, Clock, Navigation, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown } from 'lucide-react'
+import { Route, Clock, Navigation, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown, Play } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur, fmtDate } from './routeUtils'
 import DeleteModal from './DeleteModal'
 import type { SavedCourse } from '../../lib/courseStorage'
@@ -13,9 +13,10 @@ interface Props {
   onEdit:          (course: SavedCourse) => void
   onShare:         (course: SavedCourse) => void
   onVideoCreate?:  (course: SavedCourse) => void
+  onDrive?:        (course: SavedCourse) => void
 }
 
-export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCreate }: Props) {
+export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCreate, onDrive }: Props) {
   const label      = cityLabel(course.gpxPoints)
   const hasGpx     = !!course.gpxXml && course.gpxXml.length > 50
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -105,31 +106,37 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
             </p>
           )}
 
-          {/* 스탯 + 영상 만들기 버튼 */}
-          <div className="mt-1.5 flex items-center justify-between">
-            <div className="flex flex-wrap gap-3 text-[11px] font-light text-white/50">
-              <span className="flex items-center gap-1">
-                <Route size={10} strokeWidth={1.5} />{fmtDist(course.distanceKm)}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock size={10} strokeWidth={1.5} />{fmtDur(course.durationMin)}
-              </span>
-              <span className="text-white/30">{fmtDate(course.createdAt)}</span>
-            </div>
+          {/* 스탯 */}
+          <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] font-light text-white/50">
+            <span className="flex items-center gap-1">
+              <Route size={10} strokeWidth={1.5} />{fmtDist(course.distanceKm)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock size={10} strokeWidth={1.5} />{fmtDur(course.durationMin)}
+            </span>
+            <span className="text-white/30">{fmtDate(course.createdAt)}</span>
+          </div>
 
-            {/* ④ 영상 만들기 버튼 (GPX 있을 때만) */}
+          {/* 버튼 행 */}
+          <div className="mt-2 flex items-center justify-end gap-1.5">
+            {/* 영상 만들기 (GPX 있을 때만) */}
             {hasGpx && (
               <button
-                onClick={e => {
-                  e.stopPropagation()
-                  onVideoCreate?.(course)
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-teal-400/30 bg-teal-400/10 px-3 py-1.5 backdrop-blur-sm active:opacity-70 transition-opacity"
+                onClick={e => { e.stopPropagation(); onVideoCreate?.(course) }}
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-black/30 px-3 py-1.5 backdrop-blur-sm active:opacity-70 transition-opacity"
               >
-                <Clapperboard size={11} strokeWidth={2} className="text-teal-400" />
-                <span className="text-[10px] font-bold text-teal-400">영상 만들기</span>
+                <Clapperboard size={11} strokeWidth={2} className="text-white/50" />
+                <span className="text-[10px] font-bold text-white/50">영상</span>
               </button>
             )}
+            {/* 주행하기 */}
+            <button
+              onClick={e => { e.stopPropagation(); onDrive?.(course) }}
+              className="flex items-center gap-1.5 rounded-xl border border-teal-400/30 bg-teal-400/15 px-3 py-1.5 backdrop-blur-sm active:opacity-70 transition-opacity"
+            >
+              <Play size={10} strokeWidth={2.5} className="text-teal-400 fill-teal-400" />
+              <span className="text-[10px] font-bold text-teal-400">주행하기</span>
+            </button>
           </div>
         </div>
       </div>

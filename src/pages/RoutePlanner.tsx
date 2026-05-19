@@ -143,16 +143,18 @@ export default function RoutePlanner() {
       lat: p.lat, lng: p.lng, timestamp: now + i * 1_000,
     }))
     const course: SavedCourse = {
-      id:              crypto.randomUUID(),
-      title:           title.trim(),
-      distanceKm:      parseFloat(dist.toFixed(1)),
-      durationMin:     Math.round((dist / 60) * 60),
-      gpxPoints:       gpxPts,
-      gpxXml:          buildGpxXml(gpxPts),
-      createdAt:       new Date().toISOString(),
-      isShared:        isPublic,
-      communityShared: isPublic,
-      diary:           tip.trim() || undefined,
+      id:               crypto.randomUUID(),
+      title:            title.trim(),
+      distanceKm:       parseFloat(dist.toFixed(1)),
+      durationMin:      Math.round((dist / 60) * 60),
+      gpxPoints:        gpxPts,
+      gpxXml:           buildGpxXml(gpxPts),
+      createdAt:        new Date().toISOString(),
+      isShared:         isPublic,
+      communityShared:  isPublic,
+      diary:            tip.trim() || undefined,
+      // 원본 경유지 저장 → 주행하기 네비 딥링크에 사용
+      plannerWaypoints: points.map(p => ({ lat: p.lat, lng: p.lng })),
     }
     saveCourse(course)
     if (isPublic) {

@@ -15,13 +15,14 @@ export interface SavedCourse {
   gpxXml: string
   createdAt: string
   isShared: boolean
-  coverPhoto?: string      // 대표 사진 (base64 or URL)
-  diary?: string           // 사후 작성 후기
+  coverPhoto?: string       // 대표 사진 (base64 or URL)
+  diary?: string            // 사후 작성 후기
   communityShared?: boolean // 커뮤니티 공유 여부
-  starRating?: number      // 평균 별점 (1–5)
+  starRating?: number       // 평균 별점 (1–5)
   comments?: CourseComment[]
-  startCity?: string       // 리버스 지오코딩 출발 도시
-  endCity?: string         // 리버스 지오코딩 도착 도시
+  startCity?: string        // 리버스 지오코딩 출발 도시
+  endCity?: string          // 리버스 지오코딩 도착 도시
+  plannerWaypoints?: Array<{ lat: number; lng: number }> // 경로 작성 시 원본 경유지 (주행하기용)
 }
 
 const STORAGE_KEY = 'moto_my_courses'
