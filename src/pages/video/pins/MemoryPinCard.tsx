@@ -21,10 +21,10 @@ export default function MemoryPinCard({ pin, onClose, onDelete }: Props) {
       <motion.div
         className="absolute inset-x-4 z-[150]"
         style={{ bottom: '240px' }}    // 하단 컨트롤 위에 표시
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0,  scale: 1    }}
-        exit={{    opacity: 0, y: 20, scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+        initial={{ opacity: 0, y: 72 }}   // 아래에서 끌어올리며 등장
+        animate={{ opacity: 1, y: 0  }}
+        exit={{    opacity: 0, y: 88 }}   // 아래로 내려가며 퇴장
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
         <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0d1321]/90 backdrop-blur-xl shadow-2xl shadow-black/40">
 

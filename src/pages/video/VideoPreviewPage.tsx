@@ -146,9 +146,20 @@ export default function VideoPreviewPage() {
     if (courseId) setPins(loadPins(courseId))
   }, [courseId])
 
-  // 위치 콜백 — 재생 중 근처 핀(200m 이내) 자동 표시
+  // 위치 콜백 — 근처 핀 자동 표시 / 재생 중 멀어지면 자동 닫힘
   const handlePosition = useCallback((lat: number, lng: number) => {
-    if (nearbyPinRef.current) return
+    if (nearbyPinRef.current) {
+      // 재생 중일 때만 자동 닫힘 — 정지 중에는 유지
+      if (!isPausedRef.current) {
+        const dist = haversineM(lat, lng, nearbyPinRef.current.lat, nearbyPinRef.current.lng)
+        if (dist > 280) {   // 280m 이상 멀어지면 → 슬라이드다운으로 자동 닫힘
+          dismissedPinIdsRef.current.add(nearbyPinRef.current.id)
+          nearbyPinRef.current = null
+          setNearbyPin(null)
+        }
+      }
+      return
+    }
     for (const pin of pinsRef.current) {
       if (dismissedPinIdsRef.current.has(pin.id)) continue
       if (haversineM(lat, lng, pin.lat, pin.lng) < 200) {
