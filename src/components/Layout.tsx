@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { CircleDot, Route, Compass, User, Bell, Navigation, Warehouse } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
@@ -10,10 +11,21 @@ const TAB_ITEMS = [
   { path: '/profile',   icon: User,      label: '프로필'    },
 ] as const
 
+const TAB_PATHS = TAB_ITEMS.map(t => t.path)
+const LAST_TAB_KEY = 'moto:lastTab'
+
 export default function Layout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const isMapPage = pathname === '/map'
+
+  // 탭 경로에 있을 때마다 sessionStorage에 저장
+  // → 앱 전환 후 돌아와도 마지막 탭 기억 (탭 닫으면 자동 초기화)
+  useEffect(() => {
+    if (TAB_PATHS.includes(pathname as typeof TAB_PATHS[number])) {
+      sessionStorage.setItem(LAST_TAB_KEY, pathname)
+    }
+  }, [pathname])
 
   return (
     // bg-[var(--bg-app)] — 테마 전환 시 앱 전체 도화지 색 즉시 반영
