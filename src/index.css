@@ -132,13 +132,3 @@ body {
   min-height: 100svh;
 }
 
-/* ── 경로 미리보기 일시정지/재생 아이콘 팝 애니메이션 ─────────────────────── */
-@keyframes iconPopFade {
-  0%   { opacity: 0; transform: scale(0.55); }
-  18%  { opacity: 1; transform: scale(1.08); }
-  32%  { opacity: 1; transform: scale(1);    }
-  100% { opacity: 0; transform: scale(1);    }
-}
-.anim-icon-pop {
-  animation: iconPopFade 0.85s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}

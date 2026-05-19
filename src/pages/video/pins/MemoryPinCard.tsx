@@ -34,15 +34,13 @@ export default function MemoryPinCard({ pin, onClose, onDelete }: Props) {
               <img
                 src={pin.photo}
                 alt="추억 사진"
-                className="h-36 w-full object-cover"
-              />
-              {/* 확대 버튼 */}
-              <button
+                className="h-36 w-full object-cover cursor-pointer active:opacity-80"
                 onClick={() => setFullPhoto(true)}
-                className="absolute right-2 bottom-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 backdrop-blur-sm active:opacity-70"
-              >
-                <ZoomIn size={12} strokeWidth={2} className="text-white" />
-              </button>
+              />
+              {/* 확대 힌트 아이콘 */}
+              <div className="pointer-events-none absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+                <ZoomIn size={11} strokeWidth={2} className="text-white/70" />
+              </div>
             </div>
           )}
 

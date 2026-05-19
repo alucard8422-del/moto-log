@@ -64,11 +64,6 @@ export default function VideoPreviewPage() {
   const seekFnRef      = useRef<((fraction: number) => void) | null>(null)
   const progressBarRef = useRef<HTMLDivElement>(null)
   const isDraggingRef  = useRef(false)
-  // 아이콘 애니메이션 트리거 (숫자가 바뀔 때마다 key 변경 → CSS 재실행)
-  const [iconKey,   setIconKey]   = useState(0)
-  const [iconType,  setIconType]  = useState<'pause' | 'play'>('pause')
-  const iconTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [iconVisible, setIconVisible] = useState(false)
 
   // ── 추억 핀 ──────────────────────────────────────────────────────────────────
   const [pins,      setPins]      = useState<MemoryPin[]>([])
@@ -123,13 +118,7 @@ export default function VideoPreviewPage() {
   // 지도 영역 탭 → 일시정지·재생 토글
   function handleMapTap() {
     if (ended) return
-    const next = !isPaused
-    setIsPaused(next)
-    setIconType(next ? 'pause' : 'play')
-    setIconKey(k => k + 1)
-    clearTimeout(iconTimerRef.current)
-    setIconVisible(true)
-    iconTimerRef.current = setTimeout(() => setIconVisible(false), 900)
+    setIsPaused(prev => !prev)
   }
 
   // ── 지도 롱프레스 → 추억 핀 팝업 ────────────────────────────────────────────
@@ -209,7 +198,6 @@ export default function VideoPreviewPage() {
     setPct(0)
     setEnded(false)
     setIsPaused(false)
-    setIconVisible(false)
     setPreviewKey(k => k + 1)
   }
 
@@ -256,30 +244,6 @@ export default function VideoPreviewPage() {
         onPointerUp={handleMapPointerUp}
         onPointerCancel={handleMapPointerUp}
       />
-
-      {/* 일시정지 / 재생 아이콘 */}
-      {iconVisible && (
-        <div
-          key={iconKey}
-          className="anim-icon-pop pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
-          style={{ bottom: '220px' }}
-        >
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-black/55 backdrop-blur-md ring-1 ring-white/10">
-            {iconType === 'pause' ? (
-              /* ❚❚ 일시정지 */
-              <div className="flex gap-[7px]">
-                <div className="h-8 w-3 rounded-sm bg-white" />
-                <div className="h-8 w-3 rounded-sm bg-white" />
-              </div>
-            ) : (
-              /* ▶ 재생 */
-              <svg viewBox="0 0 24 24" className="ml-1 h-10 w-10 fill-white">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* 상단 헤더 */}
       <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-3 px-4 pt-safe-top pb-3 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
