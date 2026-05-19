@@ -70,18 +70,18 @@ export function cityLabel(pts: SavedCourse['gpxPoints']): string {
 // ── 샘플 데이터 (최초 1회 localStorage 시딩) ──────────────────────────────
 import { YUSONG_SEOUL_POINTS, YUSONG_SEOUL_GPX_XML } from '../../data/sampleGpxData'
 
-export const MOCK_SEED_KEY = 'moto:mock-seeded-v2'   // mock-gpx 코스 추가로 버전 올림
+export const MOCK_SEED_KEY = 'moto:mock-seeded-v3'   // 이화령 실도로 GPX 샘플로 교체
 
 export const MOCK_COURSES: SavedCourse[] = [
-  // ── GPX 포함 샘플 (영상 만들기 기능 시연용) ─────────────────────────────
+  // ── GPX 포함 샘플 (영상 만들기 기능 시연용 — OSRM 실도로 경로) ──────────
   {
-    id: 'mock-gpx', title: '유성구청 → 서울시청 라이딩',
-    distanceKm: 198, durationMin: 195, isShared: false,
+    id: 'mock-gpx', title: '이화령 와인딩 코스',
+    distanceKm: 24, durationMin: 22, isShared: false,
     createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
     gpxXml: YUSONG_SEOUL_GPX_XML,
     gpxPoints: YUSONG_SEOUL_POINTS,
     coverPhoto: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=70',
-    diary: '일반국도만 타고 서울 입성! 경부고속도로 없이도 충분히 멋진 코스.',
+    diary: '충북 괴산에서 경북 문경까지. 이화령 고개를 넘는 국내 대표 바이크 와인딩 성지.',
   },
   {
     id: 'mock-1', title: '서울 → 강릉 동해안 투어',

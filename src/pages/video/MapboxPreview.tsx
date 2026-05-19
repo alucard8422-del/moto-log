@@ -1,28 +1,25 @@
 // MapboxPreview.tsx — GPX 경로 미리보기 전용 맵 (녹화 없음)
-// 영상 제작 전에 실제 경로가 올바른지 빠르게 확인하는 용도
-// MapboxRecorder와 동일한 애니메이션이지만 MediaRecorder를 사용하지 않음
+// map.setStyle() 로 스타일만 교체 → 재생 위치·경로·속도 그대로 유지
 
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
+import { loadBikeImage } from '../../lib/bikeUtils'
 
 mapboxgl.accessToken =
   'pk.eyJ1IjoiYmliaW1iYmFwIiwiYSI6ImNtcGFydHg3aDEyZzcycnB3OGxwZDNnaGoifQ.fT7vDiAmteI35w1qlZz3jQ'
 
-// 기준 재생 배율 (speed=1 일 때)
-// 400 = 1초 ≈ 실제 6.7분 → 3시간 라이딩을 약 27초에 확인
-// speed 배율로 조절: 0.1× → 270초, 4× → 약 7초
-const BASE_PREVIEW_RATE = 400
+// ── 기준 재생 배율 ────────────────────────────────────────────────────────────
+// 15 = speed=1 일 때 실제 라이딩 시간의 15배속
+const BASE_PREVIEW_RATE = 15
 
-const MIN_PITCH   = 70
-const FPV_ZOOM    = 17
-const BIRD_ZOOM   = 14
-const BRG_LERP    = 0.08
-const SPLINE_SEGS = 12
+const BRG_LERP    = 0.12   // 방위각 LERP (높을수록 빠르게 추적)
+const SPLINE_SEGS = 20     // 세그먼트당 보간 포인트 수 (높을수록 곡선이 부드러움)
+const SMOOTH_R    = 10     // 방위각 가우시안 스무딩 반경
 
-// ── 수학 헬퍼 ──────────────────────────────────────────────────────────────
+// ── 수학 헬퍼 ────────────────────────────────────────────────────────────────
 
 function lerpBearing(a: number, b: number, t: number): number {
   let d = b - a
@@ -40,13 +37,36 @@ function calcBearing(lng1: number, lat1: number, lng2: number, lat2: number): nu
   return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360
 }
 
+function distM(lng1: number, lat1: number, lng2: number, lat2: number): number {
+  const R    = 6_371_000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a    = Math.sin(dLat/2)**2
+            + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number): number {
   const t2 = t * t, t3 = t2 * t
   return 0.5 * (
-    2 * p1 + (-p0 + p2) * t +
-    (2*p0 - 5*p1 + 4*p2 - p3) * t2 +
-    (-p0 + 3*p1 - 3*p2 + p3) * t3
+    2*p1 + (-p0 + p2)*t + (2*p0 - 5*p1 + 4*p2 - p3)*t2 + (-p0 + 3*p1 - 3*p2 + p3)*t3
   )
+}
+
+// 방위각 배열에 가우시안 스무딩 적용 → 급격한 방향 전환을 부드럽게
+function smoothBearings(brgs: number[], radius: number): number[] {
+  return brgs.map((_, i) => {
+    let bx = 0, by = 0, wSum = 0
+    for (let k = -radius; k <= radius; k++) {
+      const j  = Math.max(0, Math.min(brgs.length - 1, i + k))
+      const wk = Math.exp(-0.5 * (k / (radius * 0.5)) ** 2)
+      const r  = brgs[j] * Math.PI / 180
+      bx += Math.cos(r) * wk
+      by += Math.sin(r) * wk
+      wSum += wk
+    }
+    return ((Math.atan2(by / wSum, bx / wSum) * 180 / Math.PI) + 360) % 360
+  })
 }
 
 type Pt = { lat: number; lng: number; timestamp: number }
@@ -62,8 +82,8 @@ function splinePoints(pts: Pt[]): Pt[] {
     for (let s = 0; s < SPLINE_SEGS; s++) {
       const t = s / SPLINE_SEGS
       result.push({
-        lng: catmullRom(p0.lng, p1.lng, p2.lng, p3.lng, t),
-        lat: catmullRom(p0.lat, p1.lat, p2.lat, p3.lat, t),
+        lng:       catmullRom(p0.lng, p1.lng, p2.lng, p3.lng, t),
+        lat:       catmullRom(p0.lat, p1.lat, p2.lat, p3.lat, t),
         timestamp: p1.timestamp + (p2.timestamp - p1.timestamp) * t,
       })
     }
@@ -78,9 +98,10 @@ function buildSampler(rawPts: Pt[]) {
   const tN        = pts[pts.length - 1].timestamp
   const journeyMs = Math.max(tN - t0, 1)
 
-  const segBearings = pts.slice(0, -1).map((p, i) =>
+  const rawBearings = pts.slice(0, -1).map((p, i) =>
     calcBearing(p.lng, p.lat, pts[i + 1].lng, pts[i + 1].lat)
   )
+  const segBearings = smoothBearings(rawBearings, SMOOTH_R)
 
   function posAt(progress: number): [number, number] {
     const rideTime = t0 + Math.max(0, Math.min(1, progress)) * journeyMs
@@ -102,13 +123,35 @@ function buildSampler(rawPts: Pt[]) {
     for (let i = 1; i < pts.length; i++) {
       if (pts[i].timestamp >= rideTime) {
         const cur   = segBearings[i - 1]
-        const next  = segBearings[i] ?? cur
+        const next  = segBearings[Math.min(segBearings.length - 1, i)]
         const segDt = pts[i].timestamp - pts[i - 1].timestamp
         const segT  = segDt > 0 ? (rideTime - pts[i - 1].timestamp) / segDt : 0
-        return lerpBearing(cur, next, Math.max(0, segT * 2 - 1))
+        return lerpBearing(cur, next, segT)
       }
     }
     return segBearings[segBearings.length - 1] ?? 0
+  }
+
+  function speedAt(progress: number): number {
+    const rideTime = t0 + Math.max(0, Math.min(0.9999, progress)) * journeyMs
+    let centerIdx = 1
+    for (let i = 1; i < rawPts.length; i++) {
+      if (rawPts[i].timestamp >= rideTime) { centerIdx = i; break }
+    }
+    const WINDOW = 3
+    const start  = Math.max(1, centerIdx - WINDOW)
+    const end    = Math.min(rawPts.length - 1, centerIdx + WINDOW)
+    let totalM = 0, totalMs = 0
+    for (let i = start; i <= end; i++) {
+      const dt = rawPts[i].timestamp - rawPts[i - 1].timestamp
+      if (dt <= 0) continue
+      const m = distM(rawPts[i - 1].lng, rawPts[i - 1].lat, rawPts[i].lng, rawPts[i].lat)
+      if (m < 0.1) continue
+      totalM  += m
+      totalMs += dt
+    }
+    if (totalMs <= 0) return 0
+    return (totalM / totalMs) * 3600
   }
 
   function trailAt(progress: number): [number, number][] {
@@ -125,39 +168,10 @@ function buildSampler(rawPts: Pt[]) {
     return coords
   }
 
-  return { posAt, bearingAt, trailAt, journeyMs }
+  return { posAt, bearingAt, speedAt, trailAt, journeyMs }
 }
 
-// ── 바이크 심볼 이미지 ─────────────────────────────────────────────────────
-
-const BIKE_SVG = `<svg viewBox="0 0 32 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="10" y="0"  width="12" height="18" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
-  <rect x="12" y="2"  width="8"  height="14" rx="4" fill="#334155"/>
-  <rect x="12" y="16" width="3.5" height="7" rx="1.5" fill="#475569"/>
-  <rect x="16.5" y="16" width="3.5" height="7" rx="1.5" fill="#475569"/>
-  <rect x="4"  y="20" width="24" height="3.5" rx="1.75" fill="#475569"/>
-  <rect x="10" y="21" width="12" height="14" rx="4" fill="#2dd4bf"/>
-  <rect x="11" y="22" width="10" height="8"  rx="3"  fill="#0d9488"/>
-  <rect x="11" y="30" width="10" height="6"  rx="2"  fill="#0f766e"/>
-  <rect x="10" y="34" width="12" height="10" rx="3"  fill="#134e4a"/>
-  <rect x="4"  y="28" width="5"  height="9"  rx="2.5" fill="#64748b" opacity="0.85"/>
-  <rect x="23" y="28" width="5"  height="9"  rx="2.5" fill="#64748b" opacity="0.85"/>
-  <rect x="11" y="42" width="10" height="4"  rx="2"  fill="#0f766e"/>
-  <rect x="10" y="44" width="12" height="18" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
-  <rect x="12" y="46" width="8"  height="14" rx="4" fill="#334155"/>
-  <ellipse cx="16" cy="4" rx="4"   ry="2.5" fill="white" opacity="0.9"/>
-  <ellipse cx="16" cy="3" rx="2.5" ry="1.5" fill="white"/>
-  <ellipse cx="16" cy="3" rx="7"   ry="4"   fill="white" opacity="0.18"/>
-</svg>`
-
-function loadBikeImage(): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image(64, 112)
-    img.onload  = () => resolve(img)
-    img.onerror = reject
-    img.src = 'data:image/svg+xml,' + encodeURIComponent(BIKE_SVG)
-  })
-}
+// ── 바이크 심볼 GeoJSON ───────────────────────────────────────────────────────
 
 function bikeGeoJSON(lng: number, lat: number, bearing: number): GeoJSON.Feature {
   return {
@@ -167,24 +181,43 @@ function bikeGeoJSON(lng: number, lat: number, bearing: number): GeoJSON.Feature
   }
 }
 
-// ── 컴포넌트 ───────────────────────────────────────────────────────────────
+// ── 컴포넌트 ─────────────────────────────────────────────────────────────────
 
 interface Props {
-  points:     GpxPoint[] | Array<{ lat: number; lng: number; timestamp: number }>
-  view:       ViewOption
-  onProgress: (pct: number) => void
-  onEnd?:     () => void
+  points:       GpxPoint[] | Array<{ lat: number; lng: number; timestamp: number }>
+  view:         ViewOption
+  speed:        number
+  isPaused:     boolean
+  mapStyle?:    string   // Mapbox 스타일 URL (기본: satellite-streets-v12)
+  onProgress:   (pct: number) => void
+  onSpeed?:     (kmh: number) => void
+  onEnd?:       () => void
+  onSeekReady?: (seekFn: (fraction: number) => void) => void  // progress bar 탐색용
 }
 
-export default function MapboxPreview({ points, view, onProgress, onEnd }: Props) {
+const DEFAULT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12'
+
+export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef       = useRef<mapboxgl.Map | null>(null)
+  const rafRef       = useRef(0)
   const activeRef    = useRef(false)
 
-  const isBird   = view.id === 'bird'
-  const camPitch = isBird ? Math.max(view.pitch, 42) : Math.max(view.pitch, MIN_PITCH)
-  const camZoom  = isBird ? BIRD_ZOOM : FPV_ZOOM
+  const speedRef    = useRef(speed)
+  const viewRef     = useRef(view)
+  const isPausedRef = useRef(isPaused)
 
+  useEffect(() => { speedRef.current    = speed    }, [speed])
+  useEffect(() => { viewRef.current     = view     }, [view])
+  useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
+
+  // ── 스타일 변경 시 레이어를 재등록하는 함수 (ref 로 공유) ────────────────────
+  // addLayersRef: (isDark: boolean) => Promise<void>
+  // accRideMsRef: 스타일 교체 후 경로/바이크 위치를 즉시 복원하기 위한 진행 시간
+  const addLayersRef = useRef<((isDark: boolean) => Promise<void>) | null>(null)
+  const accRideMsRef = useRef(0)
+
+  // ── 맵 초기화 (최초 1회) ────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
 
@@ -196,12 +229,56 @@ export default function MapboxPreview({ points, view, onProgress, onEnd }: Props
       pts[1]?.lat ?? pts[0].lat,
     )
 
+    // ── 커스텀 줌 (window 에 달아야 오버레이 div 위에서도 동작) ───────────────
+    let currentZoom    = view.zoom
+    let viewZoomTarget = view.zoom
+    const ZOOM_MIN     = 8
+    const ZOOM_MAX     = 22   // Mapbox GL 최대 지원 줌 (22 = 벡터 타일 한계)
+
+    const onWheel = (e: WheelEvent) => {
+      const factor = e.deltaMode === 1 ? 30 : e.deltaMode === 2 ? 300 : 1
+      const delta  = -(e.deltaY * factor) / 500
+      currentZoom    = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, currentZoom + delta))
+      viewZoomTarget = currentZoom
+    }
+    window.addEventListener('wheel', onWheel, { passive: true })
+
+    let pinchPrevDist = 0
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinchPrevDist = Math.hypot(
+          e.touches[1].clientX - e.touches[0].clientX,
+          e.touches[1].clientY - e.touches[0].clientY,
+        )
+      }
+    }
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length < 2) return
+      const dist = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY,
+      )
+      if (pinchPrevDist > 0) {
+        currentZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX,
+          currentZoom + Math.log2(dist / pinchPrevDist)
+        ))
+        viewZoomTarget = currentZoom
+      }
+      pinchPrevDist = dist
+    }
+    const onTouchEnd = () => { pinchPrevDist = 0 }
+    window.addEventListener('touchstart',  onTouchStart, { passive: true })
+    window.addEventListener('touchmove',   onTouchMove,  { passive: true })
+    window.addEventListener('touchend',    onTouchEnd,   { passive: true })
+    window.addEventListener('touchcancel', onTouchEnd,   { passive: true })
+
+    // ── 맵 생성 ──────────────────────────────────────────────────────────────
     const map = new mapboxgl.Map({
       container:   containerRef.current,
-      style:       'mapbox://styles/mapbox/dark-v11',
+      style:       mapStyle,
       center:      [first.lng, first.lat],
-      zoom:        camZoom,
-      pitch:       camPitch,
+      zoom:        view.zoom,
+      pitch:       view.pitch,
       bearing:     initBrg,
       antialias:   true,
       interactive: false,
@@ -211,144 +288,246 @@ export default function MapboxPreview({ points, view, onProgress, onEnd }: Props
     map.on('load', async () => {
       const coords  = pts.map(p => [p.lng, p.lat]) as [number, number][]
       const sampler = buildSampler(pts)
-      let camBrg    = sampler.bearingAt(0)
 
-      // 3D 지형
-      map.addSource('mapbox-dem', {
-        type: 'raster-dem',
-        url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-        tileSize: 512, maxzoom: 14,
-      })
-      try { map.setTerrain({ source: 'mapbox-dem', exaggeration: 0.5 }) } catch {}
-
-      // 안개
-      try {
-        map.setFog({
-          color: 'rgb(12, 18, 40)', 'high-color': 'rgb(6, 10, 28)',
-          'horizon-blend': 0.04, range: [0.8, 10],
+      // ── 레이어 등록 함수 (초기 + setStyle 후 재호출용) ──────────────────────
+      // 스타일 교체 시 Mapbox가 모든 소스/레이어를 제거하므로 전부 새로 추가해야 함
+      async function addLayers(isDark: boolean) {
+        // 3D 지형 — exaggeration 2.5 → 고도차가 있는 지역에서 산·언덕이 확실히 솟음
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512, maxzoom: 14,
         })
-      } catch {}
+        try { map.setTerrain({ source: 'mapbox-dem', exaggeration: 2.5 }) } catch {}
 
-      // 3D 건물
-      map.addLayer({
-        id: '3d-buildings', source: 'composite', 'source-layer': 'building',
-        type: 'fill-extrusion', minzoom: 12,
-        filter: ['==', 'extrude', 'true'],
-        paint: {
-          'fill-extrusion-color':   '#1a2335',
-          'fill-extrusion-height':  ['get', 'height'],
-          'fill-extrusion-base':    ['get', 'min_height'],
-          'fill-extrusion-opacity': 0.75,
-        },
-      })
+        // 안개 완전 제거 — 스타일 내장 안개도 초기화
+        try {
+          ;(map as unknown as { setFog: (v: null) => void }).setFog(null)
+        } catch {}
 
-      // 전체 경로 가이드
-      map.addSource('route-full', {
-        type: 'geojson',
-        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } },
-      })
-      map.addLayer({
-        id: 'route-ghost', type: 'line', source: 'route-full',
-        layout: { 'line-cap': 'butt', 'line-join': 'round' },
-        paint: { 'line-color': '#ffffff', 'line-width': 1.5, 'line-opacity': 0.07, 'line-dasharray': [2, 5] },
-      })
+        // 하늘·대기 효과 — 수평선 깊이감 부여 (안개와 다름: 지상 가시거리 영향 없음)
+        try {
+          map.addLayer({
+            id: 'sky',
+            type: 'sky',
+            paint: {
+              'sky-type':                       'atmosphere',
+              'sky-atmosphere-sun':             [0.0, 45.0],
+              'sky-atmosphere-sun-intensity':   5,
+              'sky-atmosphere-color':           'rgba(160, 210, 255, 1)',
+              'sky-atmosphere-halo-color':      'rgba(255, 255, 255, 0.4)',
+              'sky-atmosphere-space-color':     'rgba(100, 150, 220, 1)',
+            },
+          } as mapboxgl.AnyLayer)
+        } catch {}
 
-      // 지나온 경로
-      map.addSource('route-done', {
-        type: 'geojson',
-        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [coords[0], coords[0]] } },
-      })
-      map.addLayer({
-        id: 'route-done-glow', type: 'line', source: 'route-done',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#2dd4bf', 'line-width': 22, 'line-opacity': 0.13, 'line-blur': 10 },
-      })
-      map.addLayer({
-        id: 'route-done-outline', type: 'line', source: 'route-done',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#0f766e', 'line-width': 6.5, 'line-opacity': 0.55 },
-      })
-      map.addLayer({
-        id: 'route-done-main', type: 'line', source: 'route-done',
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#2dd4bf', 'line-width': 3.5, 'line-opacity': 1.0 },
-      })
+        // 음영지형 (hillshade) — 위성사진 위에 DEM 기반 빛/그림자를 반투명으로 덧씌움
+        // 평야처럼 고도차가 적은 지역에서도 미세한 기복이 시각적으로 드러남
+        try {
+          map.addLayer({
+            id: 'terrain-hillshade',
+            type: 'hillshade',
+            source: 'mapbox-dem',
+            paint: {
+              'hillshade-shadow-color':          '#3b3520',
+              'hillshade-highlight-color':       '#ffffff',
+              'hillshade-illumination-direction': 335,
+              'hillshade-exaggeration':          0.45,
+            },
+          })
+        } catch {}
 
-      // 바이크 심볼 레이어
-      try {
-        const bikeImg = await loadBikeImage()
+        // 3D 건물
+        try {
+          map.addLayer({
+            id: '3d-buildings', source: 'composite', 'source-layer': 'building',
+            type: 'fill-extrusion', minzoom: 13,
+            filter: ['==', 'extrude', 'true'],
+            paint: {
+              'fill-extrusion-color':   isDark ? '#1a2335' : '#c8bfb0',
+              'fill-extrusion-height':  ['get', 'height'],
+              'fill-extrusion-base':    ['get', 'min_height'],
+              'fill-extrusion-opacity': isDark ? 0.75 : 0.45,
+            },
+          })
+        } catch {}
+
+        // 현재 진행 위치 계산 → 스타일 교체 후 즉시 올바른 위치로 표시
+        const progress             = Math.min(accRideMsRef.current / sampler.journeyMs, 1)
+        const [curLng, curLat]     = sampler.posAt(progress)
+        const curBrg               = sampler.bearingAt(progress)
+        const trail                = sampler.trailAt(progress)
+
+        // 전체 경로 (점선 가이드)
+        map.addSource('route-full', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } },
+        })
+        map.addLayer({
+          id: 'route-ghost', type: 'line', source: 'route-full',
+          layout: { 'line-cap': 'butt', 'line-join': 'round' },
+          paint: { 'line-color': '#ffffff', 'line-width': 1.5, 'line-opacity': 0.07, 'line-dasharray': [2, 5] },
+        })
+
+        // 지나온 경로 (현재 진행률로 즉시 복원)
+        map.addSource('route-done', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: trail } },
+        })
+        map.addLayer({
+          id: 'route-done-glow', type: 'line', source: 'route-done',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#2dd4bf', 'line-width': 14, 'line-opacity': 0.15, 'line-blur': 3 },
+        })
+        map.addLayer({
+          id: 'route-done-outline', type: 'line', source: 'route-done',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#0f766e', 'line-width': 6.5, 'line-opacity': 0.55 },
+        })
+        map.addLayer({
+          id: 'route-done-main', type: 'line', source: 'route-done',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#2dd4bf', 'line-width': 3.5, 'line-opacity': 1.0 },
+        })
+
+        // 바이크 아이콘 로드 후 소스·레이어 등록 (await 전에 route 레이어 먼저 추가 완료)
+        let bikeImg: HTMLImageElement | ImageData
+        try {
+          bikeImg = await loadBikeImage()
+        } catch {
+          // HTMLCanvasElement는 addImage 미지원 → ImageData로 변환
+          const canvas = document.createElement('canvas')
+          canvas.width = canvas.height = 32
+          const ctx = canvas.getContext('2d')!
+          ctx.beginPath(); ctx.arc(16, 16, 12, 0, Math.PI * 2)
+          ctx.fillStyle = '#2dd4bf'; ctx.fill()
+          bikeImg = ctx.getImageData(0, 0, 32, 32)
+        }
+
+        // await 사이에 컴포넌트가 언마운트됐을 경우 대비
+        if (!mapRef.current) return
+
         map.addImage('bike-icon', bikeImg, { pixelRatio: 2 })
-      } catch {
-        const canvas = document.createElement('canvas')
-        canvas.width = canvas.height = 32
-        const ctx = canvas.getContext('2d')!
-        ctx.beginPath(); ctx.arc(16, 16, 12, 0, Math.PI * 2)
-        ctx.fillStyle = '#2dd4bf'; ctx.fill()
-        map.addImage('bike-icon', canvas)
+        map.addSource('bike-pos', {
+          type: 'geojson', data: bikeGeoJSON(curLng, curLat, curBrg),
+        })
+        map.addLayer({
+          id: 'bike-layer', type: 'symbol', source: 'bike-pos',
+          layout: {
+            'icon-image':              'bike-icon',
+            'icon-size':               1,
+            'icon-rotate':             ['get', 'bearing'],
+            'icon-rotation-alignment': 'map',
+            'icon-pitch-alignment':    'map',
+            'icon-allow-overlap':      true,
+            'icon-ignore-placement':   true,
+          },
+        })
       }
 
-      map.addSource('bike-pos', {
-        type: 'geojson',
-        data: bikeGeoJSON(first.lng, first.lat, 0),
-      })
-      map.addLayer({
-        id: 'bike-layer', type: 'symbol', source: 'bike-pos',
-        layout: {
-          'icon-image':              'bike-icon',
-          'icon-size':               1,
-          'icon-rotate':             ['get', 'bearing'],
-          'icon-rotation-alignment': 'map',
-          'icon-pitch-alignment':    'map',
-          'icon-allow-overlap':      true,
-          'icon-ignore-placement':   true,
-        },
-      })
+      // ── 애니메이션 상태 — seekFn 과 tick 이 같은 closure 를 공유 ──────────
+      let camPitch    = view.pitch
+      let camBrg      = sampler.bearingAt(0)
+      let orbitBrg    = camBrg
+      let lastViewId  = view.id
+      let smoothedKmh = 0
+      let hasEnded    = false   // onEnd 는 1회만 호출
 
-      // 렌더 루프 시작
-      let started    = false
-      let startTs    = 0
+      // 탐색 함수 — progress bar 포인터 이벤트에서 호출됨
+      // fraction: 0~1 (0 = 시작, 1 = 끝)
+      const seekFn = (fraction: number) => {
+        const clamped = Math.max(0, Math.min(1, fraction))
+        accRideMsRef.current = clamped * sampler.journeyMs
+        // 카메라 방위각을 탐색 위치로 즉시 스냅
+        camBrg      = sampler.bearingAt(clamped)
+        orbitBrg    = camBrg
+        smoothedKmh = 0   // 속도 표시 리셋
+        if (clamped < 1) hasEnded = false   // 재생 재개 허용
+      }
+      onSeekReady?.(seekFn)
+
+      // ref 에 저장 → 스타일 교체 useEffect 에서 재호출
+      addLayersRef.current = addLayers
+
+      const isDarkInit = mapStyle.includes('dark-v11')
+      await addLayers(isDarkInit)
+
+      // ── 렌더 루프 ────────────────────────────────────────────────────────
+      let started = false
+      let lastTs  = 0
 
       const startAnim = () => {
         if (started) return
-        started         = true
+        started = true
         activeRef.current = true
-        startTs         = performance.now()
+        lastTs  = performance.now()
 
-        const tick = () => {
+        const tick = (now: number) => {
           if (!activeRef.current) return
 
-          const elapsed  = performance.now() - startTs
-          const rideMs   = elapsed * PREVIEW_RATE
-          const progress = Math.min(rideMs / sampler.journeyMs, 1)
+          const dt = lastTs === 0 ? 0 : now - lastTs
+          lastTs   = now
 
+          if (!isPausedRef.current) {
+            accRideMsRef.current += dt * BASE_PREVIEW_RATE * speedRef.current
+          }
+
+          const progress = Math.min(accRideMsRef.current / sampler.journeyMs, 1)
           onProgress(Math.round(progress * 100))
+
+          // 종료 감지 (1회만) — tick 은 seekFn 을 위해 계속 실행
+          if (progress >= 1 && !hasEnded) {
+            hasEnded = true
+            onEnd?.()
+          }
+
+          const rawKmh = sampler.speedAt(progress)
+          smoothedKmh  = smoothedKmh + (rawKmh - smoothedKmh) * 0.08
+          onSpeed?.(Math.max(0, smoothedKmh))
 
           const [tLng, tLat] = sampler.posAt(progress)
           const tBrg         = sampler.bearingAt(progress)
+          const v            = viewRef.current
 
-          camBrg = lerpBearing(camBrg, tBrg, BRG_LERP)
+          let targetBrg: number
+          switch (v.animStyle) {
+            case 'side':  targetBrg = tBrg + 90;  break
+            case 'front': targetBrg = tBrg + 180; break
+            case 'orbit':
+              orbitBrg += 0.3
+              targetBrg  = orbitBrg
+              break
+            case 'sweep': targetBrg = tBrg + Math.sin(progress * Math.PI * 5) * 25; break
+            case 'arc':   targetBrg = tBrg + Math.sin(progress * Math.PI * 1.5) * 50; break
+            default:      targetBrg = tBrg
+          }
 
-          ;(map.getSource('route-done') as mapboxgl.GeoJSONSource)?.setData({
+          camBrg   = v.animStyle === 'orbit'
+            ? orbitBrg
+            : lerpBearing(camBrg, targetBrg, BRG_LERP)
+          camPitch = camPitch + (v.pitch - camPitch) * 0.06
+
+          if (v.id !== lastViewId) {
+            lastViewId     = v.id
+            viewZoomTarget = v.zoom
+          }
+          currentZoom += (viewZoomTarget - currentZoom) * 0.04
+
+          // 스타일 교체 중에는 소스가 일시적으로 없을 수 있음 → ?. 로 안전하게 처리
+          ;(map.getSource('route-done') as mapboxgl.GeoJSONSource | undefined)?.setData({
             type: 'Feature', properties: {},
             geometry: { type: 'LineString', coordinates: sampler.trailAt(progress) },
           })
-          ;(map.getSource('bike-pos') as mapboxgl.GeoJSONSource)?.setData(
+          ;(map.getSource('bike-pos') as mapboxgl.GeoJSONSource | undefined)?.setData(
             bikeGeoJSON(tLng, tLat, tBrg)
           )
 
-          map.jumpTo({ center: [tLng, tLat], bearing: camBrg, pitch: camPitch, zoom: camZoom })
+          map.jumpTo({ center: [tLng, tLat], bearing: camBrg, pitch: camPitch, zoom: currentZoom })
 
-          if (progress < 1) {
-            map.triggerRepaint()
-          } else {
-            activeRef.current = false
-            map.off('render', tick)
-            onEnd?.()
-          }
+          // seekFn 을 위해 종료 이후에도 루프 유지 (isPaused 중에도 카메라 계속 업데이트)
+          rafRef.current = requestAnimationFrame(tick)
         }
 
-        map.on('render', tick)
-        map.triggerRepaint()
+        rafRef.current = requestAnimationFrame(tick)
       }
 
       map.once('idle', startAnim)
@@ -357,10 +536,32 @@ export default function MapboxPreview({ points, view, onProgress, onEnd }: Props
 
     return () => {
       activeRef.current = false
+      cancelAnimationFrame(rafRef.current)
+      window.removeEventListener('wheel',       onWheel)
+      window.removeEventListener('touchstart',  onTouchStart)
+      window.removeEventListener('touchmove',   onTouchMove)
+      window.removeEventListener('touchend',    onTouchEnd)
+      window.removeEventListener('touchcancel', onTouchEnd)
       map.remove()
-      mapRef.current = null
+      mapRef.current    = null
+      addLayersRef.current = null
     }
   }, []) // eslint-disable-line
+
+  // ── 스타일 변경 — 재생 위치·경로 유지, 지도 테마만 교체 ────────────────────
+  // map.setStyle() 은 Mapbox 로드 카운트를 소모하지 않음 (무료 할당량 영향 없음)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !addLayersRef.current) return   // 맵 미초기화 시 무시
+
+    const isDark = mapStyle.includes('dark-v11')
+    map.setStyle(mapStyle)
+
+    // style.load 이벤트 = 새 스타일 타일 로드 완료 → 소스·레이어 재등록
+    map.once('style.load', () => {
+      addLayersRef.current!(isDark)
+    })
+  }, [mapStyle]) // eslint-disable-line
 
   return (
     <div ref={containerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />

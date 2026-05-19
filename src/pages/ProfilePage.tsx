@@ -10,7 +10,7 @@ import NaviSettingsCard               from './profile/NaviSettingsCard'
 import SavedTab                       from './profile/SavedTab'
 
 // ── 공용 컴포넌트·서비스 ──────────────────────────────────────────────────
-import BadgeAchievementModal, { checkAndUnlockNaviBadge } from '../components/BadgeAchievementModal'
+import BadgeAchievementModal from '../components/BadgeAchievementModal'
 import GarageEditModal, { type GarageData } from '../components/GarageEditModal'
 import FuelLogTab                     from '../components/FuelLogTab'
 import FuelConfirmPopup               from '../components/FuelConfirmPopup'

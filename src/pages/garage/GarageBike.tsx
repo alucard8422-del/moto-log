@@ -65,8 +65,8 @@ export default function GarageBike() {
       </mesh>
 
       {/* ── 머플러 ── */}
-      <mesh position={[-0.3, 0.28, 0.2]} rotation={[0, 0.1, 0]} castShadow>
-        <cylinderGeometry args={[0.04, 0.055, 0.7, 12]} rotation={[0, 0, Math.PI / 2]} />
+      <mesh position={[-0.3, 0.28, 0.2]} rotation={[0, 0.1, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.04, 0.055, 0.7, 12]} />
         <meshStandardMaterial color="#64748B" metalness={0.85} roughness={0.15} />
       </mesh>
 

@@ -88,6 +88,14 @@ export default function GaragePage() {
             </p>
             <p className="text-sm font-bold text-white">{currentBike.name}</p>
             <p className="mt-0.5 text-[11px] font-light text-white/35">{currentBike.flavor}</p>
+            {/* 맵 아이콘 색상 미리보기 */}
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <div
+                className="h-2.5 w-2.5 rounded-full ring-1 ring-white/10"
+                style={{ backgroundColor: currentBike.mapColor }}
+              />
+              <span className="text-[10px] font-light text-white/25">맵 아이콘 색상</span>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 rounded-2xl border border-teal-400/20 bg-teal-400/5 px-3 py-2">
             <Zap size={12} strokeWidth={1.5} className="text-teal-400" />

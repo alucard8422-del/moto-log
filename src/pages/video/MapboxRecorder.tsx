@@ -24,6 +24,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
+import { loadBikeImage } from '../../lib/bikeUtils'
 
 mapboxgl.accessToken =
   'pk.eyJ1IjoiYmliaW1iYmFwIiwiYSI6ImNtcGFydHg3aDEyZzcycnB3OGxwZDNnaGoifQ.fT7vDiAmteI35w1qlZz3jQ'
@@ -44,9 +45,6 @@ mapboxgl.accessToken =
  */
 const PLAYBACK_RATE = 150
 
-const MIN_PITCH = 70   // 모든 뷰의 최소 카메라 기울기(°)
-const FPV_ZOOM  = 17   // FPV·드론 뷰 기본 줌
-const BIRD_ZOOM = 14   // 버드뷰 줌
 
 /**
  * 배링(방위) 전환 부드러움 (0~1)
@@ -199,35 +197,8 @@ function buildSampler(rawPts: Pt[]) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  ④ 바이크 GL 심볼 이미지 (canvas.captureStream 에 포착됨)
 //    HTML Marker는 DOM 오버레이라 캔버스에 안 잡힘 → 반드시 addImage 사용
+//    차고에서 업그레이드된 바이크 색상이 자동으로 반영됩니다 (bikeUtils.ts)
 // ═══════════════════════════════════════════════════════════════════════════
-const BIKE_SVG = `<svg viewBox="0 0 32 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="10" y="0"  width="12" height="18" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
-  <rect x="12" y="2"  width="8"  height="14" rx="4" fill="#334155"/>
-  <rect x="12" y="16" width="3.5" height="7" rx="1.5" fill="#475569"/>
-  <rect x="16.5" y="16" width="3.5" height="7" rx="1.5" fill="#475569"/>
-  <rect x="4"  y="20" width="24" height="3.5" rx="1.75" fill="#475569"/>
-  <rect x="10" y="21" width="12" height="14" rx="4" fill="#2dd4bf"/>
-  <rect x="11" y="22" width="10" height="8"  rx="3"  fill="#0d9488"/>
-  <rect x="11" y="30" width="10" height="6"  rx="2"  fill="#0f766e"/>
-  <rect x="10" y="34" width="12" height="10" rx="3"  fill="#134e4a"/>
-  <rect x="4"  y="28" width="5"  height="9"  rx="2.5" fill="#64748b" opacity="0.85"/>
-  <rect x="23" y="28" width="5"  height="9"  rx="2.5" fill="#64748b" opacity="0.85"/>
-  <rect x="11" y="42" width="10" height="4"  rx="2"  fill="#0f766e"/>
-  <rect x="10" y="44" width="12" height="18" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
-  <rect x="12" y="46" width="8"  height="14" rx="4" fill="#334155"/>
-  <ellipse cx="16" cy="4" rx="4"   ry="2.5" fill="white" opacity="0.9"/>
-  <ellipse cx="16" cy="3" rx="2.5" ry="1.5" fill="white"/>
-  <ellipse cx="16" cy="3" rx="7"   ry="4"   fill="white" opacity="0.18"/>
-</svg>`
-
-function loadBikeImage(): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image(64, 112)   // 2× retina
-    img.onload  = () => resolve(img)
-    img.onerror = reject
-    img.src = 'data:image/svg+xml,' + encodeURIComponent(BIKE_SVG)
-  })
-}
 
 /** GeoJSON Point feature (바이크 위치 + 방위각) */
 function bikeGeoJSON(lng: number, lat: number, bearing: number): GeoJSON.Feature {
@@ -259,9 +230,9 @@ export default function MapboxRecorder({ points, view, onProgress, onComplete }:
   const camRef       = useRef<CamState>({ brg: 0 })
   const activeRef    = useRef(false)   // render loop 활성 여부
 
-  const isBird   = view.id === 'bird'
-  const camPitch = isBird ? Math.max(view.pitch, 42) : Math.max(view.pitch, MIN_PITCH)
-  const camZoom  = isBird ? BIRD_ZOOM : FPV_ZOOM
+  // 뷰마다 직접 지정된 pitch/zoom 사용 (고정 상수로 override 하지 않음)
+  const camPitch = view.pitch
+  const camZoom  = view.zoom
 
   const startRecording = useCallback(() => {
     const map = mapRef.current
@@ -309,18 +280,18 @@ export default function MapboxRecorder({ points, view, onProgress, onComplete }:
       const tBrg         = sampler.bearingAt(progress)
 
       // animStyle별 배링 오프셋
-      let targetBrg: number
-      switch (view.animStyle) {
-        case 'sweep':
-          targetBrg = tBrg + Math.sin(progress * Math.PI * 5) * 25; break
-        case 'arc':
-          targetBrg = tBrg + Math.sin(progress * Math.PI * 1.5) * 50; break
-        default:
-          targetBrg = tBrg
-      }
-
       // Bearing만 LERP (위치는 즉시 반영 → 바이크 항상 화면 중앙)
       const cam = camRef.current
+
+      let targetBrg: number
+      switch (view.animStyle) {
+        case 'side':   targetBrg = tBrg + 90;  break
+        case 'front':  targetBrg = tBrg + 180; break
+        case 'orbit':  targetBrg = cam.brg + 0.3; break  // 매 프레임 0.3° 공전
+        case 'sweep':  targetBrg = tBrg + Math.sin(progress * Math.PI * 5) * 25; break
+        case 'arc':    targetBrg = tBrg + Math.sin(progress * Math.PI * 1.5) * 50; break
+        default:       targetBrg = tBrg
+      }
       cam.brg = lerpBearing(cam.brg, targetBrg, BRG_LERP)
 
       // 지나온 경로 점진적 그리기
@@ -458,13 +429,13 @@ export default function MapboxRecorder({ points, view, onProgress, onComplete }:
         const bikeImg = await loadBikeImage()
         map.addImage('bike-icon', bikeImg, { pixelRatio: 2 })
       } catch {
-        // 이미지 로드 실패 시 원형 폴백
+        // 이미지 로드 실패 시 원형 폴백 (HTMLCanvasElement 미지원 → ImageData 변환)
         const canvas = document.createElement('canvas')
         canvas.width = canvas.height = 32
         const ctx = canvas.getContext('2d')!
         ctx.beginPath(); ctx.arc(16, 16, 12, 0, Math.PI * 2)
         ctx.fillStyle = '#2dd4bf'; ctx.fill()
-        map.addImage('bike-icon', canvas)
+        map.addImage('bike-icon', ctx.getImageData(0, 0, 32, 32))
       }
 
       map.addSource('bike-pos', {

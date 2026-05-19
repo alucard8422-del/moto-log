@@ -2,7 +2,7 @@ import { Locate, MapPin } from 'lucide-react'
 
 declare global {
   interface Window {
-    kakao: unknown
+    kakao: any
   }
 }
 

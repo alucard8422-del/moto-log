@@ -19,7 +19,7 @@ interface Props {
 }
 
 export default function ConfirmPanel({
-  points, dist, title, tip, done, canSave,
+  points, dist: _dist, title, tip, done, canSave,
   onReEdit, onTitleChange, onTipChange, onSave,
 }: Props) {
   return (
