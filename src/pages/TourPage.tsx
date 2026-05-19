@@ -211,11 +211,11 @@ function savedToCard(c: SavedCourse): CourseCardData {
   }
 }
 
-// ── 무드 색상 ──────────────────────────────────────────────────────────────
+// ── 무드 색상 (다크 배경 호환) ────────────────────────────────────────────
 const MOOD_CHIP: Record<CourseCardData['mood'], string> = {
-  '여유로운': 'text-emerald-600 bg-emerald-50',
-  '감성적인': 'text-violet-600  bg-violet-50',
-  '도전적인': 'text-rose-600    bg-rose-50',
+  '여유로운': 'text-emerald-400 bg-emerald-400/15',
+  '감성적인': 'text-violet-400  bg-violet-400/15',
+  '도전적인': 'text-rose-400    bg-rose-400/15',
 }
 
 // ── Section 1: 오늘의 베스트 코스 캐러셀 (👍 내림차순) ───────────────────
@@ -257,7 +257,7 @@ function BestCoursesCarousel({ courses, onPress }: { courses: RankedCourse[]; on
             ) : (
               <div
                 className="absolute inset-0 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+                style={{ background: 'linear-gradient(135deg, var(--bg-elevated) 0%, color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)) 100%)' }}
               >
                 <span className="text-3xl opacity-30">🏍</span>
               </div>
@@ -349,7 +349,7 @@ function CommunityGrid({ courses, onPress }: CommunityGridProps) {
               ) : (
                 <div
                   className="absolute inset-0 flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+                  style={{ background: 'linear-gradient(135deg, var(--bg-elevated) 0%, color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)) 100%)' }}
                 >
                   <span className="text-3xl opacity-30">🏍</span>
                 </div>
@@ -433,7 +433,7 @@ function CourseListItem({ course, onPress }: { course: RankedCourse; onPress: (c
         ) : (
           <div
             className="h-full w-full flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+            style={{ background: 'linear-gradient(135deg, var(--bg-elevated) 0%, color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)) 100%)' }}
           >
             <span className="text-lg opacity-40">🏍</span>
           </div>

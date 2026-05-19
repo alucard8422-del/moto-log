@@ -74,7 +74,7 @@ export default function LandingPage() {
 
         {/* 배지 */}
         <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1">
-          <span className="text-[11px] font-semibold" style={{ color: 'var(--brand-text, #C2410C)' }}>
+          <span className="text-[11px] font-semibold text-brand">
             🏍️ 라이더를 위한 여행 기록
           </span>
         </div>

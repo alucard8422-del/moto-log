@@ -34,10 +34,10 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
             ? <img src={course.coverPhoto} className="h-full w-full object-cover" alt="" />
             : (
               <div
-                className="flex h-full w-full items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, var(--brand-soft) 0%, #FEF3C7 100%)' }}
+                className="flex h-full w-full items-center justify-center bg-elevated"
+                style={{ background: 'linear-gradient(135deg, var(--bg-elevated) 0%, color-mix(in srgb, var(--brand) 8%, var(--bg-elevated)) 100%)' }}
               >
-                <MapPin size={32} strokeWidth={1} className="text-brand-soft" style={{ color: 'var(--brand-muted)', opacity: 0.7 }} />
+                <MapPin size={32} strokeWidth={1} style={{ color: 'var(--brand-muted)', opacity: 0.5 }} />
               </div>
             )
           }
@@ -128,7 +128,7 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
               {hasGpx && (
                 <span
                   className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                  style={{ background: '#F3F0FF', color: '#7C3AED' }}
+                  style={{ background: 'rgba(139,92,246,0.18)', color: '#A78BFA' }}
                 >
                   <FileDown size={8} strokeWidth={2} />GPX
                 </span>
