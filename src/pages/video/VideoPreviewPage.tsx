@@ -1,14 +1,29 @@
 // VideoPreviewPage.tsx — GPX 경로 미리보기
 // 재생 중 뷰 각도·배속 실시간 변경 / 화면 탭으로 일시정지·재생
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Clapperboard, RotateCcw } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
 import { loadCourses } from '../../lib/courseStorage'
 import { parseGpxPoints } from '../../data/sampleGpxData'
+import { loadPins, savePin } from '../../lib/memoryPins'
 import MapboxPreview from './MapboxPreview'
 import { VIEW_OPTIONS, type ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
+import type { MemoryPin } from './pins/pinTypes'
+import MemoryPinPopup from './pins/MemoryPinPopup'
+import MemoryPinCard from './pins/MemoryPinCard'
+
+// 두 좌표 간 거리 (미터)
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R    = 6_371_000
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a    = Math.sin(dLat / 2) ** 2
+             + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
 
 // 배속 옵션 — 최소 0.005×, 최대 2×
 const SPEED_OPTIONS: [string, number][] = [
@@ -55,6 +70,23 @@ export default function VideoPreviewPage() {
   const iconTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [iconVisible, setIconVisible] = useState(false)
 
+  // ── 추억 핀 ──────────────────────────────────────────────────────────────────
+  const [pins,      setPins]      = useState<MemoryPin[]>([])
+  const [pinPopup,  setPinPopup]  = useState<{ lat: number; lng: number; fraction: number } | null>(null)
+  const [nearbyPin, setNearbyPin] = useState<MemoryPin | null>(null)
+  const pinsRef            = useRef<MemoryPin[]>([])
+  const nearbyPinRef       = useRef<MemoryPin | null>(null)
+  const dismissedPinIdsRef = useRef(new Set<string>())
+  const coordLookupRef     = useRef<((x: number, y: number) => { lat: number; lng: number } | null) | null>(null)
+  const isPausedRef        = useRef(isPaused)
+  const pctRef             = useRef(pct)
+  const pointerDownPos     = useRef<{ x: number; y: number } | null>(null)
+  const longPressTimer     = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const longPressTriggered = useRef(false)
+  useEffect(() => { pinsRef.current    = pins     }, [pins])
+  useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
+  useEffect(() => { pctRef.current     = pct      }, [pct])
+
   useEffect(() => {
     const courses = loadCourses()
     const course  = courses.find(c => c.id === courseId)
@@ -69,6 +101,24 @@ export default function VideoPreviewPage() {
     })))
   }, [courseId, navigate])
 
+  // 핀 로드
+  useEffect(() => {
+    if (courseId) setPins(loadPins(courseId))
+  }, [courseId])
+
+  // 위치 콜백 — 재생 중 근처 핀(200m 이내) 자동 표시
+  const handlePosition = useCallback((lat: number, lng: number) => {
+    if (nearbyPinRef.current) return
+    for (const pin of pinsRef.current) {
+      if (dismissedPinIdsRef.current.has(pin.id)) continue
+      if (haversineM(lat, lng, pin.lat, pin.lng) < 200) {
+        nearbyPinRef.current = pin
+        setNearbyPin(pin)
+        return
+      }
+    }
+  }, [])
+
   // 지도 영역 탭 → 일시정지·재생 토글
   function handleMapTap() {
     if (ended) return
@@ -79,6 +129,38 @@ export default function VideoPreviewPage() {
     clearTimeout(iconTimerRef.current)
     setIconVisible(true)
     iconTimerRef.current = setTimeout(() => setIconVisible(false), 900)
+  }
+
+  // ── 지도 롱프레스 → 추억 핀 팝업 ────────────────────────────────────────────
+  function handleMapPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    pointerDownPos.current     = { x: e.clientX, y: e.clientY }
+    longPressTriggered.current = false
+    longPressTimer.current     = setTimeout(() => {
+      longPressTriggered.current = true
+      if (isPausedRef.current && coordLookupRef.current && pointerDownPos.current) {
+        const coord = coordLookupRef.current(pointerDownPos.current.x, pointerDownPos.current.y)
+        if (coord) setPinPopup({ lat: coord.lat, lng: coord.lng, fraction: pctRef.current / 100 })
+      }
+    }, 600)
+  }
+
+  function handleMapPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!pointerDownPos.current) return
+    const dx = e.clientX - pointerDownPos.current.x
+    const dy = e.clientY - pointerDownPos.current.y
+    if (Math.hypot(dx, dy) > 10) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = undefined
+      pointerDownPos.current = null
+    }
+  }
+
+  function handleMapPointerUp() {
+    clearTimeout(longPressTimer.current)
+    longPressTimer.current = undefined
+    if (!longPressTriggered.current && pointerDownPos.current) handleMapTap()
+    pointerDownPos.current     = null
+    longPressTriggered.current = false
   }
 
   // ── Progress bar 탐색 ────────────────────────────────────────────────────
@@ -148,13 +230,19 @@ export default function VideoPreviewPage() {
         onSpeed={setCurrentKmh}
         onEnd={() => setEnded(true)}
         onSeekReady={(fn) => { seekFnRef.current = fn }}
+        pins={pins}
+        onCoordLookupReady={(fn) => { coordLookupRef.current = fn }}
+        onPosition={handlePosition}
       />
 
-      {/* 탭 감지 오버레이 (컨트롤 영역 제외) */}
+      {/* 탭·롱프레스 감지 오버레이 (컨트롤 영역 제외) */}
       <div
         className="absolute inset-x-0 top-0 z-10"
-        style={{ bottom: '220px' }}   /* 하단 컨트롤 높이만큼 제외 */
-        onClick={handleMapTap}
+        style={{ bottom: '220px', touchAction: 'none' }}
+        onPointerDown={handleMapPointerDown}
+        onPointerMove={handleMapPointerMove}
+        onPointerUp={handleMapPointerUp}
+        onPointerCancel={handleMapPointerUp}
       />
 
       {/* 일시정지 / 재생 아이콘 */}
@@ -342,6 +430,37 @@ export default function VideoPreviewPage() {
           </button>
         </div>
       </div>
+      {/* 추억 핀 팝업 — 일시정지 + 롱프레스 시 표시 */}
+      <AnimatePresence>
+        {pinPopup && (
+          <MemoryPinPopup
+            lat={pinPopup.lat}
+            lng={pinPopup.lng}
+            fraction={pinPopup.fraction}
+            courseId={courseId!}
+            onSave={(pin) => {
+              savePin(pin)
+              setPins(prev => [...prev, pin])
+              setPinPopup(null)
+            }}
+            onClose={() => setPinPopup(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 근처 추억 핀 카드 — 재생 중 200m 이내 접근 시 표시 */}
+      <AnimatePresence>
+        {nearbyPin && !pinPopup && (
+          <MemoryPinCard
+            pin={nearbyPin}
+            onClose={() => {
+              dismissedPinIdsRef.current.add(nearbyPin.id)
+              nearbyPinRef.current = null
+              setNearbyPin(null)
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

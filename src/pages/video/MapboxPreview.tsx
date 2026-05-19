@@ -7,6 +7,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import type { ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
 import { loadBikeImage } from '../../lib/bikeUtils'
+import type { MemoryPin } from './pins/pinTypes'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
 
@@ -192,11 +193,15 @@ interface Props {
   onSpeed?:     (kmh: number) => void
   onEnd?:       () => void
   onSeekReady?: (seekFn: (fraction: number) => void) => void  // progress bar 탐색용
+  // ── 추억 핀 ──────────────────────────────────────────────────────────────────
+  pins?:               MemoryPin[]
+  onCoordLookupReady?: (fn: (clientX: number, clientY: number) => { lat: number; lng: number } | null) => void
+  onPosition?:         (lat: number, lng: number) => void
 }
 
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12'
 
-export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady }: Props) {
+export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef       = useRef<mapboxgl.Map | null>(null)
   const rafRef       = useRef(0)
@@ -209,6 +214,41 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
   useEffect(() => { speedRef.current    = speed    }, [speed])
   useEffect(() => { viewRef.current     = view     }, [view])
   useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
+
+  // ── 추억 핀 마커 ─────────────────────────────────────────────────────────────
+  const markersRef    = useRef<mapboxgl.Marker[]>([])
+  const pinsRef       = useRef<MemoryPin[]>(pins ?? [])
+  const mapReadyRef   = useRef(false)
+  const onPositionRef = useRef(onPosition)
+  useEffect(() => { pinsRef.current    = pins ?? []    }, [pins])
+  useEffect(() => { onPositionRef.current = onPosition }, [onPosition])
+
+  function rebuildPinMarkers() {
+    const map = mapRef.current
+    if (!map || !mapReadyRef.current) return
+    markersRef.current.forEach(m => m.remove())
+    markersRef.current = (pinsRef.current).map(pin => {
+      const el = document.createElement('div')
+      Object.assign(el.style, {
+        width:         '13px',
+        height:        '13px',
+        borderRadius:  '50%',
+        background:    '#2dd4bf',
+        border:        '2.5px solid #fff',
+        boxShadow:     '0 0 8px rgba(45,212,191,0.6)',
+        pointerEvents: 'none',
+      })
+      return new mapboxgl.Marker({ element: el })
+        .setLngLat([pin.lng, pin.lat])
+        .addTo(map)
+    })
+  }
+
+  // pins 배열이 바뀔 때마다 마커 재동기화
+  useEffect(() => {
+    pinsRef.current = pins ?? []
+    rebuildPinMarkers()
+  }, [pins]) // eslint-disable-line
 
   // ── 스타일 변경 시 레이어를 재등록하는 함수 (ref 로 공유) ────────────────────
   // addLayersRef: (isDark: boolean) => Promise<void>
@@ -450,6 +490,20 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
       const isDarkInit = mapStyle.includes('dark-v11')
       await addLayers(isDarkInit)
 
+      // ── 추억 핀 마커 초기 등록 ────────────────────────────────────────────
+      mapReadyRef.current = true
+      rebuildPinMarkers()
+
+      // 좌표 역산 콜백 — VideoPreviewPage 에서 롱프레스 위치 → lat/lng 변환용
+      onCoordLookupReady?.((clientX, clientY) => {
+        if (!mapRef.current || !containerRef.current) return null
+        const rect = containerRef.current.getBoundingClientRect()
+        const { lng, lat } = mapRef.current.unproject(
+          [clientX - rect.left, clientY - rect.top] as [number, number]
+        )
+        return { lat, lng }
+      })
+
       // ── 렌더 루프 ────────────────────────────────────────────────────────
       let started = false
       let lastTs  = 0
@@ -459,6 +513,7 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
         started = true
         activeRef.current = true
         lastTs  = performance.now()
+        let frameCount = 0
 
         const tick = (now: number) => {
           if (!activeRef.current) return
@@ -485,6 +540,9 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
 
           const [tLng, tLat] = sampler.posAt(progress)
           const tBrg         = sampler.bearingAt(progress)
+          // 현재 위치 → VideoPreviewPage 근접 감지용 (30프레임마다)
+          frameCount++
+          if (frameCount % 30 === 0) onPositionRef.current?.(tLat, tLng)
           const v            = viewRef.current
 
           let targetBrg: number
@@ -541,8 +599,11 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
       window.removeEventListener('touchmove',   onTouchMove)
       window.removeEventListener('touchend',    onTouchEnd)
       window.removeEventListener('touchcancel', onTouchEnd)
+      mapReadyRef.current = false
+      markersRef.current.forEach(m => m.remove())
+      markersRef.current   = []
       map.remove()
-      mapRef.current    = null
+      mapRef.current       = null
       addLayersRef.current = null
     }
   }, []) // eslint-disable-line

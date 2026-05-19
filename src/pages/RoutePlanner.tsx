@@ -61,8 +61,10 @@ export default function RoutePlanner() {
   const dist    = totalDist(displayPath.length >= 2 ? displayPath : points)
   const canSave = locked && title.trim().length >= 1 && points.length >= 2 && !done && !routing
 
-  // ── 경유지 추가 ──────────────────────────────────────────────────────────
+  // ── 경유지 추가 (최대 20개) ───────────────────────────────────────────────
+  const MAX_POINTS = 20
   const handleAddPoint = useCallback((lat: number, lng: number) => {
+    if (latestPointsRef.current.length >= MAX_POINTS) return   // 20개 초과 시 무시
     const newPoint: LatLng = { lat, lng }
     const prev = latestPointsRef.current
     latestPointsRef.current = [...prev, newPoint]
