@@ -25,8 +25,14 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
         role="button"
         tabIndex={0}
         onClick={() => onEdit(course)}
-        className="w-full cursor-pointer overflow-hidden rounded-3xl bg-surface transition-opacity active:opacity-90"
-        style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.07)' }}
+        className="w-full cursor-pointer overflow-hidden rounded-3xl transition-opacity active:opacity-90"
+        style={{
+          background:            'var(--glass-bg)',
+          backdropFilter:        'var(--glass-blur)',
+          WebkitBackdropFilter:  'var(--glass-blur)',
+          border:                '1px solid var(--glass-border)',
+          boxShadow:             'var(--glass-shadow)',
+        }}
       >
         {/* ── 커버 이미지 ── */}
         <div className="relative h-44 w-full overflow-hidden">

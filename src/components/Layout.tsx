@@ -37,9 +37,10 @@ export default function Layout() {
         <header
           className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
           style={{
-            backgroundColor: 'color-mix(in srgb, var(--bg-app) 92%, transparent)',
-            backdropFilter:  'blur(12px)',
-            borderBottom:    '1px solid var(--border)',
+            background:            'rgba(10, 20, 34, 0.75)',
+            backdropFilter:        'blur(24px)',
+            WebkitBackdropFilter:  'blur(24px)',
+            borderBottom:          '1px solid var(--glass-border)',
           }}
         >
           <div className="flex items-center gap-2">
@@ -68,8 +69,14 @@ export default function Layout() {
         style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
       >
         <div
-          className="flex items-center justify-around rounded-[28px] bg-surface px-1 py-2"
-          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)' }}
+          className="flex items-center justify-around rounded-[28px] px-1 py-2"
+          style={{
+            background:            'var(--glass-bg)',
+            backdropFilter:        'var(--glass-blur)',
+            WebkitBackdropFilter:  'var(--glass-blur)',
+            border:                '1px solid var(--glass-border)',
+            boxShadow:             'var(--glass-shadow)',
+          }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
             const isActive = pathname === path

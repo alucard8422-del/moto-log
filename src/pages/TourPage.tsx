@@ -423,8 +423,14 @@ function CourseListItem({ course, onPress }: { course: RankedCourse; onPress: (c
   return (
     <button
       onClick={() => onPress(course)}
-      className="flex w-full items-center gap-3.5 rounded-2xl bg-surface p-3 transition-opacity active:opacity-80"
-      style={{ border: '1px solid var(--border)', boxShadow: '0 1px 8px rgba(0,0,0,0.05)' }}
+      className="flex w-full items-center gap-3.5 rounded-2xl p-3 transition-opacity active:opacity-80"
+      style={{
+        background:            'var(--glass-bg)',
+        backdropFilter:        'var(--glass-blur)',
+        WebkitBackdropFilter:  'var(--glass-blur)',
+        border:                '1px solid var(--glass-border)',
+        boxShadow:             '0 4px 16px rgba(0,0,0,0.25)',
+      }}
     >
       {/* 썸네일 */}
       <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-xl">

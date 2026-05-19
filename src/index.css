@@ -32,6 +32,12 @@
   --border-line:   rgba(255,255,255,0.07);
   --border:        rgba(255,255,255,0.07);
 
+  /* 글래스모피즘 */
+  --glass-bg:      rgba(21, 37, 54, 0.58);   /* 반투명 네이비 */
+  --glass-border:  rgba(255,255,255,0.09);   /* 흐릿한 흰 테두리 */
+  --glass-shadow:  0 8px 32px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.05) inset;
+  --glass-blur:    blur(20px);
+
   /* 상태색 */
   --danger:        #F87171;
   --success:       #4ADE80;
@@ -53,6 +59,10 @@
   --brand-accent:  #F97316;
   --border-line:   rgba(0,0,0,0.07);
   --border:        rgba(0,0,0,0.07);
+  --glass-bg:      rgba(255,255,255,0.68);
+  --glass-border:  rgba(255,255,255,0.55);
+  --glass-shadow:  0 8px 32px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.80) inset;
+  --glass-blur:    blur(20px);
   --danger:        #EF4444;
   --success:       #22C55E;
 }

@@ -107,8 +107,14 @@ export default function MyRoutesPage() {
       {/* ── 요약 통계 ── */}
       {courses.length > 0 && (
         <div
-          className="mx-5 mb-5 flex overflow-hidden rounded-3xl bg-surface"
-          style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}
+          className="mx-5 mb-5 flex overflow-hidden rounded-3xl"
+          style={{
+            background:            'var(--glass-bg)',
+            backdropFilter:        'var(--glass-blur)',
+            WebkitBackdropFilter:  'var(--glass-blur)',
+            border:                '1px solid var(--glass-border)',
+            boxShadow:             'var(--glass-shadow)',
+          }}
         >
           {[
             { value: courses.length,          label: '기록'  },
