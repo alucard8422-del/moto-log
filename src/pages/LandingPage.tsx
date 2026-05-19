@@ -1,113 +1,161 @@
+// LandingPage.tsx — 스플래시 이후 진입, 소셜 로그인
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronRight, MapPin, Navigation } from 'lucide-react'
-import AuthModal from '../components/AuthModal'
+import { supabase } from '../lib/supabaseClient'
 
-const BG_IMAGE_URL =
-  'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=80'
+const HERO_IMAGE =
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=85'
+
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  )
+}
+
+function KakaoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        d="M12 3C6.48 3 2 6.69 2 11.25c0 2.91 1.87 5.47 4.7 6.97L5.6 21.5a.5.5 0 0 0 .71.58l4.24-2.83c.47.05.95.08 1.45.08 5.52 0 10-3.69 10-8.25C22 6.69 17.52 3 12 3z"
+        fill="#3C1E1E"
+      />
+    </svg>
+  )
+}
 
 export default function LandingPage() {
-  const navigate = useNavigate()
-  const [authOpen, setAuthOpen] = useState(false)
+  const [loading, setLoading] = useState<'kakao' | 'google' | null>(null)
 
-  const handleStart = () => {
-    console.log('[LandingPage] 시작하기 클릭 → 로그인 모달 오픈')
-    setAuthOpen(true)
-  }
-
-  const handleExplore = () => {
-    console.log('[LandingPage] 코스 둘러보기 클릭 → /courses 이동')
-    navigate('/courses')
+  const loginWith = async (provider: 'kakao' | 'google') => {
+    setLoading(provider)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: window.location.origin },
+    })
+    if (error) {
+      console.error(`[LandingPage] ${provider} 로그인 실패:`, error.message)
+      setLoading(null)
+    }
   }
 
   return (
-    <>
-    <div className="relative min-h-svh w-full overflow-hidden">
-      {/* 배경 이미지 */}
+    <div className="relative overflow-hidden" style={{ height: '100dvh' }}>
+
+      {/* ── 히어로 이미지 ── */}
       <img
-        src={BG_IMAGE_URL}
-        alt="scenic road background"
+        src={HERO_IMAGE}
+        alt="mountain road"
         className="absolute inset-0 h-full w-full object-cover"
+        style={{ objectPosition: 'center 40%' }}
       />
 
-      {/* 다크 오버레이 */}
-      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md" />
+      {/* ── 이미지 위 그라디언트 오버레이 ── */}
+      {/* 상단: 살짝 어두워서 로고 가독성 / 하단: 흰색으로 자연스럽게 전환 */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.05) 35%, rgba(255,247,237,0.7) 62%, #FFF7ED 100%)',
+        }}
+      />
 
-      {/* 콘텐츠 레이어 */}
-      <div className="relative z-10 flex min-h-svh flex-col">
-        {/* 상단 로고 */}
-        <header className="flex items-center justify-between px-6 pt-12">
-          <div className="flex items-center gap-2">
-            <Navigation size={20} strokeWidth={1.5} className="text-teal-400" />
-            <span className="text-sm font-light tracking-[0.2em] text-white/60 uppercase">
-              Moto Log
+      {/* ── 상단 로고 ── */}
+      <div className="absolute top-0 left-0 right-0 flex justify-center pt-14">
+        <span
+          style={{
+            fontSize: 26,
+            fontWeight: 800,
+            color: 'white',
+            letterSpacing: '-0.02em',
+            textShadow: '0 1px 12px rgba(0,0,0,0.35)',
+          }}
+        >
+          MotoLog
+        </span>
+      </div>
+
+      {/* ── 하단 콘텐츠 카드 ── */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <div
+          className="px-6 pb-10 pt-8"
+          style={{ background: '#FFF7ED' }}
+        >
+          {/* 배지 */}
+          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1"
+            style={{ background: '#FED7AA' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#C2410C', letterSpacing: '0.05em' }}>
+              🏍️ 라이더를 위한 여행 기록
             </span>
           </div>
-        </header>
 
-        {/* 메인 히어로 */}
-        <main className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/5 px-4 py-1.5">
-            <MapPin size={12} strokeWidth={1.5} className="text-teal-400" />
-            <span className="text-xs font-light text-white/50">
-              Premium Midnight Drive
-            </span>
-          </div>
-
-          <h1 className="mb-4 text-5xl font-bold leading-tight tracking-tight text-white">
-            당신의 루트를
-            <br />
-            <span className="text-teal-400">기록하세요</span>
+          {/* 헤드라인 */}
+          <h1
+            className="mb-2"
+            style={{
+              fontSize: 30,
+              fontWeight: 800,
+              lineHeight: 1.2,
+              letterSpacing: '-0.03em',
+              color: '#1C0A00',
+            }}
+          >
+            달린 길이<br />나를 말한다
           </h1>
 
-          <p className="mb-10 max-w-xs text-base font-light leading-relaxed text-white/50">
-            오토바이 라이더를 위한 투어 로그.
-            <br />
-            달린 길, 만난 풍경, 공유된 감동.
+          {/* 서브 */}
+          <p
+            className="mb-7"
+            style={{ fontSize: 14, color: '#78716C', fontWeight: 400, lineHeight: 1.6 }}
+          >
+            루트를 기록하고, 풍경을 나누고,<br />함께 달린 감동을 간직하세요.
           </p>
 
-          {/* CTA 버튼 */}
-          <div className="flex w-full max-w-xs flex-col gap-3">
-            <button
-              onClick={handleStart}
-              className="flex items-center justify-center gap-2 rounded-3xl bg-teal-400 px-6 py-4 font-bold text-slate-950 transition-opacity active:opacity-80"
-            >
-              지금 시작하기
-              <ChevronRight size={18} strokeWidth={1.5} />
-            </button>
+          {/* ── 카카오 로그인 ── */}
+          <button
+            onClick={() => loginWith('kakao')}
+            disabled={!!loading}
+            className="mb-3 flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 active:opacity-80 disabled:opacity-60"
+            style={{
+              background: '#FEE500',
+              fontSize: 15,
+              fontWeight: 700,
+              color: '#1A1200',
+            }}
+          >
+            <KakaoIcon />
+            {loading === 'kakao' ? '연결 중…' : '카카오로 시작하기'}
+          </button>
 
-            <button
-              onClick={handleExplore}
-              className="flex items-center justify-center gap-2 rounded-3xl border border-white/5 bg-white/5 px-6 py-4 font-light text-white/70 transition-opacity active:opacity-80"
-            >
-              코스 둘러보기
-            </button>
-          </div>
-        </main>
+          {/* ── 구글 로그인 ── */}
+          <button
+            onClick={() => loginWith('google')}
+            disabled={!!loading}
+            className="flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 active:opacity-80 disabled:opacity-60"
+            style={{
+              background: '#FFFFFF',
+              border: '1.5px solid #E7E5E4',
+              fontSize: 15,
+              fontWeight: 600,
+              color: '#292524',
+            }}
+          >
+            <GoogleIcon />
+            {loading === 'google' ? '연결 중…' : '구글로 시작하기'}
+          </button>
 
-        {/* 하단 통계 */}
-        <footer className="px-6 pb-12">
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { value: '2,400+', label: '등록 코스' },
-              { value: '18K', label: '라이더' },
-              { value: '4.9', label: '평점' },
-            ].map(({ value, label }) => (
-              <div
-                key={label}
-                className="rounded-3xl border border-white/5 bg-white/5 py-4 text-center"
-              >
-                <p className="text-lg font-bold text-white">{value}</p>
-                <p className="mt-0.5 text-xs font-light text-white/40">{label}</p>
-              </div>
-            ))}
-          </div>
-        </footer>
+          {/* 약관 */}
+          <p
+            className="mt-5 text-center"
+            style={{ fontSize: 11, color: '#A8A29E', lineHeight: 1.6 }}
+          >
+            로그인 시 서비스 이용약관 및 개인정보처리방침에<br />동의하는 것으로 간주됩니다.
+          </p>
+        </div>
       </div>
     </div>
-
-    {/* 로그인 모달 */}
-    {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
-    </>
   )
 }
