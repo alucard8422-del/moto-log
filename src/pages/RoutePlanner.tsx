@@ -34,16 +34,22 @@ export default function RoutePlanner() {
   useEffect(() => {
     exitingRef.current = false
     window.history.pushState({ routePlannerSentinel: true }, '')
+
+    const repush = () => {
+      if (!exitingRef.current)
+        window.history.pushState({ routePlannerSentinel: true }, '')
+    }
+
     const onPop = () => {
       if (exitingRef.current) return
-      setTimeout(() => {
-        if (!exitingRef.current)
-          window.history.pushState({ routePlannerSentinel: true }, '')
-      }, 0)
+      // capture 단계에서 먼저 잡고, 50ms 지연으로 Android 안정성 확보
+      setTimeout(repush, 0)
+      setTimeout(repush, 50)
       setShowExitConfirm(true)
     }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
+    // capture:true — Kakao SDK 등 서드파티 리스너보다 먼저 실행
+    window.addEventListener('popstate', onPop, true)
+    return () => window.removeEventListener('popstate', onPop, true)
   }, [])
 
   function confirmExit() {
@@ -53,8 +59,8 @@ export default function RoutePlanner() {
   }
   function cancelExit() {
     setShowExitConfirm(false)
-    if (!window.history.state?.routePlannerSentinel)
-      window.history.pushState({ routePlannerSentinel: true }, '')
+    // 조건 없이 항상 sentinel 재삽입 (타이밍 레이스 방지)
+    window.history.pushState({ routePlannerSentinel: true }, '')
   }
 
   // ── 경유지 + 경로 세그먼트 ────────────────────────────────────────────────
