@@ -318,7 +318,7 @@ export default function VideoPreviewPage() {
       {/* 상단 헤더 */}
       <div className="absolute top-0 inset-x-0 z-10 flex items-center gap-3 px-4 pt-safe-top pb-3 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => setShowExitConfirm(true)}
           className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm active:opacity-70"
         >
           <ArrowLeft size={18} strokeWidth={1.5} className="text-white" />
