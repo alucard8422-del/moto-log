@@ -258,7 +258,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
       {/* 현재위치 버튼 — 우하단 */}
       <button
         onClick={handleLocate}
-        className="absolute bottom-36 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900/80 shadow-lg backdrop-blur-md active:opacity-70"
+        className="absolute bottom-44 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900/80 shadow-lg backdrop-blur-md active:opacity-70"
       >
         <LocateFixed size={20} strokeWidth={1.8} className="text-teal-400" />
       </button>
