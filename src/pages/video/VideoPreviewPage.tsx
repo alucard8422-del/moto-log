@@ -62,11 +62,17 @@ export default function VideoPreviewPage() {
   // BrowserRouter 환경에서 useBlocker 는 동작하지 않으므로 raw history API 사용
   useEffect(() => {
     exitingRef.current = false
-    window.history.pushState({ motoPreviewSentinel: true }, '')   // 센티넬 추가
+    window.history.pushState({ motoPreviewSentinel: true }, '')   // 초기 센티넬
 
     const onPop = () => {
-      if (exitingRef.current) return    // 종료 허용 상태 — 재차단 안 함
-      window.history.pushState({ motoPreviewSentinel: true }, '') // 다시 차단
+      if (exitingRef.current) return
+      // 일부 Android 브라우저는 popstate 핸들러 내 pushState를 묵시적으로 무시함
+      // → setTimeout(0) 으로 이벤트 루프 이후에 실행해 브라우저 호환성 확보
+      setTimeout(() => {
+        if (!exitingRef.current) {
+          window.history.pushState({ motoPreviewSentinel: true }, '')
+        }
+      }, 0)
       setShowExitConfirm(true)
     }
     window.addEventListener('popstate', onPop)
@@ -76,9 +82,16 @@ export default function VideoPreviewPage() {
   function confirmExit() {
     exitingRef.current = true
     setShowExitConfirm(false)
-    window.history.go(-2)   // 센티넬(-1) + 실제 페이지(-1) 두 칸 뒤로
+    // go(-N) 은 히스토리 깊이에 따라 달라져 불안정 → 직접 경로로 이동
+    navigate('/my-routes', { replace: true })
   }
-  function cancelExit() { setShowExitConfirm(false) }
+  function cancelExit() {
+    setShowExitConfirm(false)
+    // 센티넬이 없는 상태면(popstate setTimeout 경쟁 등) 즉시 보충
+    if (!window.history.state?.motoPreviewSentinel) {
+      window.history.pushState({ motoPreviewSentinel: true }, '')
+    }
+  }
 
   // 일시정지 상태
   const [currentKmh, setCurrentKmh] = useState(0)
