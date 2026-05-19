@@ -1,7 +1,7 @@
 // Layout.tsx — 공통 헤더 + 탭바
 import { useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { CircleDot, Route, Compass, Warehouse, User } from 'lucide-react'
+import { CircleDot, Route, Compass, Warehouse, User, Navigation } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 
@@ -44,7 +44,7 @@ export default function Layout() {
           }}
         >
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-brand" />
+            <Navigation size={18} strokeWidth={1.5} className="text-brand" />
             <span className="text-[17px] font-extrabold tracking-tight text-main">
               MotoLog
             </span>
