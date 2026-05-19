@@ -15,6 +15,7 @@ export interface Location {
   lat: number
   lng: number
   timestamp: number
+  altitude?: number   // 고도 (m) — GPS 지원 시
 }
 
 export type Coordinates = Location

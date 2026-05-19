@@ -11,7 +11,7 @@ export interface SavedCourse {
   title: string
   distanceKm: number
   durationMin: number
-  gpxPoints: Array<{ lat: number; lng: number; timestamp: number }>
+  gpxPoints: Array<{ lat: number; lng: number; timestamp: number; altitude?: number }>
   gpxXml: string
   createdAt: string
   isShared: boolean
@@ -29,12 +29,13 @@ const STORAGE_KEY = 'moto_my_courses'
 
 // ── GPX XML 빌더 ──────────────────────────────────────────────
 export function buildGpxXml(
-  points: Array<{ lat: number; lng: number; timestamp: number }>
+  points: Array<{ lat: number; lng: number; timestamp: number; altitude?: number }>
 ): string {
   const trkpts = points
     .map((p) => {
       const iso = new Date(p.timestamp).toISOString()
-      return `    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}"><time>${iso}</time></trkpt>`
+      const ele = p.altitude != null ? `<ele>${p.altitude.toFixed(1)}</ele>` : ''
+      return `    <trkpt lat="${p.lat.toFixed(6)}" lon="${p.lng.toFixed(6)}">${ele}<time>${iso}</time></trkpt>`
     })
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
