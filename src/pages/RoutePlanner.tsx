@@ -248,14 +248,16 @@ export default function RoutePlanner() {
       <AnimatePresence>
         {routing && (
           <motion.div
-            className="absolute left-1/2 bottom-28 z-[1000] flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-4 py-2 backdrop-blur-md"
+            className="absolute inset-x-0 bottom-28 z-[1000] flex justify-center"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
           >
-            <Loader2 size={13} strokeWidth={2} className="animate-spin text-teal-400" />
-            <span className="text-[11px] font-light text-white/60">도로 경로 계산 중…</span>
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-4 py-2 backdrop-blur-md">
+              <Loader2 size={13} strokeWidth={2} className="animate-spin text-teal-400" />
+              <span className="text-[11px] font-light text-white/60">도로 경로 계산 중…</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
