@@ -71,23 +71,22 @@ export default function ProfilePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-400/10">
-              <span className="text-2xl font-bold text-teal-400">H</span>
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-soft">
+              <span className="text-2xl font-bold text-brand">H</span>
             </div>
-            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-slate-950 bg-teal-400" />
+            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-brand" />
           </div>
           <div>
-            <p className="text-lg font-bold text-white">Rider_Hong</p>
-            <p className="mt-0.5 text-xs font-light text-white/35">
-              2023년 4월부터 함께하는 라이더
-            </p>
+            <p className="text-[17px] font-bold text-main">Rider_Hong</p>
+            <p className="mt-0.5 text-xs text-muted">2023년 4월부터 함께하는 라이더</p>
           </div>
         </div>
         <button
           onClick={() => navigate('/settings')}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 transition-opacity active:opacity-60"
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-opacity active:opacity-60"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
         >
-          <Settings size={15} strokeWidth={1.5} className="text-white/35" />
+          <Settings size={15} strokeWidth={1.5} className="text-muted" />
         </button>
       </div>
 
@@ -98,24 +97,45 @@ export default function ProfilePage() {
           { value: garage.ridingHours,              label: '라이딩 시간' },
           { value: String(garage.completedCourses), label: '완주 코스' },
         ].map(({ value, label }) => (
-          <div key={label} className="flex flex-col gap-1 rounded-2xl bg-white/5 py-4">
-            <span className="text-lg font-bold text-white">{value}</span>
-            <span className="text-[10px] font-light text-white/35">{label}</span>
+          <div
+            key={label}
+            className="flex flex-col gap-1 rounded-[20px] py-5"
+            style={{
+              background:           'var(--glass-bg)',
+              backdropFilter:       'var(--glass-blur)',
+              WebkitBackdropFilter: 'var(--glass-blur)',
+              border:               '1px solid var(--glass-border)',
+              boxShadow:            'var(--glass-shadow)',
+            }}
+          >
+            <span className="text-[20px] font-bold text-main">{value}</span>
+            <span className="text-[10px] font-medium text-muted">{label}</span>
           </div>
         ))}
       </div>
 
       {/* ── 탭 스위처 (3탭) ── */}
-      <div className="flex rounded-2xl bg-white/5 p-1">
+      <div
+        className="flex rounded-[20px] p-1"
+        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+      >
         {TABS.map(([key, label]) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex-1 rounded-xl py-2 text-xs transition-all duration-200 ${
-              activeTab === key
-                ? 'bg-white/10 font-bold text-teal-400'
-                : 'font-light text-white/40'
-            }`}
+            className="flex-1 rounded-2xl py-2.5 text-xs transition-all duration-200"
+            style={activeTab === key ? {
+              background: 'var(--glass-bg)',
+              backdropFilter: 'var(--glass-blur)',
+              WebkitBackdropFilter: 'var(--glass-blur)',
+              border: '1px solid var(--glass-border)',
+              boxShadow: 'var(--glass-shadow)',
+              fontWeight: 700,
+              color: 'var(--text-main)',
+            } : {
+              fontWeight: 400,
+              color: 'var(--text-muted)',
+            }}
           >
             {label}
           </button>
@@ -125,19 +145,24 @@ export default function ProfilePage() {
       {/* ── 마이 가라지 탭 ── */}
       {activeTab === 'garage' && <>
         {/* My Garage 요약 헤더 */}
-        <div className="flex items-center justify-between rounded-2xl bg-white/5 px-5 py-3">
+        <div
+          className="flex items-center justify-between rounded-[20px] px-5 py-4"
+          style={{
+            background:           'var(--glass-bg)',
+            backdropFilter:       'var(--glass-blur)',
+            WebkitBackdropFilter: 'var(--glass-blur)',
+            border:               '1px solid var(--glass-border)',
+            boxShadow:            'var(--glass-shadow)',
+          }}
+        >
           <div>
-            <p className="text-[10px] font-light uppercase tracking-widest text-white/25">
-              My Garage
-            </p>
-            <p className="text-sm font-bold text-white">{garage.bikeModel}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted">My Garage</p>
+            <p className="mt-0.5 text-[15px] font-bold text-main">{garage.bikeModel}</p>
           </div>
           <div className="flex items-baseline gap-1">
-            <Gauge size={13} strokeWidth={1.5} className="text-teal-400" />
-            <span className="text-xl font-bold text-white">
-              {garage.totalKm.toLocaleString()}
-            </span>
-            <span className="text-[10px] font-light text-white/30">km</span>
+            <Gauge size={13} strokeWidth={1.5} className="text-brand" />
+            <span className="text-[22px] font-bold text-main">{garage.totalKm.toLocaleString()}</span>
+            <span className="text-[11px] text-muted">km</span>
           </div>
         </div>
 
@@ -191,7 +216,8 @@ export default function ProfilePage() {
               receivedAt: new Date(),
             })
           }
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 py-3 text-xs font-light text-white/25 transition-opacity active:opacity-60"
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-xs text-muted transition-opacity active:opacity-60"
+          style={{ border: '1px dashed var(--border)' }}
         >
           <FlaskConical size={12} strokeWidth={1.5} />
           주유 팝업 테스트 (삭제 예정)

@@ -247,6 +247,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
       {/* 카카오맵 컨테이너 */}
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
+      {/* 지도 위 화이트 틴트 — 지도가 너무 도드라지지 않게 */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.4)', pointerEvents: 'none', zIndex: 1 }} />
+
       {/* REC 인디케이터 (주행 중만) */}
       {isRiding && (
         <div className="absolute left-4 top-14 z-10 flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-2 backdrop-blur-md">

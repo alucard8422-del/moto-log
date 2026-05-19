@@ -25,8 +25,9 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
         role="button"
         tabIndex={0}
         onClick={() => onEdit(course)}
-        className="w-full cursor-pointer overflow-hidden rounded-3xl transition-opacity active:opacity-90"
+        className="w-full cursor-pointer overflow-hidden transition-opacity active:opacity-90"
         style={{
+          borderRadius:          'var(--card-radius)',
           background:            'var(--glass-bg)',
           backdropFilter:        'var(--glass-blur)',
           WebkitBackdropFilter:  'var(--glass-blur)',
@@ -111,7 +112,7 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
         </div>
 
         {/* ── 하단 정보 ── */}
-        <div className="px-[18px] pb-[18px] pt-4">
+        <div className="px-5 pb-5 pt-4">
           {!course.coverPhoto && (
             <p className="mb-1 text-[16px] font-extrabold tracking-tight text-main">{label}</p>
           )}
