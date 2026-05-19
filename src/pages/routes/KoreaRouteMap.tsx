@@ -32,11 +32,12 @@ export default function KoreaRouteMap({ courses }: Props) {
         // mapRef.current 체크로 StrictMode 이중 초기화 방지
         if (cancelled || !containerRef.current || mapRef.current) return
         const map = new window.kakao.maps.Map(containerRef.current, {
-          center: new window.kakao.maps.LatLng(36.5, 127.8),
-          level: 9,
+          center: new window.kakao.maps.LatLng(36.2, 127.9),
+          level: 13,
         })
-        map.setZoomable(false)
-        map.setDraggable(false)
+        // 드래그·줌 허용 → 경로 탐색 가능
+        map.setZoomable(true)
+        map.setDraggable(true)
         mapRef.current = map
         setMapReady(true)
 
@@ -125,7 +126,7 @@ export default function KoreaRouteMap({ courses }: Props) {
   const lineCount = courses.filter(c => c.gpxPoints.length >= 2).length
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 220 }}>
+    <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 300 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
       {/* 로드뷰 팝업 */}
@@ -139,8 +140,6 @@ export default function KoreaRouteMap({ courses }: Props) {
         )}
       </AnimatePresence>
 
-      {/* 터치 차단 (로드뷰 팝업 없을 때만 드래그 방지) */}
-      <div className="absolute inset-0 z-10 touch-none pointer-events-none" />
       {/* 하단 그라데이션 */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-slate-950 to-transparent" />
       {/* 누적 동선 뱃지 */}
