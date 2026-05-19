@@ -22,16 +22,32 @@ interface Props {
 
 function useHeading(): number {
   const [heading, setHeading] = useState(0)
+  const smoothedRef = useRef(0)
+
   useEffect(() => {
+    const ALPHA = 0.08  // 낮을수록 부드럽고 반응이 느림 (0.05~0.15 권장)
+
     const handler = (e: DeviceOrientationEvent) => {
-      const h =
+      const raw =
         typeof (e as any).webkitCompassHeading === 'number'
           ? (e as any).webkitCompassHeading
           : e.alpha !== null
           ? (360 - e.alpha) % 360
-          : 0
-      setHeading(h)
+          : null
+      if (raw === null) return
+
+      // 원형 EMA — 0↔360 경계 wrap-around 처리
+      const prev = smoothedRef.current
+      const diff = ((raw - prev + 540) % 360) - 180   // 최단 각도 차이
+      const next = (prev + diff * ALPHA + 360) % 360
+      smoothedRef.current = next
+
+      // 1° 이상 바뀔 때만 setState → 불필요한 리렌더 방지
+      if (Math.abs(diff * ALPHA) >= 1) {
+        setHeading(Math.round(next))
+      }
     }
+
     window.addEventListener('deviceorientation', handler, true)
     return () => window.removeEventListener('deviceorientation', handler, true)
   }, [])
