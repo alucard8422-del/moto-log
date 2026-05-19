@@ -28,42 +28,33 @@ export default function RoutePlanner() {
   const navigate = useNavigate()
 
   const [showExitConfirm, setShowExitConfirm] = useState(false)
-  const exitingRef    = useRef(false)
-  const repushingRef  = useRef(false)   // 중복 repush 방지
+  const exitingRef = useRef(false)
 
   // ── 하드웨어 뒤로가기 → 종료 확인 모달 ──────────────────────────────
   useEffect(() => {
-    exitingRef.current   = false
-    repushingRef.current = false
+    exitingRef.current = false
     window.history.pushState({ routePlannerSentinel: true }, '')
-
     const onPop = () => {
       if (exitingRef.current) return
+      // Android 일부 브라우저에서 popstate 안에서 pushState 무시 → setTimeout 으로 우회
+      setTimeout(() => {
+        if (!exitingRef.current)
+          window.history.pushState({ routePlannerSentinel: true }, '')
+      }, 0)
       setShowExitConfirm(true)
-      // sentinel 1회만 재삽입 (중복 방지)
-      if (!repushingRef.current) {
-        repushingRef.current = true
-        setTimeout(() => {
-          repushingRef.current = false
-          if (!exitingRef.current)
-            window.history.pushState({ routePlannerSentinel: true }, '')
-        }, 50)
-      }
     }
-    window.addEventListener('popstate', onPop, true)
-    return () => window.removeEventListener('popstate', onPop, true)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
   }, [])
 
   function confirmExit() {
     exitingRef.current = true
     setShowExitConfirm(false)
-    // replace:true — sentinel 자리를 /my-routes 로 교체 → 스택에 sentinel 잔존 없음
     navigate('/my-routes', { replace: true })
   }
   function cancelExit() {
     setShowExitConfirm(false)
-    // sentinel 이 없을 때만 보충 (setTimeout 이 아직 안 돌았을 경우 대비)
-    if (!window.history.state?.routePlannerSentinel && !repushingRef.current)
+    if (!window.history.state?.routePlannerSentinel)
       window.history.pushState({ routePlannerSentinel: true }, '')
   }
 
