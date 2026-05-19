@@ -8,7 +8,7 @@
 // 마커 상호작용
 //  짧은 탭 → 삭제 팝업 / 꾹 누르기(600ms) → 로드뷰
 
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useNavigate }                            from 'react-router-dom'
 import { motion, AnimatePresence }                from 'framer-motion'
 import { PenLine, Loader2 }                       from 'lucide-react'
