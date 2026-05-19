@@ -267,17 +267,31 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
         el.appendChild(thumb)
         el.appendChild(tip)
       } else {
-        // ── 기본 핀: SVG 수직 핀 (흰색 몸체 + 틸 내부 원) ───────────────
-        Object.assign(el.style, {
-          width:  '22px',
-          height: '32px',
-          filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.45))',
-        })
-        el.innerHTML = `<svg width="22" height="32" viewBox="0 0 22 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11 0C4.925 0 0 4.925 0 11c0 7.7 11 21 11 21S22 18.7 22 11C22 4.925 17.075 0 11 0z"
-                fill="white"/>
-          <circle cx="11" cy="11" r="4" fill="#2dd4bf"/>
-        </svg>`
+        // ── 기본 핀: 순수 CSS (SVG 미사용 → 모바일 색상 확실) ─────────────
+        // 흰 원형 헤드 + 틸 내부 도트 + 흰 삼각 꼬리
+        el.style.cssText =
+          'pointer-events:none;display:flex;flex-direction:column;align-items:center;width:22px;height:34px'
+
+        const head = document.createElement('div')
+        head.style.cssText =
+          'width:22px;height:22px;border-radius:50%;background:#ffffff;' +
+          'box-shadow:0 2px 8px rgba(0,0,0,0.5);' +
+          'display:flex;align-items:center;justify-content:center;flex-shrink:0'
+
+        const dot = document.createElement('div')
+        dot.style.cssText =
+          'width:8px;height:8px;border-radius:50%;background:#2dd4bf'
+
+        const tail = document.createElement('div')
+        tail.style.cssText =
+          'width:0;height:0;' +
+          'border-left:5px solid transparent;border-right:5px solid transparent;' +
+          'border-top:12px solid #ffffff;margin-top:-1px;' +
+          'filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3))'
+
+        head.appendChild(dot)
+        el.appendChild(head)
+        el.appendChild(tail)
       }
 
       return new mapboxgl.Marker({ element: el, anchor: 'bottom' })

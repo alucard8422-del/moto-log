@@ -3,15 +3,16 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, X, ZoomIn } from 'lucide-react'
+import { MapPin, X, ZoomIn, Trash2 } from 'lucide-react'
 import type { MemoryPin } from './pinTypes'
 
 interface Props {
   pin:      MemoryPin
   onClose:  () => void
+  onDelete: () => void
 }
 
-export default function MemoryPinCard({ pin, onClose }: Props) {
+export default function MemoryPinCard({ pin, onClose, onDelete }: Props) {
   const [fullPhoto, setFullPhoto] = useState(false)
 
   return (
@@ -59,12 +60,22 @@ export default function MemoryPinCard({ pin, onClose }: Props) {
                 )}
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 active:opacity-60"
-            >
-              <X size={12} strokeWidth={1.5} className="text-white/60" />
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {/* 삭제 버튼 */}
+              <button
+                onClick={onDelete}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-red-500/25 bg-red-500/10 active:opacity-60"
+              >
+                <Trash2 size={12} strokeWidth={1.5} className="text-red-400" />
+              </button>
+              {/* 닫기 버튼 */}
+              <button
+                onClick={onClose}
+                className="flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/5 active:opacity-60"
+              >
+                <X size={12} strokeWidth={1.5} className="text-white/60" />
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>

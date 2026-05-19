@@ -7,7 +7,7 @@ import { ArrowLeft, Clapperboard, RotateCcw } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { loadCourses } from '../../lib/courseStorage'
 import { parseGpxPoints } from '../../data/sampleGpxData'
-import { loadPins, savePin } from '../../lib/memoryPins'
+import { loadPins, savePin, deletePin } from '../../lib/memoryPins'
 import MapboxPreview from './MapboxPreview'
 import { VIEW_OPTIONS, type ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../data/sampleGpxData'
@@ -469,6 +469,12 @@ export default function VideoPreviewPage() {
             pin={nearbyPin}
             onClose={() => {
               dismissedPinIdsRef.current.add(nearbyPin.id)
+              nearbyPinRef.current = null
+              setNearbyPin(null)
+            }}
+            onDelete={() => {
+              deletePin(nearbyPin.id)
+              setPins(prev => prev.filter(p => p.id !== nearbyPin.id))
               nearbyPinRef.current = null
               setNearbyPin(null)
             }}
