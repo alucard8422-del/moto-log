@@ -1,12 +1,10 @@
-// MyRoutesPage.tsx — 내 경로 메뉴 메인 (상태 관리 + 레이아웃)
-// UI 수정 → src/pages/routes/ 각 파일 / 로직 수정 → 이 파일
+// MyRoutesPage.tsx — 내 경로 메뉴 메인
 import { useState, useEffect }     from 'react'
 import { useNavigate }             from 'react-router-dom'
 import { CheckCircle }             from 'lucide-react'
 import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../constants/BadgesData'
 import BadgeAchievementModal, { checkRideDiaryBadge } from '../components/BadgeAchievementModal'
 
-// ── routes/ 서브 컴포넌트 ──────────────────────────────────────────────────
 import KoreaRouteMap      from './routes/KoreaRouteMap'
 import RouteCard          from './routes/RouteCard'
 import EditModal          from './routes/EditModal'
@@ -16,13 +14,14 @@ import RouteFab           from './routes/RouteFab'
 import VideoCreatorSheet  from './routes/VideoCreatorSheet'
 import { cityLabel, MOCK_SEED_KEY, MOCK_COURSES } from './routes/routeUtils'
 
-// ── 공용 서비스 ────────────────────────────────────────────────────────────
 import {
   loadCourses, updateCourse, deleteCourse, shareToCommunity,
   type SavedCourse,
 } from '../lib/courseStorage'
 import { saveDriveSession } from '../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
+
+const ORANGE = '#F97316'
 
 export default function MyRoutesPage() {
   const navigate = useNavigate()
@@ -33,19 +32,16 @@ export default function MyRoutesPage() {
   const [videoTarget,  setVideoTarget]  = useState<SavedCourse | null>(null)
   const [toast,        setToast]        = useState('')
 
-  // 배지 달성 팝업 큐
   const [badgeQueue, setBadgeQueue] = useState<Array<{ badgeId: string; tier: Tier }>>([])
   const currentBadge = badgeQueue[0] ?? null
   const dismissBadge = () => setBadgeQueue(prev => prev.slice(1))
 
-  // 토스트 3초 자동 소멸
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(''), 3000)
     return () => clearTimeout(t)
   }, [toast])
 
-  // 최초 1회 샘플 시딩
   useEffect(() => {
     const stored = loadCourses()
     if (!localStorage.getItem(MOCK_SEED_KEY)) {
@@ -58,7 +54,6 @@ export default function MyRoutesPage() {
     }
   }, [])
 
-  // ── 핸들러 ────────────────────────────────────────────────────────────
   const handleDelete = (id: string) => {
     deleteCourse(id)
     setCourses(prev => prev.filter(c => c.id !== id))
@@ -71,29 +66,21 @@ export default function MyRoutesPage() {
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
     setEditTarget(null)
     setToast('기록이 저장되었습니다')
-
     const { newlyUnlocked } = checkRideDiaryBadge()
     if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
   }
 
-  // ── 주행하기 ──────────────────────────────────────────────────────────
   const handleDrive = (course: SavedCourse) => {
     const naviType = loadNaviPref()
     const waypoints = getCourseNavWaypoints(course)
     if (waypoints.length < 1) return
-
     const segments = splitIntoSegments(waypoints, naviType)
-
     const session = {
-      courseId:          course.id,
-      courseTitle:       course.title,
-      naviType,
-      segments,
-      currentSegmentIdx: 0,
-      startedAt:         new Date().toISOString(),
+      courseId: course.id, courseTitle: course.title,
+      naviType, segments, currentSegmentIdx: 0,
+      startedAt: new Date().toISOString(),
     }
     saveDriveSession(session)
-    // DriveSessionOverlay가 이 이벤트를 받아 카운트다운 시작
     window.dispatchEvent(new CustomEvent('moto:startDrive', { detail: session }))
   }
 
@@ -107,82 +94,84 @@ export default function MyRoutesPage() {
     setToast('공유되었습니다')
   }
 
+  const totalKm  = courses.reduce((s, c) => s + c.distanceKm, 0)
+  const totalHr  = Math.round(courses.reduce((s, c) => s + c.durationMin, 0) / 60)
+
   return (
-    <div className="flex flex-col gap-5 px-4 pt-5 pb-32">
-      <div>
-        <p className="text-xs font-light text-white/30">GPS 기록 보관함</p>
-        <h2 className="text-xl font-bold text-white">내 경로</h2>
+    <div className="min-h-screen pb-32" style={{ backgroundColor: '#FFFBF7' }}>
+
+      {/* ── 상단 히어로 영역 ── */}
+      <div className="px-5 pb-5 pt-5">
+        <p style={{ fontSize: 12, color: '#A8A29E', fontWeight: 500, marginBottom: 2 }}>
+          My Routes
+        </p>
+        <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1C0A00', letterSpacing: '-0.03em' }}>
+          내 경로
+        </h2>
       </div>
 
-      {/* 전국 누적 동선 지도 */}
-      <KoreaRouteMap courses={courses} />
-
-      {/* 요약 통계 */}
+      {/* ── 요약 통계 ── */}
       {courses.length > 0 && (
-        <div className="flex gap-3 rounded-3xl border border-white/5 bg-white/[0.03] px-5 py-4">
-          <div className="flex-1 text-center">
-            <p className="text-lg font-bold text-teal-400">{courses.length}</p>
-            <p className="text-[10px] font-light text-white/30">총 기록</p>
-          </div>
-          <div className="w-px bg-white/5" />
-          <div className="flex-1 text-center">
-            <p className="text-lg font-bold text-teal-400">
-              {courses.reduce((s, c) => s + c.distanceKm, 0).toFixed(0)}
-            </p>
-            <p className="text-[10px] font-light text-white/30">총 km</p>
-          </div>
-          <div className="w-px bg-white/5" />
-          <div className="flex-1 text-center">
-            <p className="text-lg font-bold text-teal-400">
-              {Math.round(courses.reduce((s, c) => s + c.durationMin, 0) / 60)}
-            </p>
-            <p className="text-[10px] font-light text-white/30">총 시간(h)</p>
-          </div>
+        <div className="mx-5 mb-5 flex rounded-3xl overflow-hidden"
+          style={{ background: '#FFFFFF', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
+          {[
+            { value: courses.length, label: '기록' },
+            { value: `${totalKm.toFixed(0)}`, label: 'km' },
+            { value: totalHr, label: '시간' },
+          ].map(({ value, label }, i) => (
+            <div key={label} className="flex-1 py-4 text-center" style={{
+              borderRight: i < 2 ? '1px solid #F5F0EB' : 'none',
+            }}>
+              <p style={{ fontSize: 22, fontWeight: 800, color: ORANGE, letterSpacing: '-0.02em' }}>
+                {value}
+              </p>
+              <p style={{ fontSize: 11, color: '#A8A29E', marginTop: 2 }}>{label}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* 카드 목록 */}
-      {courses.length === 0
-        ? <EmptyState />
-        : (
-          <div className="flex flex-col gap-3">
-            {courses.map(c => (
-              <RouteCard
-                key={c.id}
-                course={c}
-                onDelete={handleDelete}
-                onEdit={setEditTarget}
-                onShare={setShareTarget}
-                onVideoCreate={setVideoTarget}
-                onDrive={handleDrive}
-              />
-            ))}
-          </div>
-        )
-      }
-
-      {/* 토스트 */}
-      <div className={`pointer-events-none fixed bottom-28 left-1/2 z-[200] flex -translate-x-1/2 items-center gap-2 rounded-full bg-teal-400 px-5 py-3 shadow-xl shadow-teal-900/40 transition-all duration-300 ${
-        toast ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
-      }`}>
-        <CheckCircle size={15} strokeWidth={2} className="text-slate-950" />
-        <span className="text-sm font-bold text-slate-950">{toast}</span>
+      {/* ── 전국 누적 동선 지도 ── */}
+      <div className="mx-5 mb-5">
+        <KoreaRouteMap courses={courses} />
       </div>
 
-      {/* 편집 모달 */}
+      {/* ── 경로 카드 목록 ── */}
+      <div className="px-5">
+        {courses.length === 0
+          ? <EmptyState />
+          : (
+            <div className="flex flex-col gap-4">
+              {courses.map(c => (
+                <RouteCard
+                  key={c.id}
+                  course={c}
+                  onDelete={handleDelete}
+                  onEdit={setEditTarget}
+                  onShare={setShareTarget}
+                  onVideoCreate={setVideoTarget}
+                  onDrive={handleDrive}
+                />
+              ))}
+            </div>
+          )
+        }
+      </div>
+
+      {/* ── 토스트 ── */}
+      <div className={`pointer-events-none fixed bottom-28 left-1/2 z-[200] flex -translate-x-1/2 items-center gap-2 rounded-full px-5 py-3 shadow-xl transition-all duration-300 ${
+        toast ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+      }`} style={{ background: ORANGE }}>
+        <CheckCircle size={15} strokeWidth={2} color="white" />
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{toast}</span>
+      </div>
+
       {editTarget && (
         <EditModal course={editTarget} onSave={handleSave} onClose={() => setEditTarget(null)} />
       )}
-
-      {/* 영상 만들기 뷰 선택 시트 */}
       {videoTarget && (
-        <VideoCreatorSheet
-          course={videoTarget}
-          onClose={() => setVideoTarget(null)}
-        />
+        <VideoCreatorSheet course={videoTarget} onClose={() => setVideoTarget(null)} />
       )}
-
-      {/* 커뮤니티 공유 컨펌 */}
       {shareTarget && (
         <ShareSheet
           title={cityLabel(shareTarget.gpxPoints)}
@@ -190,24 +179,16 @@ export default function MyRoutesPage() {
           onCancel={() => setShareTarget(null)}
         />
       )}
-
-      {/* 배지 달성 팝업 */}
       {currentBadge && (() => {
         const base = BADGES.find(b => b.id === currentBadge.badgeId)
         if (!base) return null
-        const meta     = RIDE_DIARY_TIER_META[currentBadge.tier]
+        const meta = RIDE_DIARY_TIER_META[currentBadge.tier]
         const overridden = { ...base, name: meta.name, description: meta.description, icon: meta.icon }
         return (
-          <BadgeAchievementModal
-            badge={overridden}
-            tier={currentBadge.tier}
-            isOpen={true}
-            onClose={dismissBadge}
-          />
+          <BadgeAchievementModal badge={overridden} tier={currentBadge.tier} isOpen onClose={dismissBadge} />
         )
       })()}
 
-      {/* 경로 작성 FAB */}
       <RouteFab onNavigate={() => navigate('/route-planner')} />
     </div>
   )
