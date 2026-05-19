@@ -1,30 +1,32 @@
+// Layout.tsx — 공통 헤더 + 탭바
 import { useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { CircleDot, Route, Compass, User, Bell, Navigation, Warehouse } from 'lucide-react'
+import { CircleDot, Route, Compass, Warehouse, User } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 
 const TAB_ITEMS = [
-  { path: '/map',       icon: CircleDot, label: '기록'      },
-  { path: '/my-routes', icon: Route,     label: '내 경로'   },
-  { path: '/courses',   icon: Compass,   label: '추천 코스'  },
-  { path: '/garage',    icon: Warehouse, label: '내 차고'   },
-  { path: '/profile',   icon: User,      label: '프로필'    },
+  { path: '/map',       icon: CircleDot, label: '기록'     },
+  { path: '/my-routes', icon: Route,     label: '내 경로'  },
+  { path: '/courses',   icon: Compass,   label: '코스'     },
+  { path: '/garage',    icon: Warehouse, label: '차고'     },
+  { path: '/profile',   icon: User,      label: '프로필'   },
 ] as const
 
-const TAB_PATHS = TAB_ITEMS.map(t => t.path)
+const TAB_PATHS  = TAB_ITEMS.map(t => t.path)
 const LAST_TAB_KEY = 'moto:lastTab'
 
-export default function Layout() {
-  const navigate = useNavigate()
-  const { pathname } = useLocation()
-  const isMapPage      = pathname === '/map'
-  const isPlanner      = pathname === '/route-planner'
-  // route-planner도 전체화면 — 헤더·탭바 모두 숨김 (ConfirmPanel과 겹침 방지)
-  const isFullScreen   = isMapPage || isPlanner
+// 브랜드 컬러
+const ORANGE = '#F97316'
+const ORANGE_BG = '#FFF3E8'
 
-  // 탭 경로에 있을 때마다 sessionStorage에 저장
-  // → 앱 전환 후 돌아와도 마지막 탭 기억 (탭 닫으면 자동 초기화)
+export default function Layout() {
+  const navigate    = useNavigate()
+  const { pathname } = useLocation()
+  const isMapPage   = pathname === '/map'
+  const isPlanner   = pathname === '/route-planner'
+  const isFullScreen = isMapPage || isPlanner
+
   useEffect(() => {
     if (TAB_PATHS.includes(pathname as typeof TAB_PATHS[number])) {
       sessionStorage.setItem(LAST_TAB_KEY, pathname)
@@ -32,52 +34,62 @@ export default function Layout() {
   }, [pathname])
 
   return (
-    // bg-[var(--bg-app)] — 테마 전환 시 앱 전체 도화지 색 즉시 반영
-    <div className="relative flex min-h-svh flex-col" style={{ backgroundColor: 'var(--bg-app)' }}>
+    <div className="relative flex min-h-svh flex-col" style={{ backgroundColor: '#FFFBF7' }}>
+
+      {/* ── 헤더 ── */}
       {!isFullScreen && (
-        // 헤더: 테마 배경 + 테마 텍스트 + 테마 테두리
         <header
-          className="sticky top-0 z-20 flex items-center justify-between border-b px-5 py-4 backdrop-blur-md"
+          className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
           style={{
-            borderColor:     'var(--border-line)',
-            backgroundColor: 'color-mix(in srgb, var(--bg-app) 85%, transparent)',
+            backgroundColor: 'rgba(255,251,247,0.92)',
+            backdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(0,0,0,0.06)',
           }}
         >
+          {/* 로고 */}
           <div className="flex items-center gap-2">
-            <Navigation size={18} strokeWidth={1.5} className="text-teal-400" />
+            {/* 오렌지 닷 */}
             <span
-              className="text-sm font-bold tracking-wider"
-              style={{ color: 'var(--text-main)' }}
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: ORANGE }}
+            />
+            <span
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                color: '#1C0A00',
+              }}
             >
-              MOTO LOG
+              MotoLog
             </span>
           </div>
-          <button
-            className="relative flex h-9 w-9 items-center justify-center rounded-full border"
-            style={{ borderColor: 'var(--border-line)', backgroundColor: 'var(--bg-surface)' }}
-          >
-            <Bell size={16} strokeWidth={1.5} style={{ color: 'var(--text-sub)' }} />
-            <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-teal-400" />
-          </button>
+
+          {/* 우측 — 현재 페이지 이름 */}
+          <span style={{ fontSize: 12, color: '#A8A29E', fontWeight: 500 }}>
+            {TAB_ITEMS.find(t => t.path === pathname)?.label ?? ''}
+          </span>
         </header>
       )}
 
+      {/* ── 메인 컨텐츠 ── */}
       <main className={isFullScreen ? 'contents' : 'flex-1 pb-28'}>
         <Outlet />
       </main>
 
       <FuelCompleteSheet />
-
-      {/* 주행 세션 전역 UI (재개 팝업·다음 구간 시트·카운트다운) */}
       <DriveSessionOverlay />
 
-      {/* 하단 탭 바 — 경로 작성 페이지에서는 숨김 (ConfirmPanel과 겹침 방지) */}
-      <nav className={`fixed bottom-6 left-1/2 z-30 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2 ${isPlanner ? 'hidden' : ''}`}>
+      {/* ── 탭바 ── */}
+      <nav
+        className={`fixed bottom-5 left-1/2 z-30 -translate-x-1/2 ${isPlanner ? 'hidden' : ''}`}
+        style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
+      >
         <div
-          className="flex items-center justify-around rounded-3xl border px-2 py-3 shadow-lg shadow-black/20 backdrop-blur-md"
+          className="flex items-center justify-around rounded-[28px] px-1 py-2"
           style={{
-            borderColor:     'var(--border-line)',
-            backgroundColor: 'color-mix(in srgb, var(--bg-surface) 90%, transparent)',
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)',
           }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
@@ -86,17 +98,31 @@ export default function Layout() {
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className="flex flex-col items-center gap-1 px-3 py-1 transition-opacity active:opacity-60"
+                className="flex flex-1 flex-col items-center gap-1 py-1 transition-opacity active:opacity-60"
               >
-                <Icon
-                  size={22}
-                  strokeWidth={1.5}
-                  className={isActive ? 'text-teal-400' : undefined}
-                  style={isActive ? undefined : { color: 'var(--text-sub)' }}
-                />
+                {/* 아이콘 + 활성 pill 배경 */}
+                <div
+                  className="flex items-center justify-center rounded-2xl transition-all duration-200"
+                  style={{
+                    width: 40,
+                    height: 32,
+                    backgroundColor: isActive ? ORANGE_BG : 'transparent',
+                  }}
+                >
+                  <Icon
+                    size={20}
+                    strokeWidth={isActive ? 2.2 : 1.6}
+                    style={{ color: isActive ? ORANGE : '#A8A29E' }}
+                  />
+                </div>
+                {/* 라벨 */}
                 <span
-                  className={`text-[10px] font-light ${isActive ? 'text-teal-400' : ''}`}
-                  style={isActive ? undefined : { color: 'var(--text-sub)' }}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: isActive ? 700 : 400,
+                    color: isActive ? ORANGE : '#A8A29E',
+                    letterSpacing: '0.01em',
+                  }}
                 >
                   {label}
                 </span>
