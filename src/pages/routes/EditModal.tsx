@@ -18,15 +18,86 @@ export default function EditModal({ course, onSave, onClose }: Props) {
   const [photos, setPhotos]           = useState<string[]>(course.coverPhoto ? [course.coverPhoto] : [])
   const [currentIdx, setCurrentIdx]   = useState(0)
   const [showActionSheet, setShowActionSheet] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const touchX  = useRef(0)
+  const fileRef    = useRef<HTMLInputElement>(null)
+  const touchX     = useRef(0)
 
+  // 스와이프 다운 감지용
+  const sheetWrapRef  = useRef<HTMLDivElement>(null)
+  const dragStartY    = useRef(0)
+  const currentDragY  = useRef(0)
+  const isDraggingRef = useRef(false)
+
+  // 열림 애니메이션
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
+
+  // 스크롤 잠금
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
 
+  // ── 하드웨어 뒤로가기 → 모달 닫기 ─────────────────────────────────────
+  useEffect(() => {
+    window.history.pushState({ editModalSentinel: true }, '')
+
+    const onPop = () => {
+      // 히스토리에서 sentinel 이 이미 팝됐으므로 바로 닫기
+      onClose()
+    }
+    window.addEventListener('popstate', onPop)
+
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      // X버튼·스와이프 등 일반 닫기 → sentinel 이 아직 남아있으면 제거
+      if (window.history.state?.editModalSentinel) {
+        window.history.back()
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── 스와이프 다운 핸들러 ──────────────────────────────────────────────
+  const onHandleTouchStart = (e: React.TouchEvent) => {
+    dragStartY.current  = e.touches[0].clientY
+    currentDragY.current = 0
+    isDraggingRef.current = true
+    if (sheetWrapRef.current) {
+      sheetWrapRef.current.style.transition = 'none'
+    }
+  }
+
+  const onHandleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current) return
+    const deltaY = Math.max(0, e.touches[0].clientY - dragStartY.current)
+    currentDragY.current = deltaY
+    if (sheetWrapRef.current) {
+      sheetWrapRef.current.style.transform = `translateY(${deltaY}px)`
+    }
+  }
+
+  const onHandleTouchEnd = () => {
+    if (!isDraggingRef.current) return
+    isDraggingRef.current = false
+
+    if (currentDragY.current > 80) {
+      // 임계값 초과 → 닫기
+      onClose()
+    } else {
+      // 스냅 백
+      if (sheetWrapRef.current) {
+        sheetWrapRef.current.style.transition = 'transform 300ms ease-out'
+        sheetWrapRef.current.style.transform  = 'translateY(0)'
+        setTimeout(() => {
+          if (sheetWrapRef.current) {
+            sheetWrapRef.current.style.transition = ''
+            sheetWrapRef.current.style.transform  = ''
+          }
+        }, 300)
+      }
+    }
+  }
+
+  // ── 파일 핸들러 ──────────────────────────────────────────────────────
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -45,26 +116,40 @@ export default function EditModal({ course, onSave, onClose }: Props) {
 
   return (
     <>
+      {/* 딤 */}
       <div
         className={`fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
-      <div className={`fixed inset-x-0 bottom-0 z-[80] transition-transform duration-500 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
-          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
 
-          {/* 헤더 */}
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-light text-white/30">기록 편집</p>
-              <p className="text-sm font-bold text-white">{cityLabel(course.gpxPoints)}</p>
+      {/* 시트 */}
+      <div
+        ref={sheetWrapRef}
+        className={`fixed inset-x-0 bottom-0 z-[80] transition-transform duration-500 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
+      >
+        <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
+
+          {/* ── 드래그 핸들 + 헤더 (스와이프 다운 감지 영역) ── */}
+          <div
+            onTouchStart={onHandleTouchStart}
+            onTouchMove={onHandleTouchMove}
+            onTouchEnd={onHandleTouchEnd}
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+
+            {/* 헤더 */}
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-light text-white/30">기록 편집</p>
+                <p className="text-sm font-bold text-white">{cityLabel(course.gpxPoints)}</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 active:opacity-60"
+              >
+                <X size={14} strokeWidth={1.5} />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/40 active:opacity-60"
-            >
-              <X size={14} strokeWidth={1.5} />
-            </button>
           </div>
 
           {/* 사진 슬라이더 or 첨부 버튼 */}
