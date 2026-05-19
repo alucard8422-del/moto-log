@@ -26,7 +26,13 @@ export default function MemoryPinCard({ pin, onClose, onDelete }: Props) {
         exit={{    opacity: 0, y: 88 }}   // 아래로 내려가며 퇴장
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       >
-        <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0d1321]/90 backdrop-blur-xl shadow-2xl shadow-black/40">
+        <div
+          className="overflow-hidden rounded-3xl border backdrop-blur-md shadow-xl shadow-black/30"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--bg-surface) 90%, transparent)',
+            borderColor:     'var(--border-line)',
+          }}
+        >
 
           {/* 사진 (있을 때) */}
           {pin.photo && (

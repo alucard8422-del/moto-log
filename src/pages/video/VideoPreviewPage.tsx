@@ -275,6 +275,10 @@ export default function VideoPreviewPage() {
   function handleProgressUp() {
     isDraggingRef.current = false
     setIsDragging(false)
+    // 탐색 완료 → 추억 핀 상태 초기화 (새 위치부터 처음처럼 재감지)
+    dismissedPinIdsRef.current.clear()
+    nearbyPinRef.current = null
+    setNearbyPin(null)
   }
 
   function handleReplay() {
@@ -282,6 +286,11 @@ export default function VideoPreviewPage() {
     setEnded(false)
     setIsPaused(false)
     setPreviewKey(k => k + 1)
+    // 다시보기 → 추억 핀 상태 완전 초기화
+    dismissedPinIdsRef.current.clear()
+    nearbyPinRef.current = null
+    setNearbyPin(null)
+    setPinPopup(null)
   }
 
   function handleStyleChange(url: string) {
