@@ -53,7 +53,7 @@ export default function VideoPreviewPage() {
   const [pct,        setPct]        = useState(0)
   const [ended,      setEnded]      = useState(false)
   const [view,       setView]       = useState<ViewOption>(initView)
-  const [speed,      setSpeed]      = useState(1)
+  const [speed,      setSpeed]      = useState(0.25)
   const [previewKey, setPreviewKey] = useState(0)
 
   // 일시정지 상태
@@ -78,6 +78,7 @@ export default function VideoPreviewPage() {
   const nearbyPinRef       = useRef<MemoryPin | null>(null)
   const dismissedPinIdsRef = useRef(new Set<string>())
   const coordLookupRef     = useRef<((x: number, y: number) => { lat: number; lng: number } | null) | null>(null)
+  const pinTapCheckRef     = useRef<((x: number, y: number) => MemoryPin | null) | null>(null)
   const isPausedRef        = useRef(isPaused)
   const pctRef             = useRef(pct)
   const pointerDownPos     = useRef<{ x: number; y: number } | null>(null)
@@ -158,7 +159,17 @@ export default function VideoPreviewPage() {
   function handleMapPointerUp() {
     clearTimeout(longPressTimer.current)
     longPressTimer.current = undefined
-    if (!longPressTriggered.current && pointerDownPos.current) handleMapTap()
+    if (!longPressTriggered.current && pointerDownPos.current) {
+      // 핀 탭 우선 확인 → 핀이면 카드 표시, 빈 곳이면 재생/일시정지
+      const pos       = pointerDownPos.current
+      const tappedPin = pinTapCheckRef.current?.(pos.x, pos.y) ?? null
+      if (tappedPin) {
+        nearbyPinRef.current = tappedPin
+        setNearbyPin(tappedPin)
+      } else {
+        handleMapTap()
+      }
+    }
     pointerDownPos.current     = null
     longPressTriggered.current = false
   }
@@ -233,6 +244,7 @@ export default function VideoPreviewPage() {
         pins={pins}
         onCoordLookupReady={(fn) => { coordLookupRef.current = fn }}
         onPosition={handlePosition}
+        onPinTapCheckReady={(fn) => { pinTapCheckRef.current = fn }}
       />
 
       {/* 탭·롱프레스 감지 오버레이 (컨트롤 영역 제외) */}
@@ -440,6 +452,8 @@ export default function VideoPreviewPage() {
             courseId={courseId!}
             onSave={(pin) => {
               savePin(pin)
+              // 저장 직후 카드 자동 팝업 방지 (이미 핀 지도에 표시됨)
+              dismissedPinIdsRef.current.add(pin.id)
               setPins(prev => [...prev, pin])
               setPinPopup(null)
             }}

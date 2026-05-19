@@ -194,14 +194,15 @@ interface Props {
   onEnd?:       () => void
   onSeekReady?: (seekFn: (fraction: number) => void) => void  // progress bar 탐색용
   // ── 추억 핀 ──────────────────────────────────────────────────────────────────
-  pins?:               MemoryPin[]
-  onCoordLookupReady?: (fn: (clientX: number, clientY: number) => { lat: number; lng: number } | null) => void
-  onPosition?:         (lat: number, lng: number) => void
+  pins?:                MemoryPin[]
+  onCoordLookupReady?:  (fn: (clientX: number, clientY: number) => { lat: number; lng: number } | null) => void
+  onPosition?:          (lat: number, lng: number) => void
+  onPinTapCheckReady?:  (fn: (clientX: number, clientY: number) => MemoryPin | null) => void
 }
 
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12'
 
-export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition }: Props) {
+export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition, onPinTapCheckReady }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef       = useRef<mapboxgl.Map | null>(null)
   const rafRef       = useRef(0)
@@ -266,12 +267,16 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
         el.appendChild(thumb)
         el.appendChild(tip)
       } else {
-        // ── 기본 핀: SVG 수직 핀 모양 ────────────────────────────────────
-        Object.assign(el.style, { width: '22px', height: '32px' })
+        // ── 기본 핀: SVG 수직 핀 (흰색 몸체 + 틸 내부 원) ───────────────
+        Object.assign(el.style, {
+          width:  '22px',
+          height: '32px',
+          filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.45))',
+        })
         el.innerHTML = `<svg width="22" height="32" viewBox="0 0 22 32" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M11 0C4.925 0 0 4.925 0 11c0 7.7 11 21 11 21S22 18.7 22 11C22 4.925 17.075 0 11 0z"
-                fill="#2dd4bf" stroke="white" stroke-width="1.5"/>
-          <circle cx="11" cy="11" r="4" fill="white"/>
+                fill="white"/>
+          <circle cx="11" cy="11" r="4" fill="#2dd4bf"/>
         </svg>`
       }
 
@@ -539,6 +544,22 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
           [clientX - rect.left, clientY - rect.top] as [number, number]
         )
         return { lat, lng }
+      })
+
+      // 핀 탭 히트 테스트 — 오버레이에서 단탭 시 핀 근처인지 확인
+      onPinTapCheckReady?.((clientX, clientY) => {
+        for (let i = 0; i < markersRef.current.length; i++) {
+          const el   = markersRef.current[i].getElement()
+          const rect = el.getBoundingClientRect()
+          // 마커 주변 12px 히트 영역 확장 (핀 끝 등 작은 영역 보완)
+          if (
+            clientX >= rect.left   - 12 && clientX <= rect.right  + 12 &&
+            clientY >= rect.top    - 12 && clientY <= rect.bottom + 12
+          ) {
+            return pinsRef.current[i] ?? null
+          }
+        }
+        return null
       })
 
       // ── 렌더 루프 ────────────────────────────────────────────────────────
