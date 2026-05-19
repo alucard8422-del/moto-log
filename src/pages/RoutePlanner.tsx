@@ -27,6 +27,36 @@ import type { DeleteTarget } from './planner/plannerUtils'
 export default function RoutePlanner() {
   const navigate = useNavigate()
 
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const exitingRef = useRef(false)
+
+  // ── 하드웨어 뒤로가기 → 종료 확인 모달 ──────────────────────────────
+  useEffect(() => {
+    exitingRef.current = false
+    window.history.pushState({ routePlannerSentinel: true }, '')
+    const onPop = () => {
+      if (exitingRef.current) return
+      setTimeout(() => {
+        if (!exitingRef.current)
+          window.history.pushState({ routePlannerSentinel: true }, '')
+      }, 0)
+      setShowExitConfirm(true)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function confirmExit() {
+    exitingRef.current = true
+    setShowExitConfirm(false)
+    navigate(-1)
+  }
+  function cancelExit() {
+    setShowExitConfirm(false)
+    if (!window.history.state?.routePlannerSentinel)
+      window.history.pushState({ routePlannerSentinel: true }, '')
+  }
+
   // ── 경유지 + 경로 세그먼트 ────────────────────────────────────────────────
   // segments[i] = points[i] → points[i+1] 사이 도로 경로 좌표 배열
   const [points,       setPoints]       = useState<LatLng[]>([])
@@ -273,6 +303,37 @@ export default function RoutePlanner() {
           />
         )}
       </AnimatePresence>
+
+      {/* ── 종료 확인 모달 ── */}
+      {showExitConfirm && (
+        <>
+          <div
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            onClick={cancelExit}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-[210]">
+            <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
+              <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
+              <p className="mb-1 text-center text-sm font-bold text-white">경로 작성을 종료할까요?</p>
+              <p className="mb-6 text-center text-xs font-light text-white/40">작성 중인 경로는 저장되지 않습니다</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={cancelExit}
+                  className="flex flex-1 items-center justify-center rounded-3xl border border-white/10 bg-white/5 py-4 text-sm font-bold text-white/70 active:opacity-70"
+                >
+                  계속하기
+                </button>
+                <button
+                  onClick={confirmExit}
+                  className="flex flex-[1.4] items-center justify-center rounded-3xl bg-rose-500/80 py-4 text-sm font-bold text-white active:opacity-80"
+                >
+                  종료
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
