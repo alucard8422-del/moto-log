@@ -6,25 +6,21 @@ import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 
 const TAB_ITEMS = [
-  { path: '/map',       icon: CircleDot, label: '기록'     },
-  { path: '/my-routes', icon: Route,     label: '내 경로'  },
-  { path: '/courses',   icon: Compass,   label: '코스'     },
-  { path: '/garage',    icon: Warehouse, label: '차고'     },
-  { path: '/profile',   icon: User,      label: '프로필'   },
+  { path: '/map',       icon: CircleDot, label: '기록'    },
+  { path: '/my-routes', icon: Route,     label: '내 경로' },
+  { path: '/courses',   icon: Compass,   label: '코스'    },
+  { path: '/garage',    icon: Warehouse, label: '차고'    },
+  { path: '/profile',   icon: User,      label: '프로필'  },
 ] as const
 
-const TAB_PATHS  = TAB_ITEMS.map(t => t.path)
+const TAB_PATHS    = TAB_ITEMS.map(t => t.path)
 const LAST_TAB_KEY = 'moto:lastTab'
 
-// 브랜드 컬러
-const ORANGE = '#F97316'
-const ORANGE_BG = '#FFF3E8'
-
 export default function Layout() {
-  const navigate    = useNavigate()
+  const navigate     = useNavigate()
   const { pathname } = useLocation()
-  const isMapPage   = pathname === '/map'
-  const isPlanner   = pathname === '/route-planner'
+  const isMapPage    = pathname === '/map'
+  const isPlanner    = pathname === '/route-planner'
   const isFullScreen = isMapPage || isPlanner
 
   useEffect(() => {
@@ -34,45 +30,31 @@ export default function Layout() {
   }, [pathname])
 
   return (
-    <div className="relative flex min-h-svh flex-col" style={{ backgroundColor: '#FFFBF7' }}>
+    <div className="relative flex min-h-svh flex-col bg-app">
 
       {/* ── 헤더 ── */}
       {!isFullScreen && (
         <header
           className="sticky top-0 z-20 flex items-center justify-between px-5 py-4"
           style={{
-            backgroundColor: 'rgba(255,251,247,0.92)',
-            backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid rgba(0,0,0,0.06)',
+            backgroundColor: 'color-mix(in srgb, var(--bg-app) 92%, transparent)',
+            backdropFilter:  'blur(12px)',
+            borderBottom:    '1px solid var(--border)',
           }}
         >
-          {/* 로고 */}
           <div className="flex items-center gap-2">
-            {/* 오렌지 닷 */}
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ background: ORANGE }}
-            />
-            <span
-              style={{
-                fontSize: 17,
-                fontWeight: 800,
-                letterSpacing: '-0.03em',
-                color: '#1C0A00',
-              }}
-            >
+            <span className="h-2 w-2 rounded-full bg-brand" />
+            <span className="text-[17px] font-extrabold tracking-tight text-main">
               MotoLog
             </span>
           </div>
-
-          {/* 우측 — 현재 페이지 이름 */}
-          <span style={{ fontSize: 12, color: '#A8A29E', fontWeight: 500 }}>
+          <span className="text-xs font-medium text-muted">
             {TAB_ITEMS.find(t => t.path === pathname)?.label ?? ''}
           </span>
         </header>
       )}
 
-      {/* ── 메인 컨텐츠 ── */}
+      {/* ── 메인 콘텐츠 ── */}
       <main className={isFullScreen ? 'contents' : 'flex-1 pb-28'}>
         <Outlet />
       </main>
@@ -86,11 +68,8 @@ export default function Layout() {
         style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
       >
         <div
-          className="flex items-center justify-around rounded-[28px] px-1 py-2"
-          style={{
-            backgroundColor: '#FFFFFF',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)',
-          }}
+          className="flex items-center justify-around rounded-[28px] bg-surface px-1 py-2"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)' }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
             const isActive = pathname === path
@@ -100,28 +79,25 @@ export default function Layout() {
                 onClick={() => navigate(path)}
                 className="flex flex-1 flex-col items-center gap-1 py-1 transition-opacity active:opacity-60"
               >
-                {/* 아이콘 + 활성 pill 배경 */}
                 <div
                   className="flex items-center justify-center rounded-2xl transition-all duration-200"
                   style={{
-                    width: 40,
-                    height: 32,
-                    backgroundColor: isActive ? ORANGE_BG : 'transparent',
+                    width:           40,
+                    height:          32,
+                    backgroundColor: isActive ? 'var(--brand-soft)' : 'transparent',
                   }}
                 >
                   <Icon
                     size={20}
                     strokeWidth={isActive ? 2.2 : 1.6}
-                    style={{ color: isActive ? ORANGE : '#A8A29E' }}
+                    style={{ color: isActive ? 'var(--brand)' : 'var(--text-muted)' }}
                   />
                 </div>
-                {/* 라벨 */}
                 <span
+                  className="text-[10px]"
                   style={{
-                    fontSize: 10,
                     fontWeight: isActive ? 700 : 400,
-                    color: isActive ? ORANGE : '#A8A29E',
-                    letterSpacing: '0.01em',
+                    color:      isActive ? 'var(--brand)' : 'var(--text-muted)',
                   }}
                 >
                   {label}
