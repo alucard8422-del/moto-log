@@ -92,10 +92,11 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
 
         {/* 사진 선택 */}
         <div className="mb-3">
+          {/* accept에 구체적 MIME 타입 지정 → Android/iOS에서 카메라 선택창 없이 갤러리 직접 열림 */}
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
             className="hidden"
             onChange={handleFileChange}
           />
