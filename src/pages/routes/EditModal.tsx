@@ -21,11 +21,13 @@ export default function EditModal({ course, onSave, onClose }: Props) {
   const fileRef    = useRef<HTMLInputElement>(null)
   const touchX     = useRef(0)
 
-  // 스와이프 다운 감지용
+  // DOM refs
   const sheetWrapRef  = useRef<HTMLDivElement>(null)
-  const dragStartY    = useRef(0)
-  const currentDragY  = useRef(0)
-  const isDraggingRef = useRef(false)
+  const dragHandleRef = useRef<HTMLDivElement>(null)
+
+  // onClose 를 ref 로 감싸서 네이티브 이벤트 핸들러에서 최신 값 참조
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
   // 열림 애니메이션
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
@@ -39,70 +41,70 @@ export default function EditModal({ course, onSave, onClose }: Props) {
   // ── 하드웨어 뒤로가기 → 모달 닫기 ─────────────────────────────────────
   useEffect(() => {
     window.history.pushState({ editModalSentinel: true }, '')
-
-    const onPop = () => {
-      // 히스토리에서 sentinel 이 이미 팝됐으므로 바로 닫기
-      onClose()
-    }
+    const onPop = () => { onCloseRef.current() }
     window.addEventListener('popstate', onPop)
-
     return () => {
       window.removeEventListener('popstate', onPop)
-      // X버튼·스와이프 등 일반 닫기 → sentinel 이 아직 남아있으면 제거
       if (window.history.state?.editModalSentinel) {
         window.history.back()
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ── 스와이프 다운 핸들러 ──────────────────────────────────────────────
-  const onHandleTouchStart = (e: React.TouchEvent) => {
-    dragStartY.current  = e.touches[0].clientY
-    currentDragY.current = 0
-    isDraggingRef.current = true
-    if (sheetWrapRef.current) {
-      sheetWrapRef.current.style.transition = 'none'
+  // ── 스와이프 다운 — 네이티브 터치 리스너 (React 배치 우회, 60fps) ─────
+  useEffect(() => {
+    const handle = dragHandleRef.current
+    const sheet  = sheetWrapRef.current
+    if (!handle || !sheet) return
+
+    let startY = 0
+    let dragY  = 0
+    let active = false
+
+    const onStart = (e: TouchEvent) => {
+      startY = e.touches[0].clientY
+      dragY  = 0
+      active = true
+      sheet.style.transition = 'none'
     }
-  }
 
-  const onHandleTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current) return
-    const deltaY = Math.max(0, e.touches[0].clientY - dragStartY.current)
-    currentDragY.current = deltaY
-    if (sheetWrapRef.current) {
-      sheetWrapRef.current.style.transform = `translateY(${deltaY}px)`
+    const onMove = (e: TouchEvent) => {
+      if (!active) return
+      dragY = Math.max(0, e.touches[0].clientY - startY)
+      sheet.style.transform = `translateY(${dragY}px)`
     }
-  }
 
-  const onHandleTouchEnd = () => {
-    if (!isDraggingRef.current) return
-    isDraggingRef.current = false
+    const onEnd = () => {
+      if (!active) return
+      active = false
 
-    if (currentDragY.current > 80) {
-      // 임계값 초과 → 화면 밖으로 쭉 밀어낸 뒤 닫기
-      if (sheetWrapRef.current) {
-        const h = sheetWrapRef.current.offsetHeight
-        sheetWrapRef.current.style.transition = 'transform 320ms ease-in'
-        sheetWrapRef.current.style.transform  = `translateY(${h}px)`
-        setTimeout(onClose, 320)
+      if (dragY > 80) {
+        // 화면 밖으로 밀어낸 뒤 닫기
+        const h = sheet.offsetHeight
+        sheet.style.transition = 'transform 320ms ease-in'
+        sheet.style.transform  = `translateY(${h}px)`
+        setTimeout(() => onCloseRef.current(), 320)
       } else {
-        onClose()
-      }
-    } else {
-      // 스냅 백
-      if (sheetWrapRef.current) {
-        sheetWrapRef.current.style.transition = 'transform 300ms ease-out'
-        sheetWrapRef.current.style.transform  = 'translateY(0)'
+        // 스냅 백
+        sheet.style.transition = 'transform 280ms ease-out'
+        sheet.style.transform  = 'translateY(0)'
         setTimeout(() => {
-          if (sheetWrapRef.current) {
-            sheetWrapRef.current.style.transition = ''
-            sheetWrapRef.current.style.transform  = ''
-          }
-        }, 300)
+          sheet.style.transition = ''
+          sheet.style.transform  = ''
+        }, 280)
       }
     }
-  }
+
+    handle.addEventListener('touchstart', onStart, { passive: true })
+    handle.addEventListener('touchmove',  onMove,  { passive: true })
+    handle.addEventListener('touchend',   onEnd,   { passive: true })
+
+    return () => {
+      handle.removeEventListener('touchstart', onStart)
+      handle.removeEventListener('touchmove',  onMove)
+      handle.removeEventListener('touchend',   onEnd)
+    }
+  }, [])
 
   // ── 파일 핸들러 ──────────────────────────────────────────────────────
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,12 +138,8 @@ export default function EditModal({ course, onSave, onClose }: Props) {
       >
         <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
 
-          {/* ── 드래그 핸들 + 헤더 (스와이프 다운 감지 영역) ── */}
-          <div
-            onTouchStart={onHandleTouchStart}
-            onTouchMove={onHandleTouchMove}
-            onTouchEnd={onHandleTouchEnd}
-          >
+          {/* ── 드래그 핸들 + 헤더 (네이티브 터치 리스너 부착 대상) ── */}
+          <div ref={dragHandleRef}>
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
 
             {/* 헤더 */}
