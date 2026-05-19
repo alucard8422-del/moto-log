@@ -17,7 +17,9 @@ const LAST_TAB_KEY = 'moto:lastTab'
 export default function Layout() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const isMapPage = pathname === '/map'
+  const isMapPage      = pathname === '/map'
+  // route-planner도 전체화면 — 헤더 숨김, main은 contents, 탭바는 float으로 표시
+  const isFullScreen   = isMapPage || pathname === '/route-planner'
 
   // 탭 경로에 있을 때마다 sessionStorage에 저장
   // → 앱 전환 후 돌아와도 마지막 탭 기억 (탭 닫으면 자동 초기화)
@@ -30,7 +32,7 @@ export default function Layout() {
   return (
     // bg-[var(--bg-app)] — 테마 전환 시 앱 전체 도화지 색 즉시 반영
     <div className="relative flex min-h-svh flex-col" style={{ backgroundColor: 'var(--bg-app)' }}>
-      {!isMapPage && (
+      {!isFullScreen && (
         // 헤더: 테마 배경 + 테마 텍스트 + 테마 테두리
         <header
           className="sticky top-0 z-20 flex items-center justify-between border-b px-5 py-4 backdrop-blur-md"
@@ -58,7 +60,7 @@ export default function Layout() {
         </header>
       )}
 
-      <main className={isMapPage ? 'contents' : 'flex-1 pb-28'}>
+      <main className={isFullScreen ? 'contents' : 'flex-1 pb-28'}>
         <Outlet />
       </main>
 

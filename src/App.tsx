@@ -25,16 +25,16 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/fuel-complete"  element={<FuelCompletePage />} />
             {/* 독립 전체화면 — Layout(헤더·탭바) 없이 렌더 */}
-            <Route path="/route-planner"              element={<RoutePlanner />} />
             <Route path="/video-creator/:courseId"    element={<VideoCreatorPage />} />
             <Route path="/video-preview/:courseId"    element={<VideoPreviewPage />} />
             <Route element={<Layout />}>
-              <Route path="/map"        element={<MapPage />} />
-              <Route path="/courses"    element={<TourPage />} />
-              <Route path="/my-routes"  element={<MyRoutesPage />} />
-              <Route path="/garage"     element={<GaragePage />} />
-              <Route path="/profile"    element={<ProfilePage />} />
-              <Route path="/settings"   element={<SettingsPage />} />
+              <Route path="/map"            element={<MapPage />} />
+              <Route path="/courses"        element={<TourPage />} />
+              <Route path="/my-routes"      element={<MyRoutesPage />} />
+              <Route path="/garage"         element={<GaragePage />} />
+              <Route path="/profile"        element={<ProfilePage />} />
+              <Route path="/settings"       element={<SettingsPage />} />
+              <Route path="/route-planner"  element={<RoutePlanner />} />
             </Route>
           </Routes>
         </BrowserRouter>

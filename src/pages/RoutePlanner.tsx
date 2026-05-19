@@ -11,7 +11,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useNavigate }                            from 'react-router-dom'
 import { motion, AnimatePresence }                from 'framer-motion'
-import { MapPin, PenLine, Loader2 }              from 'lucide-react'
+import { PenLine, Loader2 }                       from 'lucide-react'
 
 import { saveCourse, shareToCommunity, buildGpxXml, type SavedCourse } from '../lib/courseStorage'
 import { totalDist, type LatLng }     from './routes/routeUtils'
@@ -225,29 +225,6 @@ export default function RoutePlanner() {
         )}
       </AnimatePresence>
 
-      {/* ── DRAW: 빈 화면 안내 ── */}
-      <AnimatePresence>
-        {points.length === 0 && !locked && (
-          <motion.div
-            className="pointer-events-none absolute inset-x-0 bottom-36 z-[900] flex flex-col items-center gap-3 px-8"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-teal-400/20 bg-slate-950/80 backdrop-blur-md">
-              <MapPin size={20} strokeWidth={1.3} className="text-teal-400" />
-            </div>
-            <p className="text-center text-sm font-light text-white/50">
-              지도를 탭해서 <span className="font-bold text-white/80">경유지 추가</span>
-              <br />
-              <span className="text-[11px] text-white/30">
-                꾹 누르면 로드뷰 · 마커 탭하면 삭제
-              </span>
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── DRAW: 코스 확정 버튼 ── */}
       <AnimatePresence>
