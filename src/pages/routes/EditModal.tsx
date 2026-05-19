@@ -61,6 +61,9 @@ export default function EditModal({ course, onSave, onClose }: Props) {
     let dragY  = 0
     let active = false
 
+    const CLOSE_THRESHOLD = 160   // 이 이상 내려간 채로 손 떼야 닫힘
+    const HINT_START      = 60    // 여기부터 살짝 투명해지기 시작
+
     const onStart = (e: TouchEvent) => {
       startY = e.touches[0].clientY
       dragY  = 0
@@ -72,26 +75,35 @@ export default function EditModal({ course, onSave, onClose }: Props) {
       if (!active) return
       dragY = Math.max(0, e.touches[0].clientY - startY)
       sheet.style.transform = `translateY(${dragY}px)`
+      // 드래그 거리에 따라 살짝 투명 — 닫힘 구간 시각 피드백
+      const opacity = dragY < HINT_START
+        ? 1
+        : Math.max(0.55, 1 - (dragY - HINT_START) / (CLOSE_THRESHOLD * 1.5))
+      sheet.style.opacity = String(opacity)
     }
 
     const onEnd = () => {
       if (!active) return
       active = false
+      sheet.style.opacity = ''
 
-      if (dragY > 80) {
+      if (dragY > CLOSE_THRESHOLD) {
         // 화면 밖으로 밀어낸 뒤 닫기
         const h = sheet.offsetHeight
-        sheet.style.transition = 'transform 320ms ease-in'
+        sheet.style.transition = 'transform 320ms ease-in, opacity 320ms ease-in'
         sheet.style.transform  = `translateY(${h}px)`
+        sheet.style.opacity    = '0'
         setTimeout(() => onCloseRef.current(), 320)
       } else {
-        // 스냅 백
-        sheet.style.transition = 'transform 280ms ease-out'
+        // 스냅 백 (위로 다시 올리거나 애매하게 당겼을 때)
+        sheet.style.transition = 'transform 300ms cubic-bezier(0.34,1.56,0.64,1), opacity 200ms ease-out'
         sheet.style.transform  = 'translateY(0)'
+        sheet.style.opacity    = '1'
         setTimeout(() => {
           sheet.style.transition = ''
           sheet.style.transform  = ''
-        }, 280)
+          sheet.style.opacity    = ''
+        }, 300)
       }
     }
 
