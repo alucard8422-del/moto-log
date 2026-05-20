@@ -69,6 +69,76 @@ export async function insertCourse(
 }
 
 /* ════════════════════════════════════════════
+   이미지 압축 (Canvas API) — 500KB 이하 보장
+════════════════════════════════════════════ */
+
+/** base64 이미지를 JPEG 500KB 이하로 압축해 반환 */
+async function compressImage(base64: string, maxBytes = 500 * 1024): Promise<string> {
+  return new Promise(resolve => {
+    const img = new Image()
+    img.onerror = () => resolve(base64)   // 파싱 실패 시 원본 그대로
+    img.onload  = () => {
+      const MAX_DIM = 1920
+      let w = img.naturalWidth, h = img.naturalHeight
+      if (w > MAX_DIM || h > MAX_DIM) {
+        const r = Math.min(MAX_DIM / w, MAX_DIM / h)
+        w = Math.round(w * r); h = Math.round(h * r)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+
+      let quality = 0.82
+      const tryNext = () => {
+        const out   = canvas.toDataURL('image/jpeg', quality)
+        const bytes = Math.round((out.length * 3) / 4)
+        if (bytes <= maxBytes || quality <= 0.25) { resolve(out); return }
+        quality -= 0.10
+        tryNext()
+      }
+      tryNext()
+    }
+    img.src = base64
+  })
+}
+
+/**
+ * base64 이미지를 압축 후 Supabase Storage `course-images` 버킷에 업로드.
+ * 성공 시 Public URL 반환, 실패 시 null 반환.
+ * 파일명: `{timestamp}_{courseId}.jpg`
+ */
+export async function uploadCourseImage(base64: string, courseId: string): Promise<string | null> {
+  try {
+    const compressed = await compressImage(base64)
+    const arr  = compressed.split(',')
+    const mime = arr[0].match(/:(.*?);/)?.[1] ?? 'image/jpeg'
+    const bstr = atob(arr[1])
+    const u8   = new Uint8Array(bstr.length)
+    for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i)
+    const blob = new Blob([u8], { type: mime })
+
+    const fileName = `${Date.now()}_${courseId}.jpg`
+    console.log('[courseService] Storage 업로드 시도 — 파일:', fileName, '| 용량:', Math.round(blob.size / 1024), 'KB')
+
+    const { data, error } = await supabase.storage
+      .from('course-images')
+      .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true })
+
+    if (error) {
+      console.error('🚨 [치명적 저장 에러]: Storage 업로드 실패\n  메시지:', error.message)
+      return null
+    }
+
+    const { data: urlData } = supabase.storage.from('course-images').getPublicUrl(data.path)
+    console.log('[courseService] ✅ Storage 업로드 완료 — URL:', urlData.publicUrl)
+    return urlData.publicUrl
+  } catch (e) {
+    console.error('🚨 [치명적 저장 에러]: uploadCourseImage 예외:', e)
+    return null
+  }
+}
+
+/* ════════════════════════════════════════════
    내 주행 기록 (user_courses) — SavedCourse CRUD
 ════════════════════════════════════════════ */
 
@@ -140,7 +210,7 @@ export async function insertMyCourse(course: SavedCourse): Promise<boolean> {
   }, { onConflict: 'id' }).select().single()
   if (error) {
     console.error(
-      '[courseService] ❌ 서버 저장 실패 (데이터는 로컬에 보존됨)\n',
+      '🚨 [치명적 저장 에러]: user_courses insert 실패 (데이터는 로컬에 보존됨)\n',
       '  메시지:', error.message,
       '| 코드:', error.code,
       '| hint:', error.hint ?? '없음',
@@ -158,7 +228,7 @@ export async function updateMyCourse(id: string, partial: Partial<SavedCourse>):
   if (partial.communityShared !== undefined) payload.community_shared = partial.communityShared
   const { error } = await supabase.from('user_courses').update(payload).eq('id', id).select()
   if (error) {
-    console.error('[courseService] ❌ updateMyCourse 실패:', error.message, '| id:', id)
+    console.error('🚨 [치명적 저장 에러]: user_courses update 실패\n  메시지:', error.message, '| id:', id, '| 코드:', error.code)
     return false
   }
   console.log('[courseService] ✅ 서버 수정 완료 — id:', id)

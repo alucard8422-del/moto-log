@@ -19,7 +19,7 @@ import {
   type SavedCourse,
 } from '../lib/courseStorage'
 import {
-  fetchMyCoursesAuth, updateMyCourse, deleteMyCourse,
+  fetchMyCoursesAuth, updateMyCourse, deleteMyCourse, uploadCourseImage,
 } from '../lib/courseService'
 import { saveDriveSession } from '../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
@@ -94,24 +94,43 @@ export default function MyRoutesPage() {
   }
 
   const handleSave = (id: string, diary: string, photos: string[]) => {
-    const partial: Partial<SavedCourse> = { diary }
-    if (photos.length > 0) partial.coverPhoto = photos[0]
+    // ── [1단계] 로컬 선저장 — 서버 결과와 무관하게 즉시 화면 반영 ──────────
+    const localPartial: Partial<SavedCourse> = { diary }
+    if (photos.length > 0) localPartial.coverPhoto = photos[0]   // base64 로컬 표시용
 
-    // [1단계] 로컬 먼저 무조건 저장 (데이터 증발 방지 안전장치)
-    updateCourse(id, partial)
-    setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
+    updateCourse(id, localPartial)
+    setCourses(prev => prev.map(c => c.id === id ? { ...c, ...localPartial } : c))
     setEditTarget(null)
     setToast('기록이 저장되었습니다')
     const { newlyUnlocked } = checkRideDiaryBadge()
     if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
 
-    // [2단계] 서버 동기화 — 실패해도 로컬 데이터는 유지됨
-    updateMyCourse(id, partial)
-      .then(ok => {
-        if (!ok) console.warn('[MyRoutesPage] ⚠️ 서버 수정 실패 — 로컬에는 저장됨. 다음 접속 시 재시도 필요.')
-        else console.log('[MyRoutesPage] ✅ 서버 수정 완료 — id:', id)
-      })
-      .catch(e => console.error('[MyRoutesPage] ❌ 서버 수정 오류:', e))
+    // ── [2단계] 서버 동기화 (압축 → Storage → DB) — 실패해도 로컬 유지 ──────
+    ;(async () => {
+      try {
+        const serverPartial: Partial<SavedCourse> = { diary }
+
+        if (photos.length > 0) {
+          console.log('[MyRoutesPage] 사진 압축 및 Storage 업로드 시작...')
+          const publicUrl = await uploadCourseImage(photos[0], id)
+          if (publicUrl) {
+            serverPartial.coverPhoto = publicUrl
+            // 로컬 base64 → CDN URL로 교체 (용량 절약)
+            updateCourse(id, { coverPhoto: publicUrl })
+            setCourses(prev => prev.map(c => c.id === id ? { ...c, coverPhoto: publicUrl } : c))
+          } else {
+            console.warn('[MyRoutesPage] ⚠️ Storage 업로드 실패 — 사진은 로컬(base64)에만 보존됨')
+          }
+        }
+
+        const ok = await updateMyCourse(id, serverPartial)
+        if (!ok) console.warn('[MyRoutesPage] ⚠️ DB 수정 실패 — 로컬에는 저장됨')
+        else      console.log('[MyRoutesPage] ✅ 서버 저장 완료 — id:', id)
+
+      } catch (e) {
+        console.error('🚨 [치명적 저장 에러]: handleSave 서버 동기화 실패\n  로컬에는 정상 저장됨\n  원인:', e)
+      }
+    })()
   }
 
   const handleDrive = (course: SavedCourse) => {
