@@ -19,7 +19,7 @@ import {
   type SavedCourse,
 } from '../lib/courseStorage'
 import {
-  fetchMyCourses, updateMyCourse, deleteMyCourse,
+  fetchMyCoursesAuth, updateMyCourse, deleteMyCourse,
 } from '../lib/courseService'
 import { saveDriveSession } from '../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
@@ -28,6 +28,7 @@ export default function MyRoutesPage() {
   const navigate = useNavigate()
 
   const [courses,     setCourses]     = useState<SavedCourse[]>([])
+  const [isLoading,   setIsLoading]   = useState(true)
   const [editTarget,  setEditTarget]  = useState<SavedCourse | null>(null)
   const [shareTarget, setShareTarget] = useState<SavedCourse | null>(null)
   const [videoTarget, setVideoTarget] = useState<SavedCourse | null>(null)
@@ -44,12 +45,15 @@ export default function MyRoutesPage() {
   }, [toast])
 
   useEffect(() => {
-    fetchMyCourses().then(serverCourses => {
-      if (serverCourses.length > 0) {
-        // 로그인 상태 + 서버 데이터 존재 → 서버 기준
+    setIsLoading(true)
+    fetchMyCoursesAuth().then(({ courses: serverCourses, loggedIn }) => {
+      if (loggedIn) {
+        // ✅ 로그인 상태: 코스가 0개여도 서버 기준 표시 (Mock 주입 안 함)
+        console.log(`[MyRoutesPage] ✅ 서버 데이터 ${serverCourses.length}개 로드`)
         setCourses(serverCourses)
       } else {
-        // 미로그인 또는 서버 데이터 없음 → 로컬 폴백
+        // ℹ️ 미로그인: 로컬 폴백 (목 데이터 시딩 포함)
+        console.log('[MyRoutesPage] ℹ️ 미로그인 — 로컬 데이터 사용')
         const stored = loadCourses()
         if (!localStorage.getItem(MOCK_SEED_KEY)) {
           const seeded = [...MOCK_COURSES, ...stored]
@@ -60,6 +64,10 @@ export default function MyRoutesPage() {
           setCourses(stored)
         }
       }
+      setIsLoading(false)
+    }).catch(e => {
+      console.error('[MyRoutesPage] ❌ 데이터 로드 오류:', e)
+      setIsLoading(false)
     })
   }, [])
 
@@ -96,7 +104,8 @@ export default function MyRoutesPage() {
   }
 
   const handleShareConfirm = (id: string) => {
-    shareToCommunity(id)
+    shareToCommunity(id)                                    // 로컬
+    updateMyCourse(id, { communityShared: true })           // 서버 (fire-and-forget)
     setCourses(prev => prev.map(c =>
       c.id === id ? { ...c, communityShared: true, isShared: true } : c
     ))
@@ -153,7 +162,14 @@ export default function MyRoutesPage() {
 
       {/* ── 경로 카드 목록 ── */}
       <div className="px-5">
-        {courses.length === 0
+        {isLoading
+          ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-muted">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+              <p className="text-xs">서버에서 불러오는 중...</p>
+            </div>
+          )
+          : courses.length === 0
           ? <EmptyState />
           : (
             <div className="flex flex-col gap-4">
