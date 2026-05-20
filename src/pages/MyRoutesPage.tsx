@@ -103,17 +103,22 @@ export default function MyRoutesPage() {
     const { newlyUnlocked } = checkRideDiaryBadge()
     if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
 
-    // ── [2단계] 서버 동기화 (압축 → Storage → DB) — 실패해도 로컬 유지 ──────
+    // ── [2단계] 서버 동기화 — 전체 코스 upsert (UPDATE 불확실성 제거) ──────
     ;(async () => {
       try {
-        const serverPartial: Partial<SavedCourse> = { diary }
+        const fullCourse = courses.find(c => c.id === id)
+        if (!fullCourse) {
+          console.warn('[MyRoutesPage] ⚠️ 코스를 메모리에서 찾을 수 없음 — id:', id)
+          return
+        }
 
+        // 사진 업로드 (있을 경우)
+        let finalCoverPhoto = fullCourse.coverPhoto
         if (photos.length > 0) {
           console.log('[MyRoutesPage] 사진 압축 및 Storage 업로드 시작...')
           const publicUrl = await uploadCourseImage(photos[0], id)
           if (publicUrl) {
-            serverPartial.coverPhoto = publicUrl
-            // 로컬 base64 → CDN URL로 교체 (용량 절약)
+            finalCoverPhoto = publicUrl
             updateCourse(id, { coverPhoto: publicUrl })
             setCourses(prev => prev.map(c => c.id === id ? { ...c, coverPhoto: publicUrl } : c))
           } else {
@@ -121,26 +126,11 @@ export default function MyRoutesPage() {
           }
         }
 
-        const ok = await updateMyCourse(id, serverPartial)
-        if (!ok) {
-          // UPDATE 0행(코스가 서버에 없음) → 메모리 상태에서 전체 코스 읽어 upsert
-          console.warn('[MyRoutesPage] ⚠️ DB 수정 실패 — 전체 코스 upsert 폴백 시작...')
-          const fullCourse = courses.find(c => c.id === id)
-          if (fullCourse) {
-            const merged: SavedCourse = {
-              ...fullCourse,
-              diary,
-              ...(serverPartial.coverPhoto ? { coverPhoto: serverPartial.coverPhoto } : {}),
-            }
-            const ok2 = await insertMyCourse(merged)
-            if (ok2) console.log('[MyRoutesPage] ✅ 폴백 upsert 완료 — id:', id)
-            else     console.warn('[MyRoutesPage] ⚠️ 폴백 upsert 실패 — 로컬에만 저장됨')
-          } else {
-            console.warn('[MyRoutesPage] ⚠️ 메모리에도 코스 없음 — id:', id)
-          }
-        } else {
-          console.log('[MyRoutesPage] ✅ 서버 저장 완료 — id:', id)
-        }
+        // 전체 코스에 diary 병합 후 upsert (코스 존재 여부 무관)
+        const merged: SavedCourse = { ...fullCourse, diary, coverPhoto: finalCoverPhoto }
+        const ok = await insertMyCourse(merged)
+        if (ok) console.log('[MyRoutesPage] ✅ 서버 저장 완료 — id:', id)
+        else    console.warn('[MyRoutesPage] ⚠️ 서버 저장 실패 — 로컬에만 저장됨')
 
       } catch (e) {
         console.error('🚨 [치명적 저장 에러]: handleSave 서버 동기화 실패\n  로컬에는 정상 저장됨\n  원인:', e)
