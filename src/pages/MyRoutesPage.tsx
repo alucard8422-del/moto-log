@@ -18,6 +18,9 @@ import {
   loadCourses, updateCourse, deleteCourse, shareToCommunity,
   type SavedCourse,
 } from '../lib/courseStorage'
+import {
+  fetchMyCourses, updateMyCourse, deleteMyCourse,
+} from '../lib/courseService'
 import { saveDriveSession } from '../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
 
@@ -41,26 +44,36 @@ export default function MyRoutesPage() {
   }, [toast])
 
   useEffect(() => {
-    const stored = loadCourses()
-    if (!localStorage.getItem(MOCK_SEED_KEY)) {
-      const seeded = [...MOCK_COURSES, ...stored]
-      localStorage.setItem('moto_my_courses', JSON.stringify(seeded))
-      localStorage.setItem(MOCK_SEED_KEY, '1')
-      setCourses(seeded)
-    } else {
-      setCourses(stored)
-    }
+    fetchMyCourses().then(serverCourses => {
+      if (serverCourses.length > 0) {
+        // 로그인 상태 + 서버 데이터 존재 → 서버 기준
+        setCourses(serverCourses)
+      } else {
+        // 미로그인 또는 서버 데이터 없음 → 로컬 폴백
+        const stored = loadCourses()
+        if (!localStorage.getItem(MOCK_SEED_KEY)) {
+          const seeded = [...MOCK_COURSES, ...stored]
+          localStorage.setItem('moto_my_courses', JSON.stringify(seeded))
+          localStorage.setItem(MOCK_SEED_KEY, '1')
+          setCourses(seeded)
+        } else {
+          setCourses(stored)
+        }
+      }
+    })
   }, [])
 
   const handleDelete = (id: string) => {
-    deleteCourse(id)
+    deleteCourse(id)          // 로컬
+    deleteMyCourse(id)        // 서버 (fire-and-forget)
     setCourses(prev => prev.filter(c => c.id !== id))
   }
 
   const handleSave = (id: string, diary: string, photos: string[]) => {
     const partial: Partial<SavedCourse> = { diary }
     if (photos.length > 0) partial.coverPhoto = photos[0]
-    updateCourse(id, partial)
+    updateCourse(id, partial)     // 로컬
+    updateMyCourse(id, partial)   // 서버 (fire-and-forget)
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
     setEditTarget(null)
     setToast('기록이 저장되었습니다')
