@@ -107,6 +107,9 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
           {course.coverPhoto && (
             <div className="absolute bottom-0 left-0 right-0 p-3">
               <p className="text-[15px] font-bold text-white">{label}</p>
+              {course.title && (
+                <p className="text-[12px] font-medium text-white/75">{course.title}</p>
+              )}
             </div>
           )}
         </div>
@@ -114,7 +117,12 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
         {/* ── 하단 정보 ── */}
         <div className="px-5 pb-5 pt-4">
           {!course.coverPhoto && (
-            <p className="mb-1 text-[16px] font-extrabold tracking-tight text-main">{label}</p>
+            <>
+              <p className="mb-0.5 text-[16px] font-extrabold tracking-tight text-main">{label}</p>
+              {course.title && (
+                <p className="mb-1 text-[12px] font-medium text-sub">{course.title}</p>
+              )}
+            </>
           )}
           {course.diary && (
             <p className="mb-3 line-clamp-1 text-[12px] font-normal text-muted">{course.diary}</p>

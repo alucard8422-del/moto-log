@@ -14,6 +14,7 @@ import { motion, AnimatePresence }                from 'framer-motion'
 import { PenLine, Loader2 }                       from 'lucide-react'
 
 import { saveCourse, shareToCommunity, buildGpxXml, type SavedCourse } from '../lib/courseStorage'
+import { insertMyCourse } from '../lib/courseService'
 import { totalDist, type LatLng }     from './routes/routeUtils'
 import { fetchRoute }                 from './planner/routing'
 import RoadviewModal                  from '../components/RoadviewModal'
@@ -194,8 +195,10 @@ export default function RoutePlanner() {
       shareToCommunity(course.id)
       window.dispatchEvent(new CustomEvent('moto:community-updated'))
     }
+    // 서버 동기화 (fire-and-forget) — 내 경로 이동 후 서버 기준 로드에서 보이도록
+    insertMyCourse(course).catch(e => console.warn('[RoutePlanner] 서버 저장 실패:', e))
     setDone(true)
-    setTimeout(() => navigate(-1), 1_200)
+    setTimeout(() => navigate('/my-routes', { replace: true }), 1_200)
   }, [canSave, displayPath, points, title, dist, tip, navigate])
 
   // ── 렌더 ──────────────────────────────────────────────────────────────────
