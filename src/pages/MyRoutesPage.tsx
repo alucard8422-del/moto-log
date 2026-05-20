@@ -150,8 +150,25 @@ export default function MyRoutesPage() {
         }
 
         const ok = await updateMyCourse(id, serverPartial)
-        if (!ok) console.warn('[MyRoutesPage] ⚠️ DB 수정 실패 — 로컬에는 저장됨')
-        else      console.log('[MyRoutesPage] ✅ 서버 저장 완료 — id:', id)
+        if (!ok) {
+          // UPDATE 0행(코스가 서버에 없음) → 메모리 상태에서 전체 코스 읽어 upsert
+          console.warn('[MyRoutesPage] ⚠️ DB 수정 실패 — 전체 코스 upsert 폴백 시작...')
+          const fullCourse = courses.find(c => c.id === id)
+          if (fullCourse) {
+            const merged: SavedCourse = {
+              ...fullCourse,
+              diary,
+              ...(serverPartial.coverPhoto ? { coverPhoto: serverPartial.coverPhoto } : {}),
+            }
+            const ok2 = await insertMyCourse(merged)
+            if (ok2) console.log('[MyRoutesPage] ✅ 폴백 upsert 완료 — id:', id)
+            else     console.warn('[MyRoutesPage] ⚠️ 폴백 upsert 실패 — 로컬에만 저장됨')
+          } else {
+            console.warn('[MyRoutesPage] ⚠️ 메모리에도 코스 없음 — id:', id)
+          }
+        } else {
+          console.log('[MyRoutesPage] ✅ 서버 저장 완료 — id:', id)
+        }
 
       } catch (e) {
         console.error('🚨 [치명적 저장 에러]: handleSave 서버 동기화 실패\n  로컬에는 정상 저장됨\n  원인:', e)

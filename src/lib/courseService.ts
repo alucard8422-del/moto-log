@@ -284,7 +284,6 @@ export async function updateMyCourse(id: string, partial: Partial<SavedCourse>):
   }
   console.log('[courseService] update 전송 — id:', id, '| 필드:', Object.keys(payload).join(', '))
 
-  // ── UPDATE 시도 → 0행이면 코스가 서버에 없는 것 → 로컬에서 전체 코스 읽어 INSERT 폴백 ──
   const { data: updated, error } = await supabase
     .from('user_courses')
     .update(payload)
@@ -303,27 +302,10 @@ export async function updateMyCourse(id: string, partial: Partial<SavedCourse>):
     return false
   }
 
-  // 업데이트된 행이 0개 = 서버에 코스가 없음 → 로컬 전체 데이터로 upsert
+  // 0행 = 서버에 해당 코스 없음 → 호출부에서 insertMyCourse 폴백 처리
   if (!updated || updated.length === 0) {
-    console.warn('[courseService] ⚠️ update 0행 — 서버에 코스 없음. 로컬에서 읽어 upsert 시도...')
-    const { loadCourses } = await import('./courseStorage')
-    const localCourses = loadCourses()
-    const found = localCourses.find(c => c.id === id)
-    if (found) {
-      // diary/coverPhoto 최신값 병합 후 upsert
-      const merged = {
-        ...found,
-        diary:      partial.diary      ?? found.diary,
-        coverPhoto: partial.coverPhoto ?? found.coverPhoto,
-      }
-      const ok = await insertMyCourse(merged)
-      if (ok) console.log('[courseService] ✅ 폴백 upsert 완료 — id:', id)
-      else    console.warn('[courseService] ⚠️ 폴백 upsert 실패 — id:', id)
-      return ok
-    } else {
-      console.warn('[courseService] ⚠️ 로컬에서도 코스 없음 — id:', id)
-      return false
-    }
+    console.warn('[courseService] ⚠️ update 0행 — 서버에 코스 없음 (호출부 폴백 필요) id:', id)
+    return false
   }
 
   console.log('[courseService] ✅ 서버 수정 완료 — id:', id)
