@@ -45,41 +45,49 @@ export default function MyRoutesPage() {
   }, [toast])
 
   useEffect(() => {
-    setIsLoading(true)
-    fetchMyCoursesAuth().then(({ courses: serverCourses, loggedIn }) => {
-      if (loggedIn) {
-        if (serverCourses.length > 0) {
-          // ✅ 로그인 + 서버 데이터 있음: 서버 기준
-          console.log(`[MyRoutesPage] ✅ 서버 데이터 ${serverCourses.length}개 로드`)
-          setCourses(serverCourses)
-        } else {
-          // ⚠️ 로그인했지만 서버 데이터 0개 → 로컬 백업 확인 (서버 저장 실패 방어)
-          const localCourses = loadCourses()
-          if (localCourses.length > 0) {
-            console.warn('[MyRoutesPage] ⚠️ 서버 데이터 없음 — 로컬 백업 데이터 표시 (서버 동기화 필요)')
+    // useEffect 콜백은 async 불가 → 내부 async 함수로 분리
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        const { courses: serverCourses, loggedIn } = await fetchMyCoursesAuth()
+
+        if (loggedIn) {
+          console.log('🎯 서버에서 최종 수신한 코스 데이터:', serverCourses)
+
+          if (serverCourses.length > 0) {
+            // ✅ 로그인 + 서버 데이터 있음: 서버 기준으로 화면 갱신
+            setCourses(serverCourses)
           } else {
-            console.log('[MyRoutesPage] ℹ️ 서버/로컬 모두 데이터 없음 — 빈 화면 표시')
+            // ⚠️ 로그인했지만 서버 0개 → 로컬 백업 확인
+            const localCourses = loadCourses()
+            console.warn(
+              localCourses.length > 0
+                ? '[MyRoutesPage] ⚠️ 서버 데이터 없음 — 로컬 백업 표시 (서버 동기화 필요)'
+                : '[MyRoutesPage] ℹ️ 서버/로컬 모두 데이터 없음 — 빈 화면 표시'
+            )
+            setCourses(localCourses)
           }
-          setCourses(localCourses)
-        }
-      } else {
-        // ℹ️ 미로그인: 로컬 폴백 (목 데이터 시딩 포함)
-        console.log('[MyRoutesPage] ℹ️ 미로그인 — 로컬 데이터 사용')
-        const stored = loadCourses()
-        if (!localStorage.getItem(MOCK_SEED_KEY)) {
-          const seeded = [...MOCK_COURSES, ...stored]
-          localStorage.setItem('moto_my_courses', JSON.stringify(seeded))
-          localStorage.setItem(MOCK_SEED_KEY, '1')
-          setCourses(seeded)
         } else {
-          setCourses(stored)
+          // ℹ️ 미로그인: 로컬 폴백
+          console.log('[MyRoutesPage] ℹ️ 미로그인 — 로컬 데이터 사용')
+          const stored = loadCourses()
+          if (!localStorage.getItem(MOCK_SEED_KEY)) {
+            const seeded = [...MOCK_COURSES, ...stored]
+            localStorage.setItem('moto_my_courses', JSON.stringify(seeded))
+            localStorage.setItem(MOCK_SEED_KEY, '1')
+            setCourses(seeded)
+          } else {
+            setCourses(stored)
+          }
         }
+      } catch (e) {
+        console.error('[MyRoutesPage] ❌ 데이터 로드 오류:', e)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
-    }).catch(e => {
-      console.error('[MyRoutesPage] ❌ 데이터 로드 오류:', e)
-      setIsLoading(false)
-    })
+    }
+
+    loadData()
   }, [])
 
   const handleDelete = (id: string) => {
