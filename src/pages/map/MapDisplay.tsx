@@ -20,45 +20,39 @@ interface Props {
   mapRef?: React.MutableRefObject<any>
 }
 
-// 현재 위치 CustomOverlay HTML — 카카오맵 좌표에 고정
-function makeArrowContent(): HTMLElement {
+// 현재 위치 CustomOverlay — 원형 나침반 스타일, 방향 화살표 회전 가능
+function makeCompassOverlay(): { wrap: HTMLElement; arrowEl: HTMLElement } {
   const wrap = document.createElement('div')
-  wrap.style.cssText = `
-    width: 44px; height: 44px;
-    display: flex; align-items: center; justify-content: center;
-    position: relative; pointer-events: none;
-  `
-  wrap.innerHTML = `
-    <span style="
-      position:absolute; width:56px; height:56px;
-      border-radius:50%; background:rgba(45,212,191,0.10);
-      animation: moto-ping 1.8s cubic-bezier(0,0,0.2,1) infinite;
-    "></span>
-    <span style="
-      position:absolute; width:32px; height:32px;
-      border-radius:50%; background:rgba(45,212,191,0.15);
-      filter:blur(5px);
-    "></span>
-    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
-      fill="#2DD4BF" stroke="#2DD4BF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-      style="filter:drop-shadow(0 0 7px #2dd4bf) drop-shadow(0 0 14px #2dd4bf88); position:relative;">
-      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+  wrap.style.cssText = 'width:48px;height:48px;display:flex;align-items:center;justify-content:center;position:relative;pointer-events:none'
+
+  const ping = document.createElement('span')
+  ping.style.cssText = 'position:absolute;width:62px;height:62px;border-radius:50%;background:rgba(45,212,191,0.12);animation:moto-ping 1.8s cubic-bezier(0,0,0.2,1) infinite'
+
+  // 나침반 heading 회전 적용 대상
+  const arrowEl = document.createElement('div')
+  arrowEl.style.cssText = 'position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;will-change:transform'
+  arrowEl.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" style="position:absolute;top:0;left:0;overflow:visible">
+      <!-- 외부 원 -->
+      <circle cx="22" cy="22" r="16" fill="rgba(45,212,191,0.18)" stroke="#2DD4BF" stroke-width="1.8" stroke-opacity="0.75"/>
+      <!-- 중심 점 -->
+      <circle cx="22" cy="22" r="5.5" fill="#2DD4BF" style="filter:drop-shadow(0 0 5px #2dd4bf)"/>
+      <!-- 방향 화살표 (위 = 북쪽/heading 0) -->
+      <polygon points="22,3 26.5,14 22,11 17.5,14" fill="#2DD4BF" style="filter:drop-shadow(0 0 4px #2dd4bfaa)"/>
     </svg>
   `
-  // ping 애니메이션 — 글로벌 style 한 번만 삽입
+
+  wrap.appendChild(ping)
+  wrap.appendChild(arrowEl)
+
   if (!document.getElementById('moto-ping-style')) {
     const s = document.createElement('style')
     s.id = 'moto-ping-style'
-    s.textContent = `
-      @keyframes moto-ping {
-        0%   { transform: scale(0.9); opacity: 0.7; }
-        70%  { transform: scale(1.6); opacity: 0;   }
-        100% { transform: scale(0.9); opacity: 0;   }
-      }
-    `
+    s.textContent = '@keyframes moto-ping{0%{transform:scale(0.9);opacity:0.7}70%{transform:scale(1.6);opacity:0}100%{transform:scale(0.9);opacity:0}}'
     document.head.appendChild(s)
   }
-  return wrap
+
+  return { wrap, arrowEl }
 }
 
 export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: Props) {
@@ -69,6 +63,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
   const arrowOverlayRef   = useRef<any>(null)
   const hasCenteredRef    = useRef(false)          // 최초 1회 내 위치로 이동
   const currentPosRef     = useRef<Location | null>(null)
+  const arrowElRef        = useRef<HTMLElement | null>(null)       // 나침반 회전 대상 DOM
+  const compassHandlerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null)
+  const smoothedPosRef    = useRef<{ lat: number; lng: number } | null>(null)  // EMA 스무딩
   const [roadviewPos, setRoadviewPos] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── 1. 카카오맵 초기화 ───────────────────────────────────────────
@@ -91,10 +88,12 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         const onResize = () => { try { map.relayout() } catch {} }
         window.addEventListener('resize', onResize)
 
-        // 위치 화살표 CustomOverlay 생성 (초기 위치는 지도 중심)
+        // 위치 화살표 CustomOverlay 생성 (나침반 회전 가능)
+        const { wrap: arrowWrap, arrowEl } = makeCompassOverlay()
+        arrowElRef.current = arrowEl
         const overlay = new window.kakao.maps.CustomOverlay({
           position: new window.kakao.maps.LatLng(36.5, 127.8),
-          content:  makeArrowContent(),
+          content:  arrowWrap,
           xAnchor:  0.5,
           yAnchor:  0.5,
           zIndex:   10,
@@ -171,7 +170,37 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
     }
   }, [])
 
-  // ── 2. 주행 경로 폴리라인 실시간 업데이트 ─────────────────────────
+  // ── 2. 나침반 heading → 화살표 회전 ──────────────────────────────
+  useEffect(() => {
+    const handler = (e: DeviceOrientationEvent) => {
+      const ev = e as DeviceOrientationEvent & { webkitCompassHeading?: number }
+      let heading = 0
+      if (typeof ev.webkitCompassHeading === 'number') {
+        heading = ev.webkitCompassHeading           // iOS: 자북 기준 시계방향 °
+      } else if (e.alpha !== null && e.alpha !== undefined) {
+        heading = (360 - e.alpha) % 360             // Android: 반시계 → 시계 변환
+      }
+      if (arrowElRef.current) {
+        arrowElRef.current.style.transform = `rotate(${heading}deg)`
+      }
+    }
+    compassHandlerRef.current = handler
+
+    const DOE = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<string>
+    }
+    if (typeof DOE.requestPermission === 'function') {
+      // iOS 13+ — 유저 제스처 없이는 실패할 수 있음 (현재위치 버튼 탭 시 재시도)
+      DOE.requestPermission()
+        .then(r => { if (r === 'granted') window.addEventListener('deviceorientation', handler, true) })
+        .catch(() => {})
+    } else {
+      window.addEventListener('deviceorientation', handler, true)
+    }
+    return () => window.removeEventListener('deviceorientation', handler, true)
+  }, [])
+
+  // ── 3. 주행 경로 폴리라인 실시간 업데이트 ─────────────────────────
   useEffect(() => {
     if (!mapInstanceRef.current || !window.kakao?.maps) return
 
@@ -195,12 +224,21 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
     mainLineRef.current.setMap(mapInstanceRef.current)
   }, [path])
 
-  // ── 3. GPS 위치 업데이트 → 화살표 이동 + 조건부 panTo ─────────────
+  // ── 4. GPS 위치 업데이트 → EMA 스무딩 → 화살표 이동 + 조건부 panTo ─
   useEffect(() => {
     currentPosRef.current = currentPosition
     if (!currentPosition || !window.kakao?.maps) return
 
-    const latlng = new window.kakao.maps.LatLng(currentPosition.lat, currentPosition.lng)
+    // EMA 스무딩 (α=0.35) — GPS 떨림 시각 완화, 실제 경로 기록과 무관
+    const α = 0.35
+    const sp = smoothedPosRef.current
+    const smoothed = sp
+      ? { lat: α * currentPosition.lat + (1 - α) * sp.lat,
+          lng: α * currentPosition.lng + (1 - α) * sp.lng }
+      : { lat: currentPosition.lat, lng: currentPosition.lng }
+    smoothedPosRef.current = smoothed
+
+    const latlng = new window.kakao.maps.LatLng(smoothed.lat, smoothed.lng)
 
     // 화살표 오버레이 위치 갱신
     if (arrowOverlayRef.current) {
@@ -223,8 +261,20 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
     mapInstanceRef.current.setZoomable(!isRiding)
   }, [isRiding])
 
-  // ── 현재위치 버튼 핸들러 ──────────────────────────────────────────
+  // ── 현재위치 버튼 핸들러 (iOS 나침반 권한 요청 포함) ─────────────────
   const handleLocate = () => {
+    // iOS 13+ 나침반 권한 — 유저 탭이 제스처로 인정됨
+    const DOE = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<string>
+    }
+    if (typeof DOE.requestPermission === 'function' && compassHandlerRef.current) {
+      DOE.requestPermission()
+        .then(r => {
+          if (r === 'granted' && compassHandlerRef.current)
+            window.addEventListener('deviceorientation', compassHandlerRef.current, true)
+        })
+        .catch(() => {})
+    }
     if (!mapInstanceRef.current || !currentPosRef.current || !window.kakao?.maps) return
     const { lat, lng } = currentPosRef.current
     mapInstanceRef.current.panTo(new window.kakao.maps.LatLng(lat, lng))

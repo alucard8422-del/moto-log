@@ -9,6 +9,7 @@ import ErgonomicController           from './map/ErgonomicController'
 import NavigationCountdownPopup      from '../components/NavigationCountdownPopup'
 import { loadNaviPref, launchNavi }  from './map/naviUtils'
 import { buildGpxXml, saveCourse }   from '../lib/courseStorage'
+import { insertMyCourse }            from '../lib/courseService'
 import {
   NAVI_OPTIONS,
   type Location,
@@ -133,7 +134,7 @@ export default function MapPage() {
 
     const endTime  = new Date()
     const gpxPoints = path.map((p) => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp, altitude: p.altitude, speed: p.speed, heading: p.heading }))
-    saveCourse({
+    const rideRecord = {
       id:          crypto.randomUUID(),
       title:       `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
       distanceKm:  parseFloat(frozenDistance.toFixed(2)),
@@ -142,7 +143,10 @@ export default function MapPage() {
       gpxXml:      buildGpxXml(gpxPoints),
       createdAt:   endTime.toISOString(),
       isShared:    false,
-    })
+    }
+    saveCourse(rideRecord)
+    // 서버 동기화 — 내 경로 이동 시 서버 기준 로드에서 바로 보이도록
+    insertMyCourse(rideRecord).catch(e => console.warn('[MapPage] 서버 저장 실패:', e))
 
     setDuration(frozenDuration)
     setDistance(frozenDistance)
