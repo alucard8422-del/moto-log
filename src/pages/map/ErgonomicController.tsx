@@ -1,17 +1,191 @@
-// ErgonomicController.tsx
-import { useState, useEffect } from 'react'
-import { Play, Square, Flag, Timer, Route, Gauge } from 'lucide-react'
+// ErgonomicController.tsx — 지도 메뉴 하단 조작 컨트롤러
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Square, Flag, Timer, Route, Gauge, Compass, Settings, ChevronUp, Play } from 'lucide-react'
 import { type RideStatus } from './types'
 
 interface Props {
-  status: RideStatus
-  duration: number
-  distance: number
-  onStart: () => void
-  onStop: () => void
+  status:        RideStatus
+  duration:      number
+  distance:      number
+  onStart:       () => void       // 네비로 시작 → 카운트다운 팝업
+  onStartDirect: () => void       // 그냥 시작 → GPS만 바로 기록
+  onNaviSelect:  () => void       // 네비 선택 → 내비 앱 변경 시트
+  onStop:        () => void
   onGoToCourses: () => void
 }
 
+// ── 부채꼴 버튼 설정 ──────────────────────────────────────────────────────
+const R = 108   // 반지름 (px)
+
+const FAN_ITEMS = [
+  {
+    key:    'navi',
+    Icon:   Compass,
+    label:  '네비로 시작',
+    angle:  -58,                            // 11시 방향
+    fill:   false,
+    color:  '#0F172A',
+  },
+  {
+    key:    'direct',
+    Icon:   Play,
+    label:  '그냥 시작',
+    angle:  0,                              // 12시 방향
+    fill:   true,
+    color:  '#2DD4BF',
+  },
+  {
+    key:    'navi-select',
+    Icon:   Settings,
+    label:  '네비 선택',
+    angle:  58,                             // 1시 방향
+    fill:   false,
+    color:  '#475569',
+  },
+]
+
+function fanXY(angleDeg: number, r: number) {
+  const rad = (angleDeg * Math.PI) / 180
+  return { x: r * Math.sin(rad), y: -(r * Math.cos(rad)) }  // y: 음수 = 위
+}
+
+// ── 유리 스타일 공통 ─────────────────────────────────────────────────────
+const glass = {
+  background:           'rgba(255,255,255,0.88)',
+  backdropFilter:       'blur(16px)',
+  WebkitBackdropFilter: 'blur(16px)',
+  border:               '1px solid rgba(255,255,255,0.55)',
+  boxShadow:            '0 4px 24px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.06)',
+}
+
+// ── Idle: 토글 + 부채꼴 메뉴 ─────────────────────────────────────────────
+function IdleController({ onStart, onStartDirect, onNaviSelect }: {
+  onStart:       () => void
+  onStartDirect: () => void
+  onNaviSelect:  () => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  const handleAction = (key: string) => {
+    setOpen(false)
+    if (key === 'navi')        onStart()
+    else if (key === 'direct') onStartDirect()
+    else                       onNaviSelect()
+  }
+
+  // 토글 버튼 중심 위치 (컨테이너 하단 기준)
+  const TOGGLE_H      = 56   // 토글 버튼 직경
+  const TOGGLE_BOTTOM = 28   // 컨테이너 하단에서 토글 버튼 bottom 값
+  const CENTER_Y      = TOGGLE_BOTTOM + TOGGLE_H / 2   // 토글 중심 y (하단 기준)
+
+  const BTN_H = 62   // 팬 버튼 직경
+
+  return (
+    <>
+      {/* 딤 배경 — 탭 외부 터치 시 닫기 */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="fan-backdrop"
+            className="fixed inset-0 z-[34]"
+            style={{ background: 'rgba(0,0,0,0.18)', backdropFilter: 'blur(1px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 컨트롤러 — 화면 하단 고정 */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[35]">
+        <div className="relative mx-auto" style={{ maxWidth: 400, height: 230 }}>
+
+          {/* ── 부채꼴 팬 버튼 ── */}
+          <AnimatePresence>
+            {open && FAN_ITEMS.map((item, i) => {
+              const { x, y } = fanXY(item.angle, R)
+              return (
+                <motion.div
+                  key={item.key}
+                  className="pointer-events-auto absolute flex flex-col items-center gap-1.5"
+                  style={{
+                    bottom: CENTER_Y - BTN_H / 2,
+                    left:   `calc(50% - ${BTN_H / 2}px)`,
+                  }}
+                  initial={{ x: 0, y: 0, opacity: 0, scale: 0.55 }}
+                  animate={{ x, y, opacity: 1, scale: 1 }}
+                  exit={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
+                  transition={{
+                    type:      'spring',
+                    stiffness: 380,
+                    damping:   26,
+                    delay:     open ? i * 0.055 : (FAN_ITEMS.length - 1 - i) * 0.04,
+                  }}
+                >
+                  {/* 원형 버튼 */}
+                  <motion.button
+                    onClick={() => handleAction(item.key)}
+                    whileTap={{ scale: 0.91 }}
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: BTN_H, height: BTN_H, ...glass }}
+                  >
+                    <item.Icon
+                      size={26}
+                      strokeWidth={item.fill ? 0 : 1.7}
+                      color={item.color}
+                      fill={item.fill ? item.color : 'none'}
+                    />
+                  </motion.button>
+
+                  {/* 레이블 */}
+                  <span
+                    className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-semibold tracking-tight"
+                    style={{
+                      background:           'rgba(10,15,30,0.62)',
+                      color:                'rgba(255,255,255,0.93)',
+                      backdropFilter:       'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+
+          {/* ── 중앙 토글 버튼 (^) ── */}
+          <motion.button
+            className="pointer-events-auto absolute flex items-center justify-center rounded-full"
+            style={{
+              width:  TOGGLE_H,
+              height: TOGGLE_H,
+              bottom: TOGGLE_BOTTOM,
+              left:   '50%',
+              x:      '-50%',
+              ...glass,
+            }}
+            whileTap={{ scale: 0.91 }}
+            onClick={() => setOpen(prev => !prev)}
+          >
+            <motion.div
+              animate={{ rotate: open ? 180 : 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+            >
+              <ChevronUp size={22} strokeWidth={2.2} color="#1E293B" />
+            </motion.div>
+          </motion.button>
+
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── 주행 완료 시트 ────────────────────────────────────────────────────────
 function fmt(s: number): string {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
@@ -25,11 +199,7 @@ function RideCompleteSheet({
   duration, distance, onGoToCourses,
 }: { duration: number; distance: number; onGoToCourses: () => void }) {
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    const t = setTimeout(() => setOpen(true), 16)
-    return () => clearTimeout(t)
-  }, [])
+  useState(() => { setTimeout(() => setOpen(true), 16) })
 
   const avg = duration > 0 ? distance / (duration / 3600) : 0
 
@@ -75,9 +245,10 @@ function RideCompleteSheet({
   )
 }
 
+// ── 메인 컨트롤러 ─────────────────────────────────────────────────────────
 export default function ErgonomicController({
   status, duration, distance,
-  onStart, onStop, onGoToCourses,
+  onStart, onStartDirect, onNaviSelect, onStop, onGoToCourses,
 }: Props) {
 
   if (status === 'finished') {
@@ -87,7 +258,6 @@ export default function ErgonomicController({
   if (status === 'riding') {
     return (
       <div className="pointer-events-none absolute inset-0 z-20">
-        {/* 정지 FAB — 중앙 하단 */}
         <button
           onClick={onStop}
           className="pointer-events-auto absolute bottom-24 left-1/2 -translate-x-1/2 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500 shadow-[0_0_24px_4px_rgba(244,63,94,0.45)] active:opacity-80"
@@ -100,18 +270,10 @@ export default function ErgonomicController({
 
   // idle
   return (
-    <div className="pointer-events-none absolute inset-0 z-20">
-      {/* 레이블 */}
-      <span className="absolute bottom-[7.5rem] left-1/2 -translate-x-1/2 text-[11px] font-light tracking-widest text-white/40 select-none">
-        주행 시작
-      </span>
-      {/* 시작 FAB */}
-      <button
-        onClick={onStart}
-        className="pointer-events-auto absolute bottom-24 left-1/2 -translate-x-1/2 flex h-16 w-16 items-center justify-center rounded-full bg-teal-400 shadow-[0_0_24px_4px_rgba(45,212,191,0.40)] active:opacity-80"
-      >
-        <Play size={26} strokeWidth={0} fill="#0B0F19" className="translate-x-0.5" />
-      </button>
-    </div>
+    <IdleController
+      onStart={onStart}
+      onStartDirect={onStartDirect}
+      onNaviSelect={onNaviSelect}
+    />
   )
 }

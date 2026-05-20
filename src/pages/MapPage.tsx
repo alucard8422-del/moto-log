@@ -11,10 +11,10 @@ import { loadNaviPref, launchNavi }  from './map/naviUtils'
 import { buildGpxXml, saveCourse }   from '../lib/courseStorage'
 import { insertMyCourse }            from '../lib/courseService'
 import {
-  NAVI_OPTIONS,
-  type Location,
-  type RideStatus,
+  NAVI_OPTIONS, NAVI_STORAGE_KEY,
+  type Location, type RideStatus, type NavigationType,
 } from './map/types'
+import NaviSettings from './map/NaviSettings'
 
 // ── 하버사인 거리 계산 (km) ────────────────────────────────────────────
 function haversine(a: Location, b: Location): number {
@@ -33,11 +33,13 @@ export default function MapPage() {
   const navigate        = useNavigate()
   const { position }   = useGeolocation()
 
-  const [status,       setStatus]       = useState<RideStatus>('idle')
-  const [path,         setPath]         = useState<Location[]>([])
-  const [duration,     setDuration]     = useState(0)
-  const [distance,     setDistance]     = useState(0)
+  const [status,        setStatus]        = useState<RideStatus>('idle')
+  const [path,          setPath]          = useState<Location[]>([])
+  const [duration,      setDuration]      = useState(0)
+  const [distance,      setDistance]      = useState(0)
   const [showCountdown, setShowCountdown] = useState(false)
+  const [showNaviSheet, setShowNaviSheet] = useState(false)
+  const [naviPref,      setNaviPref]      = useState<NavigationType>(loadNaviPref)
 
   const rideWatchRef  = useRef<number | null>(null)
   const startTimeRef  = useRef<Date | null>(null)
@@ -74,18 +76,12 @@ export default function MapPage() {
     return () => clearInterval(id)
   }, [status])
 
-  // ── 출발 버튼 → 카운트다운 팝업 ─────────────────────────────────────
-  const handleStart = () => setShowCountdown(true)
-
-  // ── 카운트다운 완료 → 내비 앱 실행 + GPS 기록 시작 ──────────────────
-  const handleCountdownLaunch = () => {
-    setShowCountdown(false)
-    launchNavi(loadNaviPref())
-
-    startTimeRef.current  = new Date()
-    prevPosRef.current    = null
-    distanceRef.current   = 0
-    durationRef.current   = 0
+  // ── GPS 기록 시작 (공통) ─────────────────────────────────────────────
+  const startGpsRecording = () => {
+    startTimeRef.current = new Date()
+    prevPosRef.current   = null
+    distanceRef.current  = 0
+    durationRef.current  = 0
     setPath([])
     setDistance(0)
     setDuration(0)
@@ -97,9 +93,9 @@ export default function MapPage() {
           lat:       pos.coords.latitude,
           lng:       pos.coords.longitude,
           timestamp: pos.timestamp,
-          altitude:  pos.coords.altitude   ?? undefined,
-          speed:     pos.coords.speed      ?? undefined,  // m/s
-          heading:   pos.coords.heading    ?? undefined,  // 0~360°
+          altitude:  pos.coords.altitude ?? undefined,
+          speed:     pos.coords.speed    ?? undefined,
+          heading:   pos.coords.heading  ?? undefined,
         }
         const prev = prevPosRef.current
         if (prev) {
@@ -107,7 +103,7 @@ export default function MapPage() {
           if (delta > 0.005) {
             distanceRef.current += delta
             setDistance(distanceRef.current)
-            setPath((p) => [...p, loc])
+            setPath(p => [...p, loc])
           }
         } else {
           setPath([loc])
@@ -117,6 +113,26 @@ export default function MapPage() {
       () => {},
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 2000 }
     )
+  }
+
+  // ── 네비로 시작 → 카운트다운 팝업 ───────────────────────────────────
+  const handleStart = () => setShowCountdown(true)
+
+  // ── 카운트다운 완료 → 내비 앱 실행 + GPS 기록 ───────────────────────
+  const handleCountdownLaunch = () => {
+    setShowCountdown(false)
+    launchNavi(naviPref)
+    startGpsRecording()
+  }
+
+  // ── 그냥 시작 → 내비 없이 GPS 기록만 ───────────────────────────────
+  const handleStartDirect = () => startGpsRecording()
+
+  // ── 네비 선택 시트 ──────────────────────────────────────────────────
+  const handleNaviSelect  = () => setShowNaviSheet(true)
+  const handleNaviSave    = () => {
+    localStorage.setItem(NAVI_STORAGE_KEY, naviPref)
+    setShowNaviSheet(false)
   }
 
   // ── 카운트다운 취소 ──────────────────────────────────────────────────
@@ -189,14 +205,27 @@ export default function MapPage() {
         duration={duration}
         distance={distance}
         onStart={handleStart}
+        onStartDirect={handleStartDirect}
+        onNaviSelect={handleNaviSelect}
         onStop={handleStop}
         onGoToCourses={handleGoToCourses}
       />
 
+      {/* 네비 선택 시트 */}
+      {showNaviSheet && (
+        <NaviSettings
+          selected={naviPref}
+          onSelect={setNaviPref}
+          onSave={handleNaviSave}
+          onClose={() => setShowNaviSheet(false)}
+          isFirstLaunch={false}
+        />
+      )}
+
       {/* 카운트다운 팝업 */}
       <NavigationCountdownPopup
         isOpen={showCountdown}
-        naviLabel={NAVI_OPTIONS.find((o) => o.type === loadNaviPref())?.label ?? 'T map'}
+        naviLabel={NAVI_OPTIONS.find((o) => o.type === naviPref)?.label ?? 'T map'}
         onLaunch={handleCountdownLaunch}
         onCancel={handleCountdownCancel}
       />
