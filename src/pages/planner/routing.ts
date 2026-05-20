@@ -3,8 +3,7 @@
 // OSRM 공개 API (router.project-osrm.org)
 //  - CORS 완전 지원, API 키 불필요
 //  - 실제 도로 경로 반환 (GeoJSON)
-//  - exclude=motorway: 고속도로 제외 시도
-//    → 제외 불가 구간은 자동으로 일반 경로 fallback
+//  - exclude 파라미터 미사용 (공개 서버 400 거부)
 //  - 최종 fallback: 직선 [from, to]
 
 import type { LatLng } from '../routes/routeUtils'
@@ -38,13 +37,9 @@ async function callOSRM(from: LatLng, to: LatLng, exclude?: string): Promise<Lat
 }
 
 // ── 경로 탐색 (export) ──────────────────────────────────────────────────────
-// 1차: motorway(고속도로) 제외
-// 2차: 제한 없이 실제 도로
-// 3차: 직선 fallback
+// 1차: 실제 도로 (OSRM 기본)
+// 2차: 직선 fallback
 export async function fetchRoute(from: LatLng, to: LatLng): Promise<LatLng[]> {
-  const withExclude = await callOSRM(from, to, 'motorway')
-  if (withExclude && withExclude.length >= 2) return withExclude
-
   const plain = await callOSRM(from, to)
   if (plain && plain.length >= 2) return plain
 
