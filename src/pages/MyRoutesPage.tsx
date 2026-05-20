@@ -19,7 +19,7 @@ import {
   type SavedCourse,
 } from '../lib/courseStorage'
 import {
-  fetchMyCoursesAuth, updateMyCourse, deleteMyCourse, uploadCourseImage,
+  fetchMyCoursesAuth, insertMyCourse, updateMyCourse, deleteMyCourse, uploadCourseImage,
 } from '../lib/courseService'
 import { saveDriveSession } from '../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
@@ -58,14 +58,32 @@ export default function MyRoutesPage() {
             // ✅ 로그인 + 서버 데이터 있음: 서버 기준으로 화면 갱신
             setCourses(serverCourses)
           } else {
-            // ⚠️ 로그인했지만 서버 0개 → 로컬 백업 확인
+            // ⚠️ 로그인했지만 서버 0개 → 로컬 백업 확인 후 자동 마이그레이션
             const localCourses = loadCourses()
-            console.warn(
-              localCourses.length > 0
-                ? '[MyRoutesPage] ⚠️ 서버 데이터 없음 — 로컬 백업 표시 (서버 동기화 필요)'
-                : '[MyRoutesPage] ℹ️ 서버/로컬 모두 데이터 없음 — 빈 화면 표시'
-            )
-            setCourses(localCourses)
+
+            if (localCourses.length > 0) {
+              console.log(`[MyRoutesPage] 🔄 로컬 ${localCourses.length}개 → 서버 자동 업로드 시작...`)
+              setCourses(localCourses)  // 화면은 즉시 로컬로 표시
+
+              // 로컬 코스를 순차적으로 서버에 업로드 (백그라운드)
+              ;(async () => {
+                let successCount = 0
+                for (const course of localCourses) {
+                  // base64 cover_photo는 서버 전송 생략 (용량 문제)
+                  const serverCourse = {
+                    ...course,
+                    coverPhoto: course.coverPhoto?.startsWith('data:') ? undefined : course.coverPhoto,
+                  }
+                  const ok = await insertMyCourse(serverCourse)
+                  if (ok) successCount++
+                }
+                console.log(`[MyRoutesPage] ✅ 마이그레이션 완료 — ${successCount}/${localCourses.length}개 서버 저장`)
+                if (successCount > 0) setToast(`${successCount}개 경로가 서버에 동기화되었습니다`)
+              })()
+            } else {
+              console.log('[MyRoutesPage] ℹ️ 서버/로컬 모두 데이터 없음 — 빈 화면 표시')
+              setCourses([])
+            }
           }
         } else {
           // ℹ️ 미로그인: 로컬 폴백
