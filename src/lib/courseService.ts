@@ -117,8 +117,13 @@ export async function fetchMyCoursesAuth(): Promise<{ courses: SavedCourse[]; lo
 
 export async function insertMyCourse(course: SavedCourse): Promise<boolean> {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) { console.warn('[courseService] 미로그인 — 서버 저장 건너뜀'); return false }
-  const { data, error } = await supabase.from('user_courses').insert({
+  if (!user) {
+    console.warn('[courseService] ⚠️ 미로그인 상태 — 서버 저장 건너뜀. 로컬에는 저장되어 있습니다.')
+    return false
+  }
+  console.log('[courseService] 서버 저장 시도 — user_id:', user.id, '| course_id:', course.id)
+  // upsert: 동일 id가 이미 존재하면 덮어쓰기 (중복 insert 에러 방어)
+  const { data, error } = await supabase.from('user_courses').upsert({
     id:                course.id,
     user_id:           user.id,
     title:             course.title,
@@ -132,9 +137,14 @@ export async function insertMyCourse(course: SavedCourse): Promise<boolean> {
     star_rating:       course.starRating ?? null,
     planner_waypoints: course.plannerWaypoints ?? null,
     created_at:        course.createdAt,
-  }).select().single()
+  }, { onConflict: 'id' }).select().single()
   if (error) {
-    console.error('[courseService] ❌ insertMyCourse 실패:', error.message, '| code:', error.code)
+    console.error(
+      '[courseService] ❌ 서버 저장 실패 (데이터는 로컬에 보존됨)\n',
+      '  메시지:', error.message,
+      '| 코드:', error.code,
+      '| hint:', error.hint ?? '없음',
+    )
     return false
   }
   console.log('[courseService] ✅ 서버 저장 완료 — id:', data.id)

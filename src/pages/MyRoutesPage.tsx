@@ -48,9 +48,20 @@ export default function MyRoutesPage() {
     setIsLoading(true)
     fetchMyCoursesAuth().then(({ courses: serverCourses, loggedIn }) => {
       if (loggedIn) {
-        // ✅ 로그인 상태: 코스가 0개여도 서버 기준 표시 (Mock 주입 안 함)
-        console.log(`[MyRoutesPage] ✅ 서버 데이터 ${serverCourses.length}개 로드`)
-        setCourses(serverCourses)
+        if (serverCourses.length > 0) {
+          // ✅ 로그인 + 서버 데이터 있음: 서버 기준
+          console.log(`[MyRoutesPage] ✅ 서버 데이터 ${serverCourses.length}개 로드`)
+          setCourses(serverCourses)
+        } else {
+          // ⚠️ 로그인했지만 서버 데이터 0개 → 로컬 백업 확인 (서버 저장 실패 방어)
+          const localCourses = loadCourses()
+          if (localCourses.length > 0) {
+            console.warn('[MyRoutesPage] ⚠️ 서버 데이터 없음 — 로컬 백업 데이터 표시 (서버 동기화 필요)')
+          } else {
+            console.log('[MyRoutesPage] ℹ️ 서버/로컬 모두 데이터 없음 — 빈 화면 표시')
+          }
+          setCourses(localCourses)
+        }
       } else {
         // ℹ️ 미로그인: 로컬 폴백 (목 데이터 시딩 포함)
         console.log('[MyRoutesPage] ℹ️ 미로그인 — 로컬 데이터 사용')
@@ -72,21 +83,35 @@ export default function MyRoutesPage() {
   }, [])
 
   const handleDelete = (id: string) => {
-    deleteCourse(id)          // 로컬
-    deleteMyCourse(id)        // 서버 (fire-and-forget)
+    deleteCourse(id)                        // 로컬 먼저
     setCourses(prev => prev.filter(c => c.id !== id))
+    deleteMyCourse(id)                      // 서버 동기화
+      .then(ok => {
+        if (!ok) console.warn('[MyRoutesPage] ⚠️ 서버 삭제 실패 — 로컬에서는 삭제됨')
+        else console.log('[MyRoutesPage] ✅ 서버 삭제 완료 — id:', id)
+      })
+      .catch(e => console.error('[MyRoutesPage] ❌ 서버 삭제 오류:', e))
   }
 
   const handleSave = (id: string, diary: string, photos: string[]) => {
     const partial: Partial<SavedCourse> = { diary }
     if (photos.length > 0) partial.coverPhoto = photos[0]
-    updateCourse(id, partial)     // 로컬
-    updateMyCourse(id, partial)   // 서버 (fire-and-forget)
+
+    // [1단계] 로컬 먼저 무조건 저장 (데이터 증발 방지 안전장치)
+    updateCourse(id, partial)
     setCourses(prev => prev.map(c => c.id === id ? { ...c, ...partial } : c))
     setEditTarget(null)
     setToast('기록이 저장되었습니다')
     const { newlyUnlocked } = checkRideDiaryBadge()
     if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
+
+    // [2단계] 서버 동기화 — 실패해도 로컬 데이터는 유지됨
+    updateMyCourse(id, partial)
+      .then(ok => {
+        if (!ok) console.warn('[MyRoutesPage] ⚠️ 서버 수정 실패 — 로컬에는 저장됨. 다음 접속 시 재시도 필요.')
+        else console.log('[MyRoutesPage] ✅ 서버 수정 완료 — id:', id)
+      })
+      .catch(e => console.error('[MyRoutesPage] ❌ 서버 수정 오류:', e))
   }
 
   const handleDrive = (course: SavedCourse) => {
