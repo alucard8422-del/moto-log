@@ -191,29 +191,70 @@ export async function insertMyCourse(course: SavedCourse): Promise<boolean> {
     console.warn('[courseService] ⚠️ 미로그인 상태 — 서버 저장 건너뜀. 로컬에는 저장되어 있습니다.')
     return false
   }
-  console.log('[courseService] 서버 저장 시도 — user_id:', user.id, '| course_id:', course.id)
-  // upsert: 동일 id가 이미 존재하면 덮어쓰기 (중복 insert 에러 방어)
-  const { data, error } = await supabase.from('user_courses').upsert({
+  // ── 페이로드 유효성 검사 ─────────────────────────────────────────────────
+  // [필수값 확인]
+  if (!course.id || !user.id) {
+    console.error('🚨 Supabase 거부 상세 사유: id 또는 user_id가 비어 있음 — 저장 중단', { id: course.id, userId: user.id })
+    return false
+  }
+
+  // [base64 차단] cover_photo가 data: URI이면 서버에 보내지 않음 (용량 폭탄 방지)
+  const safeCoverPhoto = (() => {
+    const p = course.coverPhoto ?? null
+    if (p?.startsWith('data:')) {
+      console.warn('[courseService] ⚠️ cover_photo가 base64 — 서버 전송 건너뜀 (Storage URL만 허용)')
+      return null
+    }
+    return p
+  })()
+
+  // [gpx_xml 크기 제한] 100KB 초과 시 저장 생략 (PostgREST 요청 크기 방어)
+  const safeGpxXml = (() => {
+    const xml = course.gpxXml ?? null
+    if (xml && xml.length > 100_000) {
+      console.warn(`[courseService] ⚠️ gpx_xml 크기 초과 (${Math.round(xml.length / 1024)}KB) — 서버 저장 생략`)
+      return null
+    }
+    return xml
+  })()
+
+  // [gpx_points 안전 직렬화] jsonb 컬럼 전달 시 배열 그대로, text 컬럼 대비 stringify 포함
+  const safeGpxPoints = Array.isArray(course.gpxPoints) ? course.gpxPoints : []
+
+  const payload = {
     id:                course.id,
     user_id:           user.id,
-    title:             course.title,
-    distance_km:       course.distanceKm,
-    duration_min:      course.durationMin,
-    gpx_points:        course.gpxPoints,
-    gpx_xml:           course.gpxXml ?? null,
-    cover_photo:       course.coverPhoto ?? null,
-    diary:             course.diary ?? null,
+    title:             course.title          ?? '',
+    distance_km:       course.distanceKm     ?? 0,
+    duration_min:      course.durationMin    ?? 0,
+    gpx_points:        safeGpxPoints,
+    gpx_xml:           safeGpxXml,
+    cover_photo:       safeCoverPhoto,
+    diary:             course.diary          ?? null,
     community_shared:  course.communityShared ?? false,
-    star_rating:       course.starRating ?? null,
+    star_rating:       course.starRating      ?? null,
     planner_waypoints: course.plannerWaypoints ?? null,
-    created_at:        course.createdAt,
-  }, { onConflict: 'id' }).select().single()
+    created_at:        course.createdAt       ?? new Date().toISOString(),
+  }
+
+  // 전송 직전 크기 진단 로그
+  const payloadJson = JSON.stringify(payload)
+  console.log(
+    '[courseService] 서버 저장 시도 — user_id:', user.id,
+    '| course_id:', course.id,
+    '| payload 크기:', Math.round(payloadJson.length / 1024), 'KB',
+  )
+
+  const { data, error } = await supabase.from('user_courses').upsert(
+    payload, { onConflict: 'id' }
+  ).select().single()
   if (error) {
     console.error(
-      '🚨 [치명적 저장 에러]: user_courses insert 실패 (데이터는 로컬에 보존됨)\n',
-      '  메시지:', error.message,
-      '| 코드:', error.code,
-      '| hint:', error.hint ?? '없음',
+      '🚨 Supabase 거부 상세 사유:', error,
+      '\n  메시지:', error.message,
+      '\n  코드:',   error.code,
+      '\n  details:', (error as any).details ?? '없음',
+      '\n  hint:',    error.hint    ?? '없음',
     )
     return false
   }
@@ -222,13 +263,36 @@ export async function insertMyCourse(course: SavedCourse): Promise<boolean> {
 }
 
 export async function updateMyCourse(id: string, partial: Partial<SavedCourse>): Promise<boolean> {
+  if (!id) {
+    console.error('🚨 Supabase 거부 상세 사유 (update): id가 비어 있음 — 저장 중단')
+    return false
+  }
   const payload: Record<string, unknown> = {}
-  if (partial.diary       !== undefined) payload.diary         = partial.diary
-  if (partial.coverPhoto  !== undefined) payload.cover_photo   = partial.coverPhoto
+  if (partial.diary !== undefined) payload.diary = partial.diary
+  if (partial.coverPhoto !== undefined) {
+    // base64 차단 — Storage URL만 허용
+    if (partial.coverPhoto?.startsWith('data:')) {
+      console.warn('[courseService] ⚠️ cover_photo가 base64 — update 서버 전송 건너뜀')
+    } else {
+      payload.cover_photo = partial.coverPhoto
+    }
+  }
   if (partial.communityShared !== undefined) payload.community_shared = partial.communityShared
+  if (Object.keys(payload).length === 0) {
+    console.warn('[courseService] ⚠️ update payload가 비어 있음 — 전송 건너뜀')
+    return true
+  }
+  console.log('[courseService] update 전송 — id:', id, '| 필드:', Object.keys(payload).join(', '))
   const { error } = await supabase.from('user_courses').update(payload).eq('id', id).select()
   if (error) {
-    console.error('🚨 [치명적 저장 에러]: user_courses update 실패\n  메시지:', error.message, '| id:', id, '| 코드:', error.code)
+    console.error(
+      '🚨 Supabase 거부 상세 사유 (update):', error,
+      '\n  메시지:', error.message,
+      '\n  코드:',   error.code,
+      '\n  details:', (error as any).details ?? '없음',
+      '\n  hint:',    error.hint    ?? '없음',
+      '\n  id:', id,
+    )
     return false
   }
   console.log('[courseService] ✅ 서버 수정 완료 — id:', id)
