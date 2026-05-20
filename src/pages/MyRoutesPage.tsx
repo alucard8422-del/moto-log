@@ -54,37 +54,9 @@ export default function MyRoutesPage() {
         if (loggedIn) {
           console.log('🎯 서버에서 최종 수신한 코스 데이터:', serverCourses)
 
-          if (serverCourses.length > 0) {
-            // ✅ 로그인 + 서버 데이터 있음: 서버 기준으로 화면 갱신
-            setCourses(serverCourses)
-          } else {
-            // ⚠️ 로그인했지만 서버 0개 → 로컬 백업 확인 후 자동 마이그레이션
-            const localCourses = loadCourses()
-
-            if (localCourses.length > 0) {
-              console.log(`[MyRoutesPage] 🔄 로컬 ${localCourses.length}개 → 서버 자동 업로드 시작...`)
-              setCourses(localCourses)  // 화면은 즉시 로컬로 표시
-
-              // 로컬 코스를 순차적으로 서버에 업로드 (백그라운드)
-              ;(async () => {
-                let successCount = 0
-                for (const course of localCourses) {
-                  // base64 cover_photo는 서버 전송 생략 (용량 문제)
-                  const serverCourse = {
-                    ...course,
-                    coverPhoto: course.coverPhoto?.startsWith('data:') ? undefined : course.coverPhoto,
-                  }
-                  const ok = await insertMyCourse(serverCourse)
-                  if (ok) successCount++
-                }
-                console.log(`[MyRoutesPage] ✅ 마이그레이션 완료 — ${successCount}/${localCourses.length}개 서버 저장`)
-                if (successCount > 0) setToast(`${successCount}개 경로가 서버에 동기화되었습니다`)
-              })()
-            } else {
-              console.log('[MyRoutesPage] ℹ️ 서버/로컬 모두 데이터 없음 — 빈 화면 표시')
-              setCourses([])
-            }
-          }
+          // ✅ 로그인 상태: 서버가 항상 기준 (0개여도 서버 기준 유지)
+          setCourses(serverCourses)
+          console.log(`[MyRoutesPage] ✅ 서버 기준 로드 완료 — ${serverCourses.length}개`)
         } else {
           // ℹ️ 미로그인: 로컬 폴백
           console.log('[MyRoutesPage] ℹ️ 미로그인 — 로컬 데이터 사용')
