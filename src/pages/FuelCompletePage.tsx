@@ -32,15 +32,15 @@ export default function FuelCompletePage() {
     <div className="flex min-h-svh flex-col items-center justify-center bg-[#0B0F19] px-6 pb-32 pt-16">
 
       {/* 완료 아이콘 */}
-      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-teal-400/10">
-        <CheckCircle size={32} strokeWidth={1.5} className="text-teal-400" />
+      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#FF5A00]/10">
+        <CheckCircle size={32} strokeWidth={1.5} className="text-[#FF5A00]" />
       </div>
 
       {/* 타이틀 */}
       <p className="mb-1 text-xs font-light uppercase tracking-widest text-white/30">
         {storeName}
       </p>
-      <h1 className="mb-10 text-2xl font-bold text-teal-400">
+      <h1 className="mb-10 text-2xl font-bold text-[#FF5A00]">
         {label} 등록 완료
       </h1>
 
@@ -49,7 +49,7 @@ export default function FuelCompletePage() {
         <div className="flex flex-col gap-5">
 
           <Row
-            icon={<Fuel size={16} strokeWidth={1.5} className="text-teal-400" />}
+            icon={<Fuel size={16} strokeWidth={1.5} className="text-[#FF5A00]" />}
             label="주유 금액"
             value={`${amount.toLocaleString()}원`}
             highlight
@@ -77,7 +77,7 @@ export default function FuelCompletePage() {
       {/* 확인 버튼 */}
       <button
         onClick={() => navigate('/map')}
-        className="fixed bottom-28 left-1/2 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2 rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
+        className="fixed bottom-28 left-1/2 w-[calc(100%-3rem)] max-w-sm -translate-x-1/2 rounded-3xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
       >
         확인
       </button>
@@ -102,7 +102,7 @@ function Row({
         {icon}
         <span className="text-sm font-light text-white/40">{label}</span>
       </div>
-      <span className={`text-sm font-bold ${highlight ? 'text-teal-400' : 'text-white'}`}>
+      <span className={`text-sm font-bold ${highlight ? 'text-[#FF5A00]' : 'text-white'}`}>
         {value}
       </span>
     </div>

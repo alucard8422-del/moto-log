@@ -31,13 +31,13 @@ export default function GarageBike() {
       {/* ── 메인 프레임 / 차체 ── */}
       <mesh position={[0, 0.68, 0]} castShadow>
         <boxGeometry args={[1.3, 0.28, 0.32]} />
-        <meshStandardMaterial color="#2DD4BF" metalness={0.5} roughness={0.3} />
+        <meshStandardMaterial color="#FF5A00" metalness={0.5} roughness={0.3} />
       </mesh>
 
       {/* ── 연료 탱크 ── */}
       <mesh position={[0.1, 0.88, 0]} castShadow>
         <boxGeometry args={[0.55, 0.22, 0.3]} />
-        <meshStandardMaterial color="#2DD4BF" metalness={0.6} roughness={0.2} />
+        <meshStandardMaterial color="#FF5A00" metalness={0.6} roughness={0.2} />
       </mesh>
 
       {/* ── 시트 ── */}

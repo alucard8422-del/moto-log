@@ -258,7 +258,7 @@ export default function RoutePlanner() {
             transition={{ duration: 0.2 }}
           >
             <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/80 px-4 py-2 backdrop-blur-md">
-              <Loader2 size={13} strokeWidth={2} className="animate-spin text-teal-400" />
+              <Loader2 size={13} strokeWidth={2} className="animate-spin text-[#FF5A00]" />
               <span className="text-[11px] font-light text-white/60">도로 경로 계산 중…</span>
             </div>
           </motion.div>
@@ -280,7 +280,7 @@ export default function RoutePlanner() {
             <button
               onClick={handleConfirm}
               disabled={routing}
-              className="flex items-center gap-2.5 rounded-2xl bg-teal-400 px-8 py-4 text-sm font-bold text-slate-950 shadow-xl shadow-teal-900/40 active:opacity-80 disabled:opacity-60"
+              className="flex items-center gap-2.5 rounded-2xl bg-[#FF5A00] px-8 py-4 text-sm font-bold text-white shadow-xl shadow-orange-900/40 active:opacity-80 disabled:opacity-60"
             >
               <PenLine size={16} strokeWidth={2} />
               코스 확정

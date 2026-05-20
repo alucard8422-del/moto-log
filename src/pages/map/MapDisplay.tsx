@@ -26,7 +26,7 @@ function makeCompassOverlay(): { wrap: HTMLElement; arrowEl: HTMLElement } {
   wrap.style.cssText = 'width:48px;height:48px;display:flex;align-items:center;justify-content:center;position:relative;pointer-events:none'
 
   const ping = document.createElement('span')
-  ping.style.cssText = 'position:absolute;width:62px;height:62px;border-radius:50%;background:rgba(45,212,191,0.12);animation:moto-ping 1.8s cubic-bezier(0,0,0.2,1) infinite'
+  ping.style.cssText = 'position:absolute;width:62px;height:62px;border-radius:50%;background:rgba(255,90,0,0.12);animation:moto-ping 1.8s cubic-bezier(0,0,0.2,1) infinite'
 
   // 나침반 heading 회전 적용 대상
   const arrowEl = document.createElement('div')
@@ -34,11 +34,11 @@ function makeCompassOverlay(): { wrap: HTMLElement; arrowEl: HTMLElement } {
   arrowEl.innerHTML = `
     <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" style="position:absolute;top:0;left:0;overflow:visible">
       <!-- 외부 원 -->
-      <circle cx="22" cy="22" r="16" fill="rgba(45,212,191,0.18)" stroke="#2DD4BF" stroke-width="1.8" stroke-opacity="0.75"/>
+      <circle cx="22" cy="22" r="16" fill="rgba(255,90,0,0.18)" stroke="#FF5A00" stroke-width="1.8" stroke-opacity="0.75"/>
       <!-- 중심 점 -->
-      <circle cx="22" cy="22" r="5.5" fill="#2DD4BF" style="filter:drop-shadow(0 0 5px #2dd4bf)"/>
+      <circle cx="22" cy="22" r="5.5" fill="#FF5A00" style="filter:drop-shadow(0 0 5px #FF5A00)"/>
       <!-- 방향 화살표 (위 = 북쪽/heading 0) -->
-      <polygon points="22,3 26.5,14 22,11 17.5,14" fill="#2DD4BF" style="filter:drop-shadow(0 0 4px #2dd4bfaa)"/>
+      <polygon points="22,3 26.5,14 22,11 17.5,14" fill="#FF5A00" style="filter:drop-shadow(0 0 4px #FF5A00aa)"/>
     </svg>
   `
 
@@ -213,13 +213,13 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
 
     glowLineRef.current = new window.kakao.maps.Polyline({
       path: linePath, strokeWeight: 12,
-      strokeColor: '#2DD4BF', strokeOpacity: 0.15, strokeStyle: 'solid',
+      strokeColor: '#FF5A00', strokeOpacity: 0.18, strokeStyle: 'solid',
     })
     glowLineRef.current.setMap(mapInstanceRef.current)
 
     mainLineRef.current = new window.kakao.maps.Polyline({
       path: linePath, strokeWeight: 4,
-      strokeColor: '#2DD4BF', strokeOpacity: 0.9, strokeStyle: 'solid',
+      strokeColor: '#FF5A00', strokeOpacity: 0.95, strokeStyle: 'solid',
     })
     mainLineRef.current.setMap(mapInstanceRef.current)
   }, [path])
@@ -313,7 +313,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         onClick={handleLocate}
         className="absolute bottom-44 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-slate-900/80 shadow-lg backdrop-blur-md active:opacity-70"
       >
-        <LocateFixed size={20} strokeWidth={1.8} className="text-teal-400" />
+        <LocateFixed size={20} strokeWidth={1.8} className="text-[#FF5A00]" />
       </button>
     </div>
   )

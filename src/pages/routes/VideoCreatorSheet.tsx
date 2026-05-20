@@ -53,8 +53,8 @@ export default function VideoCreatorSheet({ course, onClose }: Props) {
 
           {/* 헤더 */}
           <div className="mb-5 flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-400/10">
-              <Clapperboard size={18} strokeWidth={1.5} className="text-teal-400" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FF5A00]/10">
+              <Clapperboard size={18} strokeWidth={1.5} className="text-[#FF5A00]" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-light text-white/30">영상 만들기</p>
@@ -68,7 +68,7 @@ export default function VideoCreatorSheet({ course, onClose }: Props) {
           <div className="flex gap-2">
             <button
               onClick={handlePreview}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-3xl border border-teal-400/40 bg-teal-400/10 py-4 text-sm font-bold text-teal-400 transition-opacity active:opacity-70"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-3xl border border-[#FF5A00]/40 bg-[#FF5A00]/10 py-4 text-sm font-bold text-[#FF5A00] transition-opacity active:opacity-70"
             >
               <Play size={14} strokeWidth={2.5} />
               미리보기
@@ -76,7 +76,7 @@ export default function VideoCreatorSheet({ course, onClose }: Props) {
 
             <button
               onClick={handleStart}
-              className="flex flex-[1.6] items-center justify-center gap-2 rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
+              className="flex flex-[1.6] items-center justify-center gap-2 rounded-3xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
             >
               <Clapperboard size={15} strokeWidth={2} />
               영상 만들기

@@ -411,11 +411,11 @@ export default function VideoPreviewPage() {
                 key={v.id}
                 onClick={() => { setView(v); viewResetFnRef.current?.() }}
                 className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 transition-colors active:opacity-70 ${
-                  active ? 'bg-teal-400 text-slate-950' : 'bg-white/8 border border-white/10'
+                  active ? 'bg-[#FF5A00] text-white' : 'bg-white/8 border border-white/10'
                 }`}
               >
                 <span className="text-base leading-none">{v.emoji}</span>
-                <span className={`text-[9px] font-bold leading-none ${active ? 'text-slate-950' : 'text-white/50'}`}>
+                <span className={`text-[9px] font-bold leading-none ${active ? 'text-white' : 'text-white/50'}`}>
                   {v.name.replace('캠', '')}
                 </span>
               </button>
@@ -461,7 +461,7 @@ export default function VideoPreviewPage() {
             {/* 레일 */}
             <div className="absolute inset-x-0 h-[3px] rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-teal-400"
+                className="h-full rounded-full bg-[#FF5A00]"
                 style={{
                   width: `${pct}%`,
                   transition: isDragging ? 'none' : 'width 0.1s linear',
@@ -470,9 +470,9 @@ export default function VideoPreviewPage() {
             </div>
             {/* 썸 — 드래그 중에는 크게, 평소에는 작게 */}
             <div
-              className={`absolute rounded-full bg-teal-400 -translate-x-1/2 transition-all duration-150 ${
+              className={`absolute rounded-full bg-[#FF5A00] -translate-x-1/2 transition-all duration-150 ${
                 isDragging
-                  ? 'h-4 w-4 ring-2 ring-teal-400/40'
+                  ? 'h-4 w-4 ring-2 ring-[#FF5A00]/40'
                   : 'h-2.5 w-2.5 ring-1 ring-white/20'
               }`}
               style={{
@@ -500,8 +500,8 @@ export default function VideoPreviewPage() {
             disabled={!ended}
             className={`flex flex-[2] items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-colors active:opacity-80 ${
               ended
-                ? 'bg-teal-400 text-slate-950'
-                : 'bg-teal-400/20 text-teal-400/50 cursor-not-allowed'
+                ? 'bg-[#FF5A00] text-white'
+                : 'bg-[#FF5A00]/20 text-[#FF5A00]/50 cursor-not-allowed'
             }`}
           >
             <Clapperboard size={15} strokeWidth={2} />

@@ -15,7 +15,7 @@ const THEME_OPTIONS: Array<{
   accent:  string
 }> = [
   { value: 'light', label: '라이트', sub: '연회색 미니멀 — 낮 환경 최적',   icon: Sun,      preview: '#F8F9FA', accent: '#F97316' },
-  { value: 'navy',  label: '네이비', sub: '심해 네이비 — 야간 주행 최적',   icon: Moon,     preview: '#0F172A', accent: '#2DD4BF' },
+  { value: 'navy',  label: '네이비', sub: '심해 네이비 — 야간 주행 최적',   icon: Moon,     preview: '#0F172A', accent: '#FF5A00' },
   { value: 'warm',  label: '웜',     sub: '따뜻한 크림 — 감성 라이딩',      icon: Contrast, preview: '#FDF6EC', accent: '#D97706' },
 ]
 
@@ -142,7 +142,7 @@ function SettingRow({
         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl"
         style={{ backgroundColor: 'var(--border-line)' }}
       >
-        <Icon size={15} strokeWidth={1.5} className="text-teal-400" />
+        <Icon size={15} strokeWidth={1.5} className="text-[#FF5A00]" />
       </div>
 
       <span className="flex-1 text-left text-sm font-medium" style={{ color: 'var(--text-main)' }}>

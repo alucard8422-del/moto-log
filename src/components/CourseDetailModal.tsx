@@ -58,9 +58,9 @@ function ThumbsUpButton({ courseId, initialCount }: { courseId: string; initialC
       <ThumbsUp
         size={20}
         strokeWidth={1.5}
-        className={thumbed ? 'fill-teal-400 text-teal-400' : 'text-white/30'}
+        className={thumbed ? 'fill-[#FF5A00] text-[#FF5A00]' : 'text-white/30'}
       />
-      <span className={`text-sm font-bold tabular-nums ${thumbed ? 'text-teal-400' : 'text-white/30'}`}>
+      <span className={`text-sm font-bold tabular-nums ${thumbed ? 'text-[#FF5A00]' : 'text-white/30'}`}>
         {count.toLocaleString()}
       </span>
     </button>
@@ -165,7 +165,7 @@ function CommentsSection({ courseId }: { courseId: string }) {
         <button
           onClick={handleSubmit}
           disabled={!text.trim()}
-          className="shrink-0 text-teal-400 transition-colors disabled:text-white/20 active:scale-90"
+          className="shrink-0 text-[#FF5A00] transition-colors disabled:text-white/20 active:scale-90"
         >
           <Send size={14} strokeWidth={1.5} />
         </button>
@@ -287,7 +287,7 @@ export default function CourseDetailModal({
             {/* 커뮤니티 배지 */}
             {savedCourseId && (
               <div className="absolute bottom-8 left-4" onClick={e => e.stopPropagation()}>
-                <span className="rounded-full bg-teal-400/20 px-2.5 py-1 text-[10px] font-medium text-teal-300 backdrop-blur-sm">
+                <span className="rounded-full bg-[#FF5A00]/20 px-2.5 py-1 text-[10px] font-medium text-[#FF8040] backdrop-blur-sm">
                   🤝 커뮤니티 공유 코스
                 </span>
               </div>
@@ -381,7 +381,7 @@ export default function CourseDetailModal({
             {/* ── 주행 시작 버튼 ── */}
             <button
               onClick={handleNavigatePress}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
             >
               <Navigation size={16} strokeWidth={2} />
               바로 여행하기

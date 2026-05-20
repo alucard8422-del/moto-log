@@ -44,7 +44,7 @@ export default function NaviSettings({
                   onClick={() => onSelect(opt.type)}
                   className={`flex items-center gap-4 rounded-2xl px-4 py-3.5 transition-all duration-200 ${
                     isSelected
-                      ? 'bg-teal-400/10 ring-1 ring-teal-400/40'
+                      ? 'bg-[#FF5A00]/10 ring-1 ring-[#FF5A00]/40'
                       : 'bg-white/5 ring-0'
                   }`}
                 >
@@ -52,7 +52,7 @@ export default function NaviSettings({
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-black ${
                       isSelected
-                        ? 'bg-teal-400 text-slate-950'
+                        ? 'bg-[#FF5A00] text-white'
                         : 'bg-white/10 text-white/50'
                     }`}
                   >
@@ -61,7 +61,7 @@ export default function NaviSettings({
 
                   {/* 텍스트 */}
                   <div className="flex-1 text-left">
-                    <p className={`text-sm font-bold ${isSelected ? 'text-teal-400' : 'text-white/70'}`}>
+                    <p className={`text-sm font-bold ${isSelected ? 'text-[#FF5A00]' : 'text-white/70'}`}>
                       {opt.label}
                     </p>
                     <p className="text-[11px] font-light text-white/30">{opt.label}</p>
@@ -70,7 +70,7 @@ export default function NaviSettings({
                   {/* 체크 */}
                   <div
                     className={`flex h-5 w-5 items-center justify-center rounded-full ${
-                      isSelected ? 'bg-teal-400' : 'bg-white/8'
+                      isSelected ? 'bg-[#FF5A00]' : 'bg-white/8'
                     }`}
                   >
                     {isSelected && <Check size={11} strokeWidth={2.5} className="text-slate-950" />}
@@ -82,7 +82,7 @@ export default function NaviSettings({
 
           <button
             onClick={onSave}
-            className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
+            className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
           >
             {isFirstLaunch ? '설정 완료' : '변경 저장'}
             <ChevronRight size={15} strokeWidth={2.5} />

@@ -52,7 +52,7 @@ export default function MemoryPinCard({ pin, onClose, onDelete }: Props) {
 
           <div className="flex items-start justify-between gap-3 px-4 py-3">
             <div className="flex items-start gap-2 min-w-0">
-              <MapPin size={13} strokeWidth={1.5} className="mt-0.5 shrink-0 text-teal-400" />
+              <MapPin size={13} strokeWidth={1.5} className="mt-0.5 shrink-0 text-[#FF5A00]" />
               <div className="min-w-0">
                 <p className="text-[10px] font-light text-white/30">추억 핀</p>
                 {pin.memo ? (

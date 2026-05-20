@@ -33,7 +33,7 @@ const FAN_ITEMS = [
     label:  '그냥 시작',
     angle:  0,                              // 12시 방향
     fill:   true,
-    color:  '#2DD4BF',
+    color:  '#FF5A00',
   },
   {
     key:    'navi-select',
@@ -204,9 +204,9 @@ function RideCompleteSheet({
   const avg = duration > 0 ? distance / (duration / 3600) : 0
 
   const rows = [
-    { icon: <Timer size={14} strokeWidth={1.5} className="text-teal-400" />, label: '주행 시간', value: fmt(duration) },
-    { icon: <Route size={14} strokeWidth={1.5} className="text-teal-400" />, label: '주행 거리', value: `${distance.toFixed(2)} km` },
-    { icon: <Gauge size={14} strokeWidth={1.5} className="text-teal-400" />, label: '평균 속도', value: `${avg.toFixed(0)} km/h` },
+    { icon: <Timer size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '주행 시간', value: fmt(duration) },
+    { icon: <Route size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '주행 거리', value: `${distance.toFixed(2)} km` },
+    { icon: <Gauge size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '평균 속도', value: `${avg.toFixed(0)} km/h` },
   ]
 
   return (
@@ -216,7 +216,7 @@ function RideCompleteSheet({
         <div className="mx-auto max-w-sm rounded-t-3xl bg-[#161B26]/98 px-6 pt-5 pb-12 backdrop-blur-xl">
           <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/15" />
           <div className="mb-6 flex items-center gap-2">
-            <Flag size={13} strokeWidth={1.5} className="text-teal-400" />
+            <Flag size={13} strokeWidth={1.5} className="text-[#FF5A00]" />
             <span className="text-[10px] font-light uppercase tracking-widest text-white/30">Ride Complete</span>
           </div>
           <div className="mb-6 flex flex-col gap-4 rounded-3xl bg-white/5 px-5 py-4">
@@ -227,7 +227,7 @@ function RideCompleteSheet({
                     {icon}
                     <span className="text-sm font-light text-white/40">{label}</span>
                   </div>
-                  <span className="text-sm font-bold text-teal-400">{value}</span>
+                  <span className="text-sm font-bold text-[#FF5A00]">{value}</span>
                 </div>
                 {i < rows.length - 1 && <div className="mt-4 h-px bg-white/5" />}
               </div>
@@ -235,7 +235,7 @@ function RideCompleteSheet({
           </div>
           <button
             onClick={onGoToCourses}
-            className="w-full rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
+            className="w-full rounded-3xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
           >
             내 경로에 저장하기
           </button>

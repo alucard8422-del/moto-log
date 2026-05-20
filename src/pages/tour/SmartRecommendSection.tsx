@@ -122,15 +122,15 @@ export default function SmartRecommendSection({ courses, onPress, limit = 3 }: P
         {/* 라벨 + GPS */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Cpu size={13} strokeWidth={1.5} className="text-teal-400" />
-            <span className="text-[10px] font-medium uppercase tracking-widest text-teal-400/80">
+            <Cpu size={13} strokeWidth={1.5} className="text-[#FF5A00]" />
+            <span className="text-[10px] font-medium uppercase tracking-widest text-[#FF5A00]/80">
               AI 맞춤 추천
             </span>
           </div>
           <div className="flex items-center gap-1 text-[10px] font-light text-white/30">
             {loading
-              ? <Loader size={9} strokeWidth={1.5} className="animate-spin text-teal-400/50" />
-              : <MapPin size={9} strokeWidth={1.5} className="text-teal-400/50" />}
+              ? <Loader size={9} strokeWidth={1.5} className="animate-spin text-[#FF5A00]/50" />
+              : <MapPin size={9} strokeWidth={1.5} className="text-[#FF5A00]/50" />}
             <span>{locLabel ?? '위치 확인 중'}</span>
           </div>
         </div>
@@ -159,7 +159,7 @@ export default function SmartRecommendSection({ courses, onPress, limit = 3 }: P
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
 
             {/* 순위 뱃지 */}
-            <div className="absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-teal-400 text-[11px] font-bold text-slate-950 shadow-lg">
+            <div className="absolute left-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#FF5A00] text-[11px] font-bold text-white shadow-lg">
               {i + 1}
             </div>
 
@@ -179,7 +179,7 @@ export default function SmartRecommendSection({ courses, onPress, limit = 3 }: P
                 <p className="text-[11px] font-light text-white/50">
                   {course.region} · {course.distanceKm}km
                 </p>
-                <span className="text-[10px] font-light text-teal-400/70">
+                <span className="text-[10px] font-light text-[#FF5A00]/70">
                   ♥ {course.recommendCount}
                 </span>
               </div>

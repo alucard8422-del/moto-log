@@ -92,8 +92,8 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
         {/* 헤더 */}
         <div className="mb-7 flex flex-col items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-teal-400/20 bg-teal-400/10">
-            <Navigation size={20} strokeWidth={1.5} className="text-teal-400" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#FF5A00]/20 bg-[#FF5A00]/10">
+            <Navigation size={20} strokeWidth={1.5} className="text-[#FF5A00]" />
           </div>
           <div className="text-center">
             <h2 className="text-lg font-bold text-white">모토로그 시작하기</h2>

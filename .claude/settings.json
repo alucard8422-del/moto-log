@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"C:\\Users\\HONG\\moto-log\\moto-log-app\"; npx tsc -b --noEmit *)",
+      "PowerShell(cd \"C:\\Users\\HONG\\moto-log\\moto-log-app\"; npx tsc --noEmit *)",
+      "PowerShell(Get-ChildItem *)"
+    ]
+  }
+}

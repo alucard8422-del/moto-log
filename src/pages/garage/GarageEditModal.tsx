@@ -48,7 +48,7 @@ export default function GarageEditModal({ data, onClose, onSave }: GarageEditMod
         {/* 헤더 */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bike size={16} strokeWidth={1.5} className="text-teal-400" />
+            <Bike size={16} strokeWidth={1.5} className="text-[#FF5A00]" />
             <h2 className="text-base font-bold text-white">가라지 편집</h2>
           </div>
           <button
@@ -115,7 +115,7 @@ export default function GarageEditModal({ data, onClose, onSave }: GarageEditMod
         <button
           onClick={handleSave}
           disabled={!canSave}
-          className="mt-6 w-full rounded-2xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity disabled:opacity-30 active:opacity-80"
+          className="mt-6 w-full rounded-2xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity disabled:opacity-30 active:opacity-80"
         >
           저장하기
         </button>
@@ -126,7 +126,7 @@ export default function GarageEditModal({ data, onClose, onSave }: GarageEditMod
 
 /* ── 로컬 헬퍼 ── */
 const INPUT =
-  'w-full rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm font-light text-white placeholder-white/20 outline-none focus:border-teal-400/40'
+  'w-full rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm font-light text-white placeholder-white/20 outline-none focus:border-[#FF5A00]/40'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

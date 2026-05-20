@@ -71,13 +71,13 @@ export default function CourseCard({ course, onPress, onBookmark }: CourseCardPr
               </h3>
               <button
                 onClick={handleBookmark}
-                className="shrink-0 text-white/30 transition-colors hover:text-teal-400"
+                className="shrink-0 text-white/30 transition-colors hover:text-[#FF5A00]"
               >
                 <Bookmark
                   size={16}
                   strokeWidth={1.5}
                   fill={course.isBookmarked ? 'currentColor' : 'none'}
-                  className={course.isBookmarked ? 'text-teal-400' : ''}
+                  className={course.isBookmarked ? 'text-[#FF5A00]' : ''}
                 />
               </button>
             </div>

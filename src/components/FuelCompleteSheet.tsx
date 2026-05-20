@@ -29,24 +29,24 @@ export default function FuelCompleteSheet() {
           <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/20" />
 
           <div className="mb-6 flex flex-col items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-teal-400/10">
-              <CheckCircle size={28} strokeWidth={1.5} className="text-teal-400" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FF5A00]/10">
+              <CheckCircle size={28} strokeWidth={1.5} className="text-[#FF5A00]" />
             </div>
             <div className="text-center">
               <p className="text-[10px] font-light uppercase tracking-widest text-white/30">
                 {completedFuel?.storeName}
               </p>
-              <p className="mt-1 text-xl font-bold text-teal-400">{label} 등록 완료</p>
+              <p className="mt-1 text-xl font-bold text-[#FF5A00]">{label} 등록 완료</p>
             </div>
           </div>
 
           <div className="mb-6 flex flex-col gap-4 rounded-3xl bg-white/5 px-5 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Fuel size={15} strokeWidth={1.5} className="text-teal-400" />
+                <Fuel size={15} strokeWidth={1.5} className="text-[#FF5A00]" />
                 <span className="text-sm font-light text-white/40">주유 금액</span>
               </div>
-              <span className="text-sm font-bold text-teal-400">
+              <span className="text-sm font-bold text-[#FF5A00]">
                 {completedFuel?.amount.toLocaleString()}원
               </span>
             </div>
@@ -64,7 +64,7 @@ export default function FuelCompleteSheet() {
 
           <button
             onClick={clearComplete}
-            className="w-full rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80"
+            className="w-full rounded-3xl bg-[#FF5A00] py-4 text-sm font-bold text-white transition-opacity active:opacity-80"
           >
             확인
           </button>

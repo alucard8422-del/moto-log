@@ -230,13 +230,13 @@ export default function EditModal({ course, onSave, onClose }: Props) {
             placeholder="오늘 주행 후기를 남겨보세요 🏍️"
             rows={3}
             maxLength={200}
-            className="mb-1 w-full resize-none rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-3 text-sm font-light text-white outline-none placeholder:text-white/20 focus:border-teal-400/30 transition-colors"
+            className="mb-1 w-full resize-none rounded-2xl border border-white/5 bg-white/[0.04] px-4 py-3 text-sm font-light text-white outline-none placeholder:text-white/20 focus:border-[#FF5A00]/30 transition-colors"
           />
           <p className="mb-4 text-right text-[10px] font-light text-white/20">{diary.length}/200</p>
 
           <button
             onClick={() => onSave(course.id, diary, photos)}
-            className="flex w-full items-center justify-center gap-2 rounded-3xl bg-teal-400 py-4 text-sm font-bold text-slate-950 active:opacity-80"
+            className="flex w-full items-center justify-center gap-2 rounded-3xl bg-[#FF5A00] py-4 text-sm font-bold text-white active:opacity-80"
           >
             <CheckCircle size={15} strokeWidth={2} />
             저장하기
@@ -257,7 +257,7 @@ export default function EditModal({ course, onSave, onClose }: Props) {
                 onClick={() => { setShowActionSheet(false); fileRef.current?.click() }}
                 className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-light text-white/70 active:bg-white/5"
               >
-                <Image size={16} strokeWidth={1.5} className="text-teal-400" />
+                <Image size={16} strokeWidth={1.5} className="text-[#FF5A00]" />
                 사진 추가하기
               </button>
               <button

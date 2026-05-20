@@ -95,8 +95,8 @@ export default function NavigationCountdownPopup({ isOpen, naviLabel, onLaunch, 
         <div className="flex w-72 flex-col items-center rounded-3xl border border-white/10 bg-[#111622]/98 px-8 py-8 backdrop-blur-xl">
 
           {/* 아이콘 */}
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-teal-400/10">
-            <Navigation size={24} strokeWidth={1.5} className="text-teal-400" />
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FF5A00]/10">
+            <Navigation size={24} strokeWidth={1.5} className="text-[#FF5A00]" />
           </div>
 
           {/* 헤더 */}
@@ -119,21 +119,21 @@ export default function NavigationCountdownPopup({ isOpen, naviLabel, onLaunch, 
               <circle
                 cx="44" cy="44" r={RADIUS}
                 fill="none"
-                stroke="#2DD4BF"
+                stroke="#FF5A00"
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeDasharray={CIRCUMFERENCE}
                 strokeDashoffset={offset}
-                style={{ filter: 'drop-shadow(0 0 6px #2DD4BF)' }}
+                style={{ filter: 'drop-shadow(0 0 6px #FF5A00)' }}
               />
             </svg>
 
             {/* 숫자 — offset과 동일 elapsed에서 파생 → 자로 잰 듯 동기화 */}
             <span
-              className="text-4xl font-bold leading-none text-[#2DD4BF]"
+              className="text-4xl font-bold leading-none text-[#FF5A00]"
               style={{
                 fontFamily: "'Orbitron', sans-serif",
-                textShadow: '0 0 16px rgba(45,212,191,0.7)',
+                textShadow: '0 0 16px rgba(255,90,0,0.7)',
               }}
             >
               {count}

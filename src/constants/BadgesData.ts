@@ -46,11 +46,11 @@ export const TIER_STYLES: Record<Tier, TierStyle> = {
   },
   PLATINUM: {
     label:    'PLATINUM',
-    border:   'ring-2 ring-[#2DD4BF]',
-    glow:     '0 0 24px rgba(45,212,191,0.7), 0 0 48px rgba(45,212,191,0.3)',
-    text:     'text-[#2DD4BF]',
-    bg:       'bg-[#2DD4BF]/10',
-    confetti: ['#2DD4BF', '#0EA5E9', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'],
+    border:   'ring-2 ring-[#FF5A00]',
+    glow:     '0 0 24px rgba(255,90,0,0.7), 0 0 48px rgba(255,90,0,0.3)',
+    text:     'text-[#FF5A00]',
+    bg:       'bg-[#FF5A00]/10',
+    confetti: ['#FF5A00', '#FF8C00', '#FFB347', '#EC4899', '#F59E0B', '#10B981'],
   },
 }
 

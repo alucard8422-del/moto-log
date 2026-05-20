@@ -113,12 +113,12 @@ export default function KoreaRouteMap({ courses }: Props) {
           new window.kakao.maps.LatLng(p.lat, p.lng)
         )
         const glow = new window.kakao.maps.Polyline({
-          path, strokeWeight: 10, strokeColor: '#2DD4BF',
-          strokeOpacity: 0.12, strokeStyle: 'solid',
+          path, strokeWeight: 10, strokeColor: '#FF5A00',
+          strokeOpacity: 0.18, strokeStyle: 'solid',
         })
         const main = new window.kakao.maps.Polyline({
-          path, strokeWeight: 2.5, strokeColor: '#2DD4BF',
-          strokeOpacity: 0.85, strokeStyle: 'solid',
+          path, strokeWeight: 2.5, strokeColor: '#FF5A00',
+          strokeOpacity: 0.9, strokeStyle: 'solid',
         })
         glow.setMap(mapRef.current)
         main.setMap(mapRef.current)
@@ -147,12 +147,12 @@ export default function KoreaRouteMap({ courses }: Props) {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-slate-950 to-transparent" />
       {/* 누적 동선 뱃지 */}
       <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md">
-        <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A00]" />
         <span className="text-[10px] font-light text-white/60">누적 동선</span>
       </div>
       {lineCount > 0 && (
-        <div className="pointer-events-none absolute bottom-4 right-4 z-30 rounded-full border border-teal-400/20 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md">
-          <span className="text-[10px] font-bold text-teal-400">{lineCount}개 경로</span>
+        <div className="pointer-events-none absolute bottom-4 right-4 z-30 rounded-full border border-[#FF5A00]/20 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md">
+          <span className="text-[10px] font-bold text-[#FF5A00]">{lineCount}개 경로</span>
         </div>
       )}
     </div>

@@ -25,8 +25,8 @@ export default function ShareSheet({ title, onConfirm, onCancel }: Props) {
       <div className={`fixed inset-x-0 bottom-0 z-[80] transition-transform duration-500 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="mx-auto max-w-sm rounded-t-3xl border border-white/10 bg-[#161B26]/98 px-6 pt-5 pb-10 backdrop-blur-xl">
           <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/20" />
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-teal-400/10">
-            <Share2 size={20} strokeWidth={1.5} className="text-teal-400" />
+          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#FF5A00]/10">
+            <Share2 size={20} strokeWidth={1.5} className="text-[#FF5A00]" />
           </div>
           <p className="mb-1 mt-3 text-sm font-bold text-white">추천 코스로 공유하기</p>
           <p className="mb-6 text-xs font-light text-white/40">
@@ -39,7 +39,7 @@ export default function ShareSheet({ title, onConfirm, onCancel }: Props) {
               아니오
             </button>
             <button onClick={onConfirm}
-              className="flex-1 rounded-2xl bg-teal-400 py-3.5 text-sm font-bold text-slate-950 active:opacity-80">
+              className="flex-1 rounded-2xl bg-[#FF5A00] py-3.5 text-sm font-bold text-white active:opacity-80">
               예, 공유하기
             </button>
           </div>

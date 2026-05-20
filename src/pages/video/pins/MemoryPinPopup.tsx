@@ -71,7 +71,7 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
         {/* 헤더 */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MapPin size={15} strokeWidth={1.5} className="text-teal-400" />
+            <MapPin size={15} strokeWidth={1.5} className="text-[#FF5A00]" />
             <span className="text-sm font-bold text-white">추억 핀 추가</span>
           </div>
           <button
@@ -102,14 +102,14 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
           />
           {photo ? (
             /* 사진 선택됨 — 소형 인디케이터 (대형 미리보기 대신) */
-            <div className="flex items-center gap-3 rounded-2xl border border-teal-400/25 bg-teal-400/8 px-3 py-2.5">
+            <div className="flex items-center gap-3 rounded-2xl border border-[#FF5A00]/25 bg-[#FF5A00]/8 px-3 py-2.5">
               <img
                 src={photo}
                 alt=""
                 className="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-white/15"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-semibold text-teal-400">사진 선택됨</p>
+                <p className="text-[11px] font-semibold text-[#FF5A00]">사진 선택됨</p>
                 <p className="text-[10px] font-light text-white/35 mt-0.5">핀 아이콘에 표시됩니다</p>
               </div>
               <button
@@ -126,7 +126,7 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] py-4 active:opacity-70 disabled:opacity-40"
             >
               {loading
-                ? <Loader2 size={16} strokeWidth={1.5} className="animate-spin text-teal-400" />
+                ? <Loader2 size={16} strokeWidth={1.5} className="animate-spin text-[#FF5A00]" />
                 : <ImagePlus size={16} strokeWidth={1.5} className="text-white/40" />
               }
               <span className="text-[11px] font-light text-white/40">
@@ -143,14 +143,14 @@ export default function MemoryPinPopup({ lat, lng, fraction, courseId, onSave, o
           placeholder="이 장소에 대한 메모 (선택)"
           maxLength={200}
           rows={2}
-          className="mb-4 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-light text-white placeholder-white/25 outline-none focus:border-teal-400/30"
+          className="mb-4 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-light text-white placeholder-white/25 outline-none focus:border-[#FF5A00]/30"
         />
 
         {/* 저장 버튼 */}
         <button
           onClick={handleSave}
           disabled={!photo && !memo.trim()}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-400 py-3.5 text-sm font-bold text-slate-950 active:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-3.5 text-sm font-bold text-white active:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Save size={14} strokeWidth={2.5} />
           핀 저장

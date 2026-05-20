@@ -41,18 +41,18 @@ function MiniMap({ courseId }: { courseId: string }) {
           </filter>
         </defs>
         {/* glow trail */}
-        <path d={d} fill="none" stroke="#2DD4BF" strokeWidth="6" strokeOpacity="0.12"
+        <path d={d} fill="none" stroke="#FF5A00" strokeWidth="6" strokeOpacity="0.12"
           strokeLinecap="round" strokeLinejoin="round" />
         {/* route line */}
-        <path d={d} fill="none" stroke="#2DD4BF" strokeWidth="2"
+        <path d={d} fill="none" stroke="#FF5A00" strokeWidth="2"
           strokeLinecap="round" strokeLinejoin="round"
           filter={`url(#glow-${courseId})`} />
         {/* start dot */}
-        <circle cx="10" cy={parseFloat(d.split(' ')[2])} r="3.5" fill="#2DD4BF" fillOpacity="0.5"
-          stroke="#2DD4BF" strokeWidth="1" />
+        <circle cx="10" cy={parseFloat(d.split(' ')[2])} r="3.5" fill="#FF5A00" fillOpacity="0.5"
+          stroke="#FF5A00" strokeWidth="1" />
         {/* end dot */}
         <circle cx="265" cy={parseFloat(d.split(' ')[d.split(' ').length - 1])} r="4"
-          fill="#2DD4BF" />
+          fill="#FF5A00" />
       </svg>
       {/* vignette */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#161B26]/80" />

@@ -33,20 +33,20 @@ export default function NaviSettingsCard({ naviType, onChange, onBadges }: Props
               key={opt.type}
               onClick={() => handleSelect(opt.type)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-150 ${
-                active ? 'bg-teal-400/10 ring-1 ring-teal-400/40' : 'bg-white/5'
+                active ? 'bg-[#FF5A00]/10 ring-1 ring-[#FF5A00]/40' : 'bg-white/5'
               }`}
             >
               <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black ${
-                active ? 'bg-teal-400 text-slate-950' : 'bg-white/10 text-white/50'
+                active ? 'bg-[#FF5A00] text-white' : 'bg-white/10 text-white/50'
               }`}>
                 {opt.badge}
               </div>
               <span className={`flex-1 text-left text-sm font-semibold ${
-                active ? 'text-teal-400' : 'text-white/70'
+                active ? 'text-[#FF5A00]' : 'text-white/70'
               }`}>
                 {opt.label}
               </span>
-              {active && <Check size={14} strokeWidth={2.5} className="text-teal-400" />}
+              {active && <Check size={14} strokeWidth={2.5} className="text-[#FF5A00]" />}
             </button>
           )
         })}

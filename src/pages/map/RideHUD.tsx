@@ -16,10 +16,10 @@ function HUDCol({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
       <span
-        className="text-3xl font-bold leading-none text-[#2DD4BF] md:text-5xl [@media(orientation:landscape)]:text-2xl"
+        className="text-3xl font-bold leading-none text-[#FF5A00] md:text-5xl [@media(orientation:landscape)]:text-2xl"
         style={{
           fontFamily: "'Orbitron', sans-serif",
-          textShadow: '0 0 10px rgba(45,212,191,0.5)',
+          textShadow: '0 0 10px rgba(255,90,0,0.5)',
         }}
       >
         {value}
@@ -50,7 +50,7 @@ export default function RideHUD({ duration, distance }: RideHUDProps) {
         <HUDCol value={distance.toFixed(2)}  label="주행거리" />
         <HUDCol value={avg.toFixed(0)}        label="평균속도" />
       </div>
-      <p className="text-xs font-medium text-[#2DD4BF] animate-pulse drop-shadow-[0_0_5px_rgba(45,212,191,0.6)]">
+      <p className="text-xs font-medium text-[#FF5A00] animate-pulse drop-shadow-[0_0_5px_rgba(255,90,0,0.6)]">
         • 경로를 기록중입니다
       </p>
     </div>

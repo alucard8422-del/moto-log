@@ -8,7 +8,7 @@ interface Props {
 }
 
 const MOOD_GRADIENT: Record<CourseCardData['mood'], string> = {
-  '여유로운': 'from-emerald-900/60 to-teal-900/40',
+  '여유로운': 'from-emerald-900/60 to-orange-900/40',
   '감성적인': 'from-violet-900/60 to-indigo-900/40',
   '도전적인': 'from-rose-900/60 to-orange-900/40',
 }
@@ -30,7 +30,7 @@ export default function RecommendationSection({ courses, onPress }: Props) {
       {/* 섹션 헤더 */}
       <div className="flex items-center justify-between px-0.5">
         <div className="flex items-center gap-2">
-          <Compass size={14} strokeWidth={1.5} className="text-teal-400" />
+          <Compass size={14} strokeWidth={1.5} className="text-[#FF5A00]" />
           <span className="text-sm font-bold text-white">오늘의 추천 코스</span>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-light text-white/30">
@@ -64,7 +64,7 @@ export default function RecommendationSection({ courses, onPress }: Props) {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent" />
 
             {/* 추천 순위 뱃지 */}
-            <div className="absolute left-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-teal-400 text-[10px] font-bold text-slate-950">
+            <div className="absolute left-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5A00] text-[10px] font-bold text-white">
               {i + 1}
             </div>
 

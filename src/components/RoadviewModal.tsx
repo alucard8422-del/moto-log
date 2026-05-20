@@ -70,7 +70,7 @@ export default function RoadviewModal({ lat, lng, onClose }: Props) {
       {/* 헤더 */}
       <div className="flex flex-shrink-0 items-center justify-between border-b border-white/5 px-5 py-3">
         <div className="flex items-center gap-2">
-          <Camera size={15} strokeWidth={1.5} className="text-teal-400" />
+          <Camera size={15} strokeWidth={1.5} className="text-[#FF5A00]" />
           <span className="text-sm font-bold text-white/80">로드뷰</span>
         </div>
         <button
@@ -93,7 +93,7 @@ export default function RoadviewModal({ lat, lng, onClose }: Props) {
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070B12]"
               exit={{ opacity: 0 }}
             >
-              <Loader2 size={28} strokeWidth={1.5} className="animate-spin text-teal-400/60" />
+              <Loader2 size={28} strokeWidth={1.5} className="animate-spin text-[#FF5A00]/60" />
               <p className="text-xs font-light text-white/30">로드뷰 불러오는 중…</p>
             </motion.div>
           )}

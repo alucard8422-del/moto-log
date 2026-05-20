@@ -31,7 +31,7 @@ export default function PlannerHeader({
       {/* ── 중앙 거리 뱃지 (포인트 2개 이상일 때만) ── */}
       <div className="pointer-events-none flex flex-col items-center gap-1">
         {pointsCount >= 2 && (
-          <span className="rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-[10px] font-bold text-teal-400 backdrop-blur-md">
+          <span className="rounded-full border border-white/10 bg-slate-950/80 px-3 py-1 text-[10px] font-bold text-[#FF5A00] backdrop-blur-md">
             {dist.toFixed(1)} km · {pointsCount}개 포인트
           </span>
         )}

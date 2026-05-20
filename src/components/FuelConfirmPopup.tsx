@@ -40,14 +40,14 @@ export default function FuelConfirmPopup() {
           <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/20" />
 
           <div className="mb-6 flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-400/10">
-              <Fuel size={18} strokeWidth={1.5} className="text-teal-400" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#FF5A00]/10">
+              <Fuel size={18} strokeWidth={1.5} className="text-[#FF5A00]" />
             </div>
             <p className="text-sm font-light leading-relaxed text-white/70">
               방금{' '}
               <span className="font-bold text-white">{pendingFuel?.storeName}</span>
               에서{' '}
-              <span className="font-bold text-teal-400">{pendingFuel?.amount.toLocaleString()}원</span>{' '}
+              <span className="font-bold text-[#FF5A00]">{pendingFuel?.amount.toLocaleString()}원</span>{' '}
               주유 문자를 확인했어요.
               <br />
               어떤 유종으로 등록할까요?
@@ -65,10 +65,10 @@ export default function FuelConfirmPopup() {
 
             <button
               onClick={() => handleSelect('premium')}
-              className="flex flex-1 flex-col items-center gap-1 rounded-3xl bg-teal-400 py-5 transition-opacity active:opacity-70"
+              className="flex flex-1 flex-col items-center gap-1 rounded-3xl bg-[#FF5A00] py-5 transition-opacity active:opacity-70"
             >
-              <span className="text-base font-bold text-slate-950">고급유</span>
-              <span className="text-[11px] font-light text-slate-950/60">Premium</span>
+              <span className="text-base font-bold text-white">고급유</span>
+              <span className="text-[11px] font-light text-white/70">Premium</span>
             </button>
           </div>
 

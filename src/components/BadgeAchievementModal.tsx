@@ -243,7 +243,7 @@ export default function BadgeAchievementModal({ badge, tier, isOpen, onClose }: 
               <button
                 onClick={onClose}
                 className={`mt-8 flex w-full items-center justify-center rounded-2xl py-4 text-sm font-bold text-slate-950 transition-opacity active:opacity-80 ${
-                  tier === 'PLATINUM' ? 'bg-[#2DD4BF]'
+                  tier === 'PLATINUM' ? 'bg-[#FF5A00]'
                   : tier === 'GOLD'   ? 'bg-[#FFD700]'
                   : tier === 'SILVER' ? 'bg-[#C0C0C0]'
                   : 'bg-[#CD7F32]'

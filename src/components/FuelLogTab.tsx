@@ -97,8 +97,8 @@ function FuelAreaChart({ logs }: { logs: FuelRecord[] }) {
         >
           <defs>
             <linearGradient id="fuelGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0" />
+              <stop offset="0%" stopColor="#FF5A00" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#FF5A00" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -106,12 +106,12 @@ function FuelAreaChart({ logs }: { logs: FuelRecord[] }) {
             stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
 
           <path d={areaPath} fill="url(#fuelGrad)" />
-          <path d={linePath} fill="none" stroke="#2DD4BF" strokeWidth="1.5"
+          <path d={linePath} fill="none" stroke="#FF5A00" strokeWidth="1.5"
             strokeLinecap="round" strokeLinejoin="round" />
 
           {pts.map((p, i) => (
             totals[i] > 0 && (
-              <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#2DD4BF" />
+              <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#FF5A00" />
             )
           ))}
 
@@ -145,7 +145,7 @@ function FuelItem({ log }: { log: FuelRecord }) {
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 flex-1 flex-col gap-1 pr-3">
           <div className="flex items-center gap-2">
-            <span className={`shrink-0 text-[10px] font-bold ${isPremium ? 'text-teal-400' : 'text-white/40'}`}>
+            <span className={`shrink-0 text-[10px] font-bold ${isPremium ? 'text-[#FF5A00]' : 'text-white/40'}`}>
               {log.fuelType}
             </span>
             <div className="flex min-w-0 items-center gap-1">
@@ -198,7 +198,7 @@ export default function FuelLogTab() {
         ].map(({ label, value }) => (
           <div key={label} className="flex flex-col gap-0.5 rounded-2xl bg-[#161B26]/60 px-4 py-3 backdrop-blur-xl">
             <span className="text-[10px] font-light uppercase tracking-widest text-white/30">{label}</span>
-            <span className="text-lg font-bold text-teal-400">{value}</span>
+            <span className="text-lg font-bold text-[#FF5A00]">{value}</span>
           </div>
         ))}
       </div>

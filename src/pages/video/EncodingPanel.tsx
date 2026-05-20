@@ -82,7 +82,7 @@ export default function EncodingPanel({ points, view, onComplete }: Props) {
           transition={{ delay: 0.3 }}
         >
           {/* 상태 레이블 */}
-          <p className={`text-[10px] font-light tracking-widest uppercase ${isDone ? 'text-teal-400/80' : 'text-white/30'}`}>
+          <p className={`text-[10px] font-light tracking-widest uppercase ${isDone ? 'text-[#FF5A00]/80' : 'text-white/30'}`}>
             {isDone ? '인코딩 완료' : '영상 인코딩 중'}
           </p>
 

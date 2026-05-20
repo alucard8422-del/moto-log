@@ -163,7 +163,7 @@ export default function DriveSessionOverlay() {
 
               <div className="mb-5 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
                 <p className="text-[10px] font-light text-white/40">진행 구간</p>
-                <p className="mt-0.5 text-sm font-bold text-teal-400">
+                <p className="mt-0.5 text-sm font-bold text-[#FF5A00]">
                   {session.currentSegmentIdx + 1} / {session.segments.length} 구간
                 </p>
               </div>
@@ -178,7 +178,7 @@ export default function DriveSessionOverlay() {
                 </button>
                 <button
                   onClick={handleResume}
-                  className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-teal-400 py-3.5 text-sm font-bold text-slate-950 active:opacity-80"
+                  className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-3.5 text-sm font-bold text-white active:opacity-80"
                 >
                   <Navigation size={15} strokeWidth={2} />
                   이어서 주행
@@ -210,8 +210,8 @@ export default function DriveSessionOverlay() {
               transition={{ type: 'spring', stiffness: 340, damping: 30 }}
             >
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-400/15">
-                  <Navigation size={18} strokeWidth={1.5} className="text-teal-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF5A00]/15">
+                  <Navigation size={18} strokeWidth={1.5} className="text-[#FF5A00]" />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">
@@ -228,9 +228,9 @@ export default function DriveSessionOverlay() {
                     key={i}
                     className={`h-1.5 flex-1 rounded-full transition-colors ${
                       i < session.currentSegmentIdx
-                        ? 'bg-teal-400'
+                        ? 'bg-[#FF5A00]'
                         : i === session.currentSegmentIdx
-                        ? 'bg-teal-400/40'
+                        ? 'bg-[#FF5A00]/40'
                         : 'bg-white/10'
                     }`}
                   />
@@ -246,7 +246,7 @@ export default function DriveSessionOverlay() {
                 /* 마지막 구간 완료 */
                 <button
                   onClick={handleEnd}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-teal-400 py-3.5 text-sm font-bold text-slate-950 active:opacity-80"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-3.5 text-sm font-bold text-white active:opacity-80"
                 >
                   <CheckCircle size={15} strokeWidth={2} />
                   주행 완료
@@ -262,7 +262,7 @@ export default function DriveSessionOverlay() {
                   </button>
                   <button
                     onClick={handleNextSegment}
-                    className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-teal-400 py-3.5 text-sm font-bold text-slate-950 active:opacity-80"
+                    className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-3.5 text-sm font-bold text-white active:opacity-80"
                   >
                     <ChevronRight size={15} strokeWidth={2.5} />
                     다음 구간 시작
@@ -286,9 +286,9 @@ export default function DriveSessionOverlay() {
               setTimeout(() => { clearDriveSession(); setSession(null); setMode('idle') }, 2500)
             }}
           >
-            <div className="flex items-center gap-2 rounded-full border border-teal-400/20 bg-slate-950/90 px-5 py-3 shadow-xl backdrop-blur-md">
-              <CheckCircle size={15} strokeWidth={2} className="text-teal-400" />
-              <span className="text-sm font-bold text-teal-400">전체 경로 주행 완료!</span>
+            <div className="flex items-center gap-2 rounded-full border border-[#FF5A00]/20 bg-slate-950/90 px-5 py-3 shadow-xl backdrop-blur-md">
+              <CheckCircle size={15} strokeWidth={2} className="text-[#FF5A00]" />
+              <span className="text-sm font-bold text-[#FF5A00]">전체 경로 주행 완료!</span>
             </div>
           </motion.div>
         )}

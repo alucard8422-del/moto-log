@@ -202,7 +202,7 @@ export default function PlannerMap({
       const isStart = i === 0
       const isEnd   = i === points.length - 1 && points.length > 1
       const label   = isStart ? 'S' : isEnd ? 'E' : String(i)
-      const bg      = isStart ? '#2DD4BF' : isEnd ? '#F87171' : '#1E293B'
+      const bg      = isStart ? '#FF5A00' : isEnd ? '#F87171' : '#1E293B'
       const fg      = isStart ? '#0F172A' : '#ffffff'
 
       const markerImage = new window.kakao.maps.MarkerImage(
@@ -231,12 +231,12 @@ export default function PlannerMap({
     const path = linePts.map(p => new window.kakao.maps.LatLng(p.lat, p.lng))
 
     polylineGlowRef.current = new window.kakao.maps.Polyline({
-      path, strokeWeight: 12, strokeColor: '#2DD4BF',
-      strokeOpacity: 0.15, strokeStyle: 'solid',
+      path, strokeWeight: 12, strokeColor: '#FF5A00',
+      strokeOpacity: 0.18, strokeStyle: 'solid',
     })
     polylineMainRef.current = new window.kakao.maps.Polyline({
-      path, strokeWeight: 3, strokeColor: '#2DD4BF',
-      strokeOpacity: 0.9, strokeStyle: 'solid',
+      path, strokeWeight: 3, strokeColor: '#FF5A00',
+      strokeOpacity: 0.95, strokeStyle: 'solid',
     })
     polylineGlowRef.current.setMap(mapRef.current)
     polylineMainRef.current.setMap(mapRef.current)
