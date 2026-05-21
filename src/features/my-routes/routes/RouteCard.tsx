@@ -1,6 +1,6 @@
 // RouteCard.tsx — 내 경로 > 주행 기록 카드
 import { useState } from 'react'
-import { Route, Clock, MapPin, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown, Play, Navigation } from 'lucide-react'
+import { Route, Clock, MapPin, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown, Play } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur, fmtDate } from './routeUtils'
 import DeleteModal from './DeleteModal'
 import type { SavedCourse } from '../../../lib/courseStorage'
@@ -177,14 +177,6 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                   className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-[11px] font-bold text-white active:opacity-70"
                 >
                   <Play size={10} strokeWidth={0} fill="white" />주행
-                </button>
-              )}
-              {isPlanned && (
-                <button
-                  onClick={e => { e.stopPropagation(); onDrive?.(course) }}
-                  className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-[11px] font-bold text-white active:opacity-70"
-                >
-                  <Navigation size={11} strokeWidth={2} />여행하기
                 </button>
               )}
             </div>

@@ -109,37 +109,37 @@ export default function MyRoutesPage() {
     const { newlyUnlocked } = checkRideDiaryBadge()
     if (newlyUnlocked.length > 0) setBadgeQueue(newlyUnlocked)
 
-    // ── [2단계] 서버 동기화 — 전체 코스 upsert (UPDATE 불확실성 제거) ──────
+    // ── [2단계] 서버 동기화 — diary/photo 필드만 업데이트 ──────────────────
     ;(async () => {
       try {
-        const fullCourse = courses.find(c => c.id === id)
-        if (!fullCourse) {
-          console.warn('[MyRoutesPage] ⚠️ 코스를 메모리에서 찾을 수 없음 — id:', id)
-          return
-        }
-
         // 사진 업로드 (있을 경우)
-        let finalCoverPhoto = fullCourse.coverPhoto
+        let finalCoverPhoto: string | undefined
         if (photos.length > 0) {
-          console.log('[MyRoutesPage] 사진 압축 및 Storage 업로드 시작...')
           const publicUrl = await uploadCourseImage(photos[0], id)
           if (publicUrl) {
             finalCoverPhoto = publicUrl
             updateCourse(id, { coverPhoto: publicUrl })
             setCourses(prev => prev.map(c => c.id === id ? { ...c, coverPhoto: publicUrl } : c))
-          } else {
-            console.warn('[MyRoutesPage] ⚠️ Storage 업로드 실패 — 사진은 로컬(base64)에만 보존됨')
           }
         }
 
-        // 전체 코스에 diary 병합 후 upsert (코스 존재 여부 무관)
-        const merged: SavedCourse = { ...fullCourse, diary, coverPhoto: finalCoverPhoto }
-        const ok = await insertMyCourse(merged)
-        if (ok) console.log('[MyRoutesPage] ✅ 서버 저장 완료 — id:', id)
-        else    console.warn('[MyRoutesPage] ⚠️ 서버 저장 실패 — 로컬에만 저장됨')
+        // 변경 필드만 PATCH — GPX·기존 사진 덮어쓰기 없음
+        const patch: Partial<SavedCourse> = { diary }
+        if (finalCoverPhoto) patch.coverPhoto = finalCoverPhoto
+        const ok = await updateMyCourse(id, patch)
 
+        if (!ok) {
+          // 서버에 코스가 없으면 전체 insert (새 코스 첫 저장)
+          const fullCourse = courses.find(c => c.id === id)
+          if (fullCourse) {
+            await insertMyCourse({
+              ...fullCourse, diary,
+              ...(finalCoverPhoto ? { coverPhoto: finalCoverPhoto } : {}),
+            })
+          }
+        }
       } catch (e) {
-        console.error('🚨 [치명적 저장 에러]: handleSave 서버 동기화 실패\n  로컬에는 정상 저장됨\n  원인:', e)
+        console.error('🚨 handleSave 서버 동기화 실패:', e)
       }
     })()
   }

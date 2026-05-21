@@ -14,27 +14,30 @@ import { makeMarkerDataUrl } from './plannerUtils'
 
 declare global { interface Window { kakao: any } }
 
-// ── 현재 위치 마커 이미지 (파란 GPS 점) ────────────────────────────────────
+// ── 현재 위치 마커 이미지 (기록 메뉴 나침반 스타일 — 주황 원 + 중심점) ──────
 function makeUserPosMarkerUrl(): string {
-  const S = 36
+  const S = 44
   const c = document.createElement('canvas')
   c.width = c.height = S
   const ctx = c.getContext('2d')!
-  // 바깥 흰 테두리
+  // 외부 반투명 링
   ctx.beginPath()
-  ctx.arc(S / 2, S / 2, S / 2 - 1, 0, Math.PI * 2)
-  ctx.fillStyle = '#FFFFFF'
+  ctx.arc(S / 2, S / 2, 20, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(255,90,0,0.18)'
   ctx.fill()
-  // 파란 원
+  ctx.strokeStyle = '#FF5A00'
+  ctx.lineWidth = 1.8
+  ctx.globalAlpha = 0.75
+  ctx.stroke()
+  ctx.globalAlpha = 1
+  // 중앙 주황 점
   ctx.beginPath()
-  ctx.arc(S / 2, S / 2, S / 2 - 5, 0, Math.PI * 2)
-  ctx.fillStyle = '#3B82F6'
+  ctx.arc(S / 2, S / 2, 5.5, 0, Math.PI * 2)
+  ctx.fillStyle = '#FF5A00'
+  ctx.shadowColor = '#FF5A00'
+  ctx.shadowBlur = 8
   ctx.fill()
-  // 중앙 흰 점
-  ctx.beginPath()
-  ctx.arc(S / 2, S / 2, 4, 0, Math.PI * 2)
-  ctx.fillStyle = '#FFFFFF'
-  ctx.fill()
+  ctx.shadowBlur = 0
   return c.toDataURL()
 }
 
@@ -229,8 +232,8 @@ export default function PlannerMap({
     const ll = new window.kakao.maps.LatLng(currentUserPos.lat, currentUserPos.lng)
     const markerImage = new window.kakao.maps.MarkerImage(
       makeUserPosMarkerUrl(),
-      new window.kakao.maps.Size(36, 36),
-      { offset: new window.kakao.maps.Point(18, 18) },
+      new window.kakao.maps.Size(44, 44),
+      { offset: new window.kakao.maps.Point(22, 22) },
     )
     userPosMarkerRef.current = new window.kakao.maps.Marker({
       position: ll, image: markerImage, map: mapRef.current,
