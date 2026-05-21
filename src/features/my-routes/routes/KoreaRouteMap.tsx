@@ -2,10 +2,8 @@
 // 지도 UI 수정 시 이 파일만 건드리면 됩니다.
 
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import { KAKAO_APP_KEY } from './routeUtils'
 import type { SavedCourse } from '../../../lib/courseStorage'
-import RoadviewModal from '../../../components/RoadviewModal'
 
 declare global {
   interface Window { kakao: any }
@@ -21,7 +19,6 @@ export default function KoreaRouteMap({ courses, isLoading = false }: Props) {
   const mapRef        = useRef<any>(null)
   const polylinesRef  = useRef<any[]>([])
   const [mapReady,    setMapReady]    = useState(false)
-  const [roadviewPos, setRoadviewPos] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── 지도 초기화 (최초 1회) ─────────────────────────────────────────────
   useEffect(() => {
@@ -37,49 +34,14 @@ export default function KoreaRouteMap({ courses, isLoading = false }: Props) {
           level: 13,
         })
         // 드래그·줌 허용 → 경로 탐색 가능
-        map.setZoomable(true)
-        map.setDraggable(true)
+        // 내 경로 지도는 확인용 — 드래그·줌 비활성화 (페이지 스크롤 방해 방지)
+        map.setZoomable(false)
+        map.setDraggable(false)
         mapRef.current = map
         setMapReady(true)
 
         // 컨테이너 크기 재계산 — SDK가 초기화 시 높이를 잘못 읽는 버그 방지
         requestAnimationFrame(() => { try { map.relayout() } catch {} })
-
-        // ── 롱프레스 → 로드뷰 ──────────────────────────────────────
-        let downX = 0, downY = 0
-        let lpTimer: ReturnType<typeof setTimeout> | null = null
-        const cancelLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null } }
-
-        const startLP = (cx: number, cy: number) => {
-          cancelLP(); downX = cx; downY = cy
-          lpTimer = setTimeout(() => {
-            lpTimer = null
-            if (navigator.vibrate) navigator.vibrate(40)
-            try {
-              const rect = containerRef.current!.getBoundingClientRect()
-              const proj = map.getProjection()
-              const ll   = proj.coordsFromContainerPoint(
-                new window.kakao.maps.Point(cx - rect.left, cy - rect.top)
-              )
-              setRoadviewPos({ lat: ll.getLat(), lng: ll.getLng() })
-            } catch {}
-          }, 600)
-        }
-        const moveLP = (cx: number, cy: number) => {
-          if (Math.abs(cx - downX) > 10 || Math.abs(cy - downY) > 10) cancelLP()
-        }
-
-        containerRef.current!.addEventListener('mousedown', e => startLP(e.clientX, e.clientY))
-        containerRef.current!.addEventListener('mousemove', e => moveLP(e.clientX, e.clientY))
-        containerRef.current!.addEventListener('mouseup',   cancelLP)
-        containerRef.current!.addEventListener('touchstart', e => {
-          const t = e.touches[0]; startLP(t.clientX, t.clientY)
-        }, { passive: true })
-        containerRef.current!.addEventListener('touchmove', e => {
-          const t = e.touches[0]; moveLP(t.clientX, t.clientY)
-        }, { passive: true })
-        containerRef.current!.addEventListener('touchend',   cancelLP)
-        containerRef.current!.addEventListener('touchcancel', cancelLP)
       })
     }
 
@@ -173,17 +135,6 @@ export default function KoreaRouteMap({ courses, isLoading = false }: Props) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 300 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
-
-      {/* 로드뷰 팝업 */}
-      <AnimatePresence>
-        {roadviewPos && (
-          <RoadviewModal
-            lat={roadviewPos.lat}
-            lng={roadviewPos.lng}
-            onClose={() => setRoadviewPos(null)}
-          />
-        )}
-      </AnimatePresence>
 
       {/* 하단 그라데이션 */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-slate-950 to-transparent" />
