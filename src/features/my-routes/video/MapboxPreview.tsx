@@ -569,14 +569,14 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
             const { lng, lat, bearing } = bikeTransformRef.current
             const mc = mapboxgl.MercatorCoordinate.fromLngLat([lng, lat], 0)
             // 1미터를 Mercator 단위로 변환 후 스케일 계산 (20m 크기)
-            const s  = mc.meterInMercatorCoordinateUnits() * 20
+            const s  = mc.meterInMercatorCoordinateUnits() * 6
 
             // Mapbox 행렬 → Three.js Camera projection matrix
             const m = new THREE.Matrix4().fromArray(matrix)
             const l = new THREE.Matrix4()
               .makeTranslation(mc.x, mc.y, mc.z)
-              .scale(new THREE.Vector3(s, -s, s))                          // Mercator Y축 반전 보정
-              .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))   // 바이크를 수직으로 세움
+              .scale(new THREE.Vector3(s, -s, s))                           // Mercator Y축 반전 보정
+              .multiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2))   // 바이크를 수직으로 세움
               .multiply(new THREE.Matrix4().makeRotationZ(-bearing * DEG_TO_RAD)) // 진행 방향으로 회전
 
             bikeCamera.projectionMatrix = m.multiply(l)
