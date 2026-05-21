@@ -1,6 +1,5 @@
 // MyRoutesPage.tsx — 내 경로 메뉴 메인
 import { useState, useEffect }     from 'react'
-import { useNavigate }             from 'react-router-dom'
 import { CheckCircle }             from 'lucide-react'
 import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../../constants/BadgesData'
 import BadgeAchievementModal, { checkRideDiaryBadge } from '../../components/BadgeAchievementModal'
@@ -10,8 +9,8 @@ import RouteCard          from './routes/RouteCard'
 import EditModal          from './routes/EditModal'
 import ShareSheet         from './routes/ShareSheet'
 import EmptyState         from './routes/EmptyState'
-import RouteFab           from './routes/RouteFab'
 import VideoCreatorSheet  from './routes/VideoCreatorSheet'
+import MyRoutesController from './MyRoutesController'
 import { cityLabel, MOCK_SEED_KEY, MOCK_COURSES } from './routes/routeUtils'
 
 import {
@@ -25,8 +24,6 @@ import { saveDriveSession } from '../../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from '../../lib/naviUtils'
 
 export default function MyRoutesPage() {
-  const navigate = useNavigate()
-
   const [courses,     setCourses]     = useState<SavedCourse[]>([])
   const [isLoading,   setIsLoading]   = useState(true)
   const [editTarget,  setEditTarget]  = useState<SavedCourse | null>(null)
@@ -269,7 +266,7 @@ export default function MyRoutesPage() {
         return <BadgeAchievementModal badge={overridden} tier={currentBadge.tier} isOpen onClose={dismissBadge} />
       })()}
 
-      <RouteFab onNavigate={() => navigate('/route-planner')} />
+      <MyRoutesController />
     </div>
   )
 }

@@ -1,9 +1,10 @@
 // Layout.tsx — 공통 헤더 + 탭바
 import { useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { CircleDot, Route, Compass, Warehouse, User, Navigation } from 'lucide-react'
+import { CircleDot, Route, Compass, Warehouse, User, Navigation, LogOut } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
+import { supabase } from '../lib/supabaseClient'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'    },
@@ -19,6 +20,11 @@ const LAST_TAB_KEY = 'moto:lastTab'
 export default function Layout() {
   const navigate     = useNavigate()
   const { pathname } = useLocation()
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    // AuthListener가 SIGNED_OUT 이벤트로 '/'로 navigate 처리
+  }
   const isMapPage    = pathname === '/map'
   const isPlanner    = pathname === '/route-planner'
   const isFullScreen = isMapPage || isPlanner
@@ -49,9 +55,17 @@ export default function Layout() {
               MotoLog
             </span>
           </div>
-          <span className="text-xs font-medium text-muted">
-            {TAB_ITEMS.find(t => t.path === pathname)?.label ?? ''}
-          </span>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-opacity active:opacity-60"
+            style={{
+              background: 'var(--brand)',
+              color:      'white',
+            }}
+          >
+            <LogOut size={13} strokeWidth={2} />
+            로그아웃
+          </button>
         </header>
       )}
 

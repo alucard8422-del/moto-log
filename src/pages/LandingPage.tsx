@@ -1,9 +1,14 @@
 // LandingPage.tsx — 스플래시 이후 진입, 소셜 로그인
+// 배경: landing-bg-1/2/3.mp4 루프 재생 (onCanPlay 페이드인)
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-const HERO_IMAGE =
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=85'
+// 추후 파일 추가 시 배열에만 추가하면 됨
+const BG_VIDEOS = [
+  '/landing-bg-1.mp4',
+  '/landing-bg-2.mp4',
+  '/landing-bg-3.mp4',
+]
 
 function GoogleIcon() {
   return (
@@ -25,7 +30,19 @@ function KakaoIcon() {
 }
 
 export default function LandingPage() {
-  const [loading, setLoading] = useState<'kakao' | 'google' | null>(null)
+  const [loading,    setLoading]    = useState<'kakao' | 'google' | null>(null)
+  const [videoReady, setVideoReady] = useState(false)
+  const [videoErr,   setVideoErr]   = useState(false)
+  // 로드 실패 시 다음 소스 시도
+  const [srcIdx,     setSrcIdx]     = useState(0)
+
+  const handleVideoError = () => {
+    if (srcIdx < BG_VIDEOS.length - 1) {
+      setSrcIdx(prev => prev + 1)
+    } else {
+      setVideoErr(true)
+    }
+  }
 
   const loginWith = async (provider: 'kakao' | 'google') => {
     setLoading(provider)
@@ -42,50 +59,69 @@ export default function LandingPage() {
   return (
     <div className="relative overflow-hidden" style={{ height: '100dvh' }}>
 
-      {/* ── 히어로 이미지 ── */}
-      <img
-        src={HERO_IMAGE}
-        alt="mountain road"
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ objectPosition: 'center 40%' }}
-      />
+      {/* ── 배경 (검정) — 영상 로딩 전·실패 시 보임 ── */}
+      <div className="absolute inset-0" style={{ background: '#000', zIndex: 0 }} />
+
+      {/* ── 배경 동영상 — 루프, onCanPlay 페이드인 ── */}
+      {!videoErr && (
+        <video
+          key={srcIdx}
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{
+            zIndex:     1,
+            opacity:    videoReady ? 1 : 0,
+            transition: 'opacity 0.5s ease-in',
+          }}
+          src={BG_VIDEOS[srcIdx]}
+          autoPlay
+          muted
+          loop
+          playsInline
+          onCanPlay={() => setVideoReady(true)}
+          onError={handleVideoError}
+        />
+      )}
 
       {/* ── 그라디언트 오버레이 ── */}
       <div
         className="absolute inset-0"
         style={{
+          zIndex: 2,
           background:
-            'linear-gradient(to bottom, rgba(0,0,0,0.22) 0%, rgba(0,0,0,0.04) 35%, color-mix(in srgb, var(--bg-app) 70%, transparent) 62%, var(--bg-app) 100%)',
+            'linear-gradient(to bottom, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.85) 100%)',
         }}
       />
 
       {/* ── 상단 로고 ── */}
-      <div className="absolute left-0 right-0 top-0 flex justify-center pt-14">
+      <div className="absolute left-0 right-0 top-0 flex justify-center pt-14" style={{ zIndex: 3 }}>
         <span
           className="font-extrabold tracking-tight text-white"
-          style={{ fontSize: 26, textShadow: '0 1px 12px rgba(0,0,0,0.35)' }}
+          style={{ fontSize: 26, textShadow: '0 1px 12px rgba(0,0,0,0.5)' }}
         >
           MotoLog
         </span>
       </div>
 
       {/* ── 하단 콘텐츠 ── */}
-      <div className="absolute bottom-0 left-0 right-0 bg-app px-6 pb-10 pt-8">
+      <div
+        className="absolute bottom-0 left-0 right-0 px-6 pb-10 pt-8"
+        style={{ zIndex: 3 }}
+      >
 
         {/* 배지 */}
-        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1">
-          <span className="text-[11px] font-semibold text-brand">
+        <div className="mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1" style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}>
+          <span className="text-[11px] font-semibold text-white">
             🏍️ 라이더를 위한 여행 기록
           </span>
         </div>
 
         {/* 헤드라인 */}
-        <h1 className="mb-2 text-[30px] font-extrabold leading-tight tracking-tight text-main">
+        <h1 className="mb-2 text-[30px] font-extrabold leading-tight tracking-tight text-white">
           달린 길이<br />나를 말한다
         </h1>
 
         {/* 서브 */}
-        <p className="mb-7 text-[14px] leading-relaxed text-sub">
+        <p className="mb-7 text-[14px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
           루트를 기록하고, 풍경을 나누고,<br />함께 달린 감동을 간직하세요.
         </p>
 
@@ -104,15 +140,15 @@ export default function LandingPage() {
         <button
           onClick={() => loginWith('google')}
           disabled={!!loading}
-          className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-surface py-4 text-[15px] font-semibold text-main active:opacity-80 disabled:opacity-60"
-          style={{ border: '1.5px solid var(--border)' }}
+          className="flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 text-[15px] font-semibold active:opacity-80 disabled:opacity-60"
+          style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.30)', color: 'white' }}
         >
           <GoogleIcon />
           {loading === 'google' ? '연결 중…' : '구글로 시작하기'}
         </button>
 
         {/* 약관 */}
-        <p className="mt-5 text-center text-[11px] leading-relaxed text-muted">
+        <p className="mt-5 text-center text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
           로그인 시 서비스 이용약관 및 개인정보처리방침에<br />동의하는 것으로 간주됩니다.
         </p>
       </div>
