@@ -4,10 +4,10 @@
 // Section 3: 코스 탐색 필터 + 세로 리스트 (하단)
 import { useState, useMemo, useEffect } from 'react'
 import { Flame, ChevronRight, Clock, MapPin, ThumbsUp } from 'lucide-react'
-import { type RankedCourse } from './tour/SmartRecommendSection'
-import CourseDetailModal from '../components/CourseDetailModal'
-import { loadCommunityCourses, type SavedCourse } from '../lib/courseStorage'
-import type { CourseCardData } from './tour/CourseCard'
+import { type RankedCourse } from './SmartRecommendSection'
+import CourseDetailModal from '../../components/CourseDetailModal'
+import { loadCommunityCourses, type SavedCourse } from '../../lib/courseStorage'
+import type { CourseCardData } from './CourseCard'
 
 // ── 카테고리 필터 ──────────────────────────────────────────────────────────
 type FilterId = 'all' | 'short' | 'mid' | 'long' | 'cafe'
