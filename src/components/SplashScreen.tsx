@@ -9,9 +9,10 @@ interface Props {
 }
 
 export default function SplashScreen({ onComplete }: Props) {
-  const [fading,   setFading]   = useState(false)
-  const [videoErr, setVideoErr] = useState(false)
-  const calledRef               = useRef(false)
+  const [fading,    setFading]    = useState(false)
+  const [videoErr,  setVideoErr]  = useState(false)
+  const [videoReady, setVideoReady] = useState(false)
+  const calledRef                 = useRef(false)
 
   const finish = () => {
     if (calledRef.current) return
@@ -31,24 +32,23 @@ export default function SplashScreen({ onComplete }: Props) {
       className="fixed inset-0 z-[9999] overflow-hidden"
       style={{ opacity: fading ? 0 : 1, transition: 'opacity 0.7s ease-out' }}
     >
-      {/* ── 폴백 그라디언트 (영상 로드 실패 시에만 보임) ── */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'linear-gradient(160deg, #1C0A00 0%, #431407 35%, #7C2D12 65%, #F97316 100%)',
-          zIndex: 0,
-        }}
-      />
+      {/* ── 배경 (검정) — 영상 로딩 전·실패 시 보임 ── */}
+      <div className="absolute inset-0" style={{ background: '#000', zIndex: 0 }} />
 
-      {/* ── 배경 영상 (그라디언트 위에 덮음) ── */}
+      {/* ── 배경 영상 — 준비되면 부드럽게 나타남 ── */}
       {!videoErr && (
         <video
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ zIndex: 1 }}
+          style={{
+            zIndex: 1,
+            opacity: videoReady ? 1 : 0,
+            transition: 'opacity 0.4s ease-in',
+          }}
           src="/splash.mp4"
           autoPlay
           muted
           playsInline
+          onCanPlay={() => setVideoReady(true)}
           onEnded={finish}
           onError={() => setVideoErr(true)}
         />
