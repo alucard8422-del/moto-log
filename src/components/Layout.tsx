@@ -34,22 +34,26 @@ export default function Layout() {
 
   useEffect(() => { showExitConfirmRef.current = showExitConfirm }, [showExitConfirm])
 
-  // ── 탭 페이지 진입 시 뒤로가기 센티넬 + 두 번 종료 로직 ──────────────────
+  // ── 탭 페이지 진입 시 센티넬 re-push (탭 이동마다 항상 최신 엔트리 위에 유지) ──
   useEffect(() => {
     if (!TAB_PATHS.includes(pathname as typeof TAB_PATHS[number])) return
+    window.history.pushState({ motoRoot: true }, '')
+  }, [pathname])
 
-    // 센티넬 쌓기
-    window.history.pushState({ motoTabSentinel: true }, '')
+  // ── 뒤로가기 두 번 종료 로직 (마운트 시 1회만 등록) ──────────────────────
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      // 센티넬로 돌아온 경우 (모달 닫힘 후 등) → 종료 로직 건너뜀
+      if (e.state?.motoRoot) return
 
-    const onPop = () => {
       // ① 로그아웃 확인 모달이 열려 있으면 모달만 닫기
       if (showExitConfirmRef.current) {
         setShowExitConfirm(false)
-        window.history.pushState({ motoTabSentinel: true }, '')  // 센티넬 복원
+        window.history.pushState({ motoRoot: true }, '')
         return
       }
 
-      // ② 이미 토스트가 떠 있으면 → 진짜 종료 허용 (센티넬 재push 안 함)
+      // ② 이미 토스트가 떠 있으면 → 진짜 종료 허용
       if (exitReadyRef.current) {
         clearTimeout(exitTimerRef.current)
         exitReadyRef.current = false
@@ -58,7 +62,7 @@ export default function Layout() {
       }
 
       // ③ 첫 번째 뒤로가기 → 토스트 표시 + 센티넬 복원
-      window.history.pushState({ motoTabSentinel: true }, '')
+      window.history.pushState({ motoRoot: true }, '')
       exitReadyRef.current = true
       setShowExitToast(true)
       clearTimeout(exitTimerRef.current)
@@ -72,10 +76,8 @@ export default function Layout() {
     return () => {
       window.removeEventListener('popstate', onPop)
       clearTimeout(exitTimerRef.current)
-      exitReadyRef.current = false
-      setShowExitToast(false)
     }
-  }, [pathname]) // eslint-disable-line
+  }, []) // eslint-disable-line
 
   // ── 로그아웃 ───────────────────────────────────────────────────────────────
   const handleLogout = async () => {
@@ -180,7 +182,7 @@ export default function Layout() {
                   <span
                     className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-1.5 py-[3px]"
                     style={{
-                      top:                  '4px',
+                      top:                  '18px',
                       background:           'rgba(10,15,30,0.72)',
                       backdropFilter:       'blur(8px)',
                       WebkitBackdropFilter: 'blur(8px)',

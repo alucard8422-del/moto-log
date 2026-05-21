@@ -24,9 +24,16 @@ export default function MapPage() {
   const {
     status, path, duration, distance, wakeLockActive,
     pendingCheckpoint,
-    startRecording, stopRecording,
+    startRecording, stopRecording, resetStatus,
     resumeFromCheckpoint, discardCheckpoint,
   } = useRideRecord()
+
+  // finished 상태에서 탭 이동 후 돌아왔을 때 시트가 다시 뜨는 버그 방지
+  const statusRef = useRef(status)
+  useEffect(() => { statusRef.current = status }, [status])
+  useEffect(() => {
+    return () => { if (statusRef.current === 'finished') resetStatus() }
+  }, []) // eslint-disable-line
 
   const [showCountdown,          setShowCountdown]         = useState(false)
   const [showNaviSheet,          setShowNaviSheet]         = useState(false)
