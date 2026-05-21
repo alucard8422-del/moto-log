@@ -1,25 +1,24 @@
-// ErgonomicController.tsx — 기록 탭 위 수직 팬 메뉴 + 주행 정지 버튼
-// - Idle  : 기록 탭 위 오렌지 화살표 → 위로 3개 버튼 순차 호출
-// - Riding: 화살표 자리에 정지 버튼 표시
-// - Finished: 주행 완료 시트
+// ErgonomicController.tsx — 기록 탭 위 ▲ 삼각형 + 수직 팬 메뉴 + 주행 정지 버튼
+// ▲ 삼각형: 탭바 top edge에 절반 걸치는 구조 (상단=지도, 하단=탭바)
+// 팬 버튼 + ▲ 전부 동일 수직 중심축 정렬
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Square, Flag, Timer, Route, Gauge, Compass, Settings, ChevronUp, Play } from 'lucide-react'
+import { Square, Flag, Timer, Route, Gauge, Compass, Settings, Play } from 'lucide-react'
 import { type RideStatus } from './types'
 
 interface Props {
   status:        RideStatus
   duration:      number
   distance:      number
-  onStart:       () => void       // 내비로 시작 → 카운트다운
-  onStartDirect: () => void       // 바로 시작 → GPS 바로 기록
-  onNaviSelect:  () => void       // 네비 선택 시트
+  onStart:       () => void
+  onStartDirect: () => void
+  onNaviSelect:  () => void
   onStop:        () => void
   onGoToCourses: () => void
 }
 
-// ── 수직 팬 아이템 (아래 → 위 순서로 정의) ───────────────────────────────
+// ── 수직 팬 아이템 (아래 → 위 순서) ─────────────────────────────────────
 const FAN_ITEMS = [
   { key: 'direct',      Icon: Play,     label: '바로 시작',   fill: true,  color: '#FF5A00' },
   { key: 'navi',        Icon: Compass,  label: '내비로 시작', fill: false, color: '#0F172A' },
@@ -36,16 +35,28 @@ const glass = {
 } as const
 
 // ── 레이아웃 상수 ────────────────────────────────────────────────────────
-const TAB_BAR_BOTTOM   = 20          // bottom-5 (px) — 탭바 하단
-const TAB_BAR_H        = 84          // 탭바 높이
-const ARROW_SIZE       = 48          // 오렌지 서클 직경
-const TOUCH_W          = 76          // 터치 영역 너비 (장갑 고려)
-const TOUCH_H          = TAB_BAR_H + ARROW_SIZE + 6   // 138px — 기록탭+화살표 전체
-// 오렌지 서클 상단 edge = screen bottom 에서 (TAB_BAR_BOTTOM + TOUCH_H) = 158px
-const ARROW_CIRCLE_TOP = TAB_BAR_BOTTOM + TOUCH_H      // 158px from screen bottom
-const FAN_BTN_SIZE     = 58
-const FAN_GAP          = 12
-const FAN_BASE_BOTTOM  = ARROW_CIRCLE_TOP + 10         // 168px — 첫 팬 버튼 하단
+const TAB_BAR_BOTTOM  = 20          // bottom-5 (px)
+const TAB_BAR_H       = 84          // 탭바 높이
+const TAB_BAR_TOP     = TAB_BAR_BOTTOM + TAB_BAR_H   // 104px — 탭바 상단 edge
+
+// ▲ 삼각형: 중심 Y = 탭바 상단 edge (절반 위, 절반 아래)
+const TRI_W           = 32          // 삼각형 너비
+const TRI_H           = 24          // 삼각형 높이
+const TRI_BASE_BOTTOM = TAB_BAR_TOP - TRI_H / 2      // 92px — 삼각형 하단 (화면 하단 기준)
+const TRI_TIP_BOTTOM  = TAB_BAR_TOP + TRI_H / 2      // 116px — 삼각형 꼭짓점
+
+// 터치 영역: 탭바 전체 + 삼각형 위쪽 여유
+const TOUCH_W         = 72
+const TOUCH_BOTTOM    = TAB_BAR_BOTTOM                // 20px
+const TOUCH_H         = TRI_TIP_BOTTOM + 12 - TOUCH_BOTTOM  // 108px
+
+// 팬 버튼: 삼각형 꼭짓점 위에서 시작
+const FAN_BTN_SIZE    = 58
+const FAN_GAP         = 12
+const FAN_BASE_BOTTOM = TRI_TIP_BOTTOM + 10           // 126px — 첫 번째 팬 버튼 하단
+
+// 삼각형이 터치 div 내부에서 몇 px 위인지 (상대 좌표)
+const TRI_BOTTOM_IN_TOUCH = TRI_BASE_BOTTOM - TOUCH_BOTTOM  // 72px
 
 // ── 주행 완료 포맷 ───────────────────────────────────────────────────────
 function fmt(s: number): string {
@@ -65,11 +76,10 @@ function RideCompleteSheet({
   useState(() => { setTimeout(() => setOpen(true), 16) })
 
   const avg = duration > 0 ? distance / (duration / 3600) : 0
-
   const rows = [
-    { icon: <Timer size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '주행 시간', value: fmt(duration) },
-    { icon: <Route size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '주행 거리', value: `${distance.toFixed(2)} km` },
-    { icon: <Gauge size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '평균 속도', value: `${avg.toFixed(0)} km/h` },
+    { icon: <Timer  size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '주행 시간', value: fmt(duration) },
+    { icon: <Route  size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '주행 거리', value: `${distance.toFixed(2)} km` },
+    { icon: <Gauge  size={14} strokeWidth={1.5} className="text-[#FF5A00]" />, label: '평균 속도', value: `${avg.toFixed(0)} km/h` },
   ]
 
   return (
@@ -105,6 +115,41 @@ function RideCompleteSheet({
         </div>
       </div>
     </>
+  )
+}
+
+// ── ▲ 삼각형 SVG ─────────────────────────────────────────────────────────
+function Triangle({ open }: { open: boolean }) {
+  return (
+    <div
+      style={{
+        position:  'absolute',
+        bottom:    TRI_BOTTOM_IN_TOUCH,
+        left:      '50%',
+        transform: 'translateX(-50%)',
+      }}
+    >
+      <motion.svg
+        width={TRI_W}
+        height={TRI_H}
+        viewBox={`0 0 ${TRI_W} ${TRI_H}`}
+        animate={{ rotate: open ? 180 : 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+        style={{
+          display: 'block',
+          filter:  open
+            ? 'drop-shadow(0 0 6px rgba(255,90,0,0.55))'
+            : 'drop-shadow(0 2px 6px rgba(255,90,0,0.40))',
+          transformOrigin: `${TRI_W / 2}px ${TRI_H / 2}px`,
+        }}
+      >
+        {/* ▲ 꼭짓점=상단 중앙, 밑변=하단 */}
+        <polygon
+          points={`${TRI_W / 2},2 ${TRI_W - 2},${TRI_H - 2} 2,${TRI_H - 2}`}
+          fill="#FF5A00"
+        />
+      </motion.svg>
+    </div>
   )
 }
 
@@ -146,7 +191,7 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
         className="pointer-events-none fixed bottom-0 left-1/2 z-[35] -translate-x-1/2"
         style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
       >
-        {/* ── 수직 팬 버튼 (아래→위 순서로 i=0이 가장 아래) ── */}
+        {/* ── 수직 팬 버튼 (▲와 동일 중심축, 아래→위) ── */}
         <AnimatePresence>
           {open && FAN_ITEMS.map((item, i) => (
             <motion.div
@@ -200,41 +245,19 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
           ))}
         </AnimatePresence>
 
-        {/* ── 화살표 토글 버튼 (터치 영역: 기록 탭 전체 + 화살표) ── */}
+        {/* ── 터치 영역 (탭바 전체 + 삼각형 포함) ── */}
         <div
-          className="pointer-events-auto absolute"
+          className="pointer-events-auto absolute cursor-pointer"
           style={{
-            bottom:    TAB_BAR_BOTTOM,
+            bottom:    TOUCH_BOTTOM,
             left:      '10%',
             transform: 'translateX(-50%)',
             width:     TOUCH_W,
             height:    TOUCH_H,
-            cursor:    'pointer',
           }}
           onClick={() => setOpen(prev => !prev)}
         >
-          {/* 오렌지 서클 — 터치 영역 최상단 */}
-          <div
-            className="absolute left-1/2 flex items-center justify-center rounded-full"
-            style={{
-              top:       0,
-              transform: 'translateX(-50%)',
-              width:     ARROW_SIZE,
-              height:    ARROW_SIZE,
-              background: '#FF5A00',
-              boxShadow: open
-                ? '0 0 0 10px rgba(255,90,0,0.14), 0 4px 20px rgba(255,90,0,0.55)'
-                : '0 4px 16px rgba(255,90,0,0.42), 0 0 0 3px rgba(255,90,0,0.10)',
-              transition: 'box-shadow 0.2s',
-            }}
-          >
-            <motion.div
-              animate={{ rotate: open ? 180 : 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-            >
-              <ChevronUp size={22} strokeWidth={2.5} color="white" />
-            </motion.div>
-          </div>
+          <Triangle open={open} />
         </div>
       </div>
     </>
@@ -248,31 +271,31 @@ function RidingController({ onStop }: { onStop: () => void }) {
       className="pointer-events-none fixed bottom-0 left-1/2 z-[35] -translate-x-1/2"
       style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
     >
-      {/* 정지 버튼 — 화살표와 동일 위치/터치 영역 */}
+      {/* 정지 버튼 — ▲와 동일 위치/터치 영역 */}
       <div
-        className="pointer-events-auto absolute"
+        className="pointer-events-auto absolute cursor-pointer"
         style={{
-          bottom:    TAB_BAR_BOTTOM,
+          bottom:    TOUCH_BOTTOM,
           left:      '10%',
           transform: 'translateX(-50%)',
           width:     TOUCH_W,
           height:    TOUCH_H,
-          cursor:    'pointer',
-          display:   'flex',
-          alignItems: 'flex-start',
+          display:        'flex',
+          alignItems:     'flex-end',
           justifyContent: 'center',
+          paddingBottom:  TRI_BOTTOM_IN_TOUCH + TRI_H / 2 - 24,  // 빨간 서클 중심 = 삼각형 중심
         }}
         onClick={onStop}
       >
         <motion.div
           className="flex items-center justify-center rounded-full"
           style={{
-            width:     ARROW_SIZE,
-            height:    ARROW_SIZE,
+            width:     48,
+            height:    48,
             background: '#EF4444',
-            boxShadow: '0 0 0 3px rgba(239,68,68,0.15), 0 4px 20px rgba(239,68,68,0.50)',
+            boxShadow: '0 0 0 4px rgba(239,68,68,0.18), 0 4px 20px rgba(239,68,68,0.50)',
           }}
-          animate={{ scale: [1, 1.05, 1] }}
+          animate={{ scale: [1, 1.06, 1] }}
           transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
         >
           <Square size={18} strokeWidth={0} fill="white" />
@@ -287,7 +310,6 @@ export default function ErgonomicController({
   status, duration, distance,
   onStart, onStartDirect, onNaviSelect, onStop, onGoToCourses,
 }: Props) {
-
   if (status === 'finished') {
     return (
       <RideCompleteSheet
