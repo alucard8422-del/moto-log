@@ -34,16 +34,27 @@ type OverlayMode =
 export default function DriveSessionOverlay() {
   const [mode,    setMode]    = useState<OverlayMode>('idle')
   const [session, setSession] = useState<DriveSession | null>(null)
-  const pendingLaunchRef      = useRef(false)  // countdown 후 실행 플래그
+  const pendingLaunchRef      = useRef(false)   // countdown 후 실행 플래그
+  const lastLaunchedAt        = useRef(0)        // 네비 실행 시각 (ms) — 실패 감지용
+  const isRelaunchRef         = useRef(false)    // 다음 구간 재출발 여부
 
   const naviLabel = NAVI_OPTIONS.find(n => n.type === session?.naviType)?.label ?? 'T map'
 
   // ── 세션의 현재 구간 정보 ─────────────────────────────────────────────
+  // currentSegmentIdx = 다음에 실행할 구간 (0-based)
+  // 완료된 구간 = currentSegmentIdx - 1
   const segInfo = session
     ? {
-        current: session.currentSegmentIdx + 1,          // 표시용 1-based
-        total:   session.segments.length,
-        isLast:  session.currentSegmentIdx >= session.segments.length - 1,
+        completedIdx: session.currentSegmentIdx - 1,           // 방금 완료한 구간 (0-based)
+        nextIdx:      session.currentSegmentIdx,               // 다음 구간 (0-based)
+        total:        session.segments.length,
+        isLast:       session.currentSegmentIdx >= session.segments.length,
+        // 방금 완료한 구간의 경유지 수
+        completedWpCount: session.segments[session.currentSegmentIdx - 1]?.length ?? 0,
+        // 전체 경유지 수 (세그먼트 경계 공유점 제외한 유니크 수)
+        totalWpCount: session.segments.reduce(
+          (sum, seg, i) => sum + (i === 0 ? seg.length : seg.length - 1), 0
+        ),
       }
     : null
 
@@ -73,12 +84,19 @@ export default function DriveSessionOverlay() {
       const s = loadDriveSession()
       if (!s) return
 
-      if (hasRemainingSegments(s)) {
-        setSession(s)
+      // 4초 이내 복귀 → 네비 실행 실패로 간주, 구간 전진하지 않음
+      if (Date.now() - lastLaunchedAt.current < 4000) return
+
+      // 네비에서 실제로 복귀 → 구간 전진
+      const advanced = advanceDriveSegment()
+      if (!advanced) return
+
+      if (hasRemainingSegments(advanced)) {
+        setSession(advanced)
         setMode('nextSegment')
       } else {
         // 모든 구간 완료
-        setSession(s)
+        setSession(advanced)
         setMode('done')
       }
     }
@@ -95,10 +113,10 @@ export default function DriveSessionOverlay() {
     const seg = session.segments[session.currentSegmentIdx]
     if (!seg) { clearDriveSession(); return }
 
-    // 세션 전진
-    const updated = advanceDriveSegment()
-    setSession(updated)
+    // 실행 시각 기록 (visibilitychange에서 실패 감지에 사용)
+    lastLaunchedAt.current = Date.now()
 
+    // 구간 전진은 앱 복귀 시(visibilitychange)에 수행 — 여기서는 하지 않음
     // 네비 실행
     launchNaviSegment(session.naviType, seg, session.courseTitle)
 
@@ -109,6 +127,7 @@ export default function DriveSessionOverlay() {
   // ── 다음 구간 시작 ────────────────────────────────────────────────────
   const handleNextSegment = useCallback(() => {
     if (!session) return
+    isRelaunchRef.current = true
     setMode('countdown')
   }, [session])
 
@@ -126,8 +145,8 @@ export default function DriveSessionOverlay() {
 
   // ── 카운트다운 취소 ───────────────────────────────────────────────────
   const handleCancelCountdown = useCallback(() => {
-    setMode(session ? 'nextSegment' : 'idle')
-  }, [session])
+    setMode(isRelaunchRef.current ? 'nextSegment' : 'idle')
+  }, [])
 
   return (
     <>
@@ -164,7 +183,10 @@ export default function DriveSessionOverlay() {
               <div className="mb-5 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
                 <p className="text-[10px] font-light text-white/40">진행 구간</p>
                 <p className="mt-0.5 text-sm font-bold text-[#FF5A00]">
-                  {session.currentSegmentIdx + 1} / {session.segments.length} 구간
+                  {session.currentSegmentIdx + 1}구간 / 전체 {session.segments.length}구간
+                </p>
+                <p className="mt-1 text-[10px] font-light text-white/30">
+                  내비게이션 앱 경유지 제한으로 경로가 {session.segments.length}개 구간으로 분리됩니다
                 </p>
               </div>
 
@@ -215,21 +237,21 @@ export default function DriveSessionOverlay() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">
-                    {segInfo.current - 1}구간 완료!
+                    {segInfo.completedIdx + 1}구간 안내 완료!
                   </p>
                   <p className="text-[11px] font-light text-white/40">{session.courseTitle}</p>
                 </div>
               </div>
 
               {/* 구간 프로그레스 */}
-              <div className="mb-4 flex items-center gap-1.5">
+              <div className="mb-3 flex items-center gap-1.5">
                 {Array.from({ length: segInfo.total }).map((_, i) => (
                   <div
                     key={i}
                     className={`h-1.5 flex-1 rounded-full transition-colors ${
-                      i < session.currentSegmentIdx
+                      i <= segInfo.completedIdx
                         ? 'bg-[#FF5A00]'
-                        : i === session.currentSegmentIdx
+                        : i === segInfo.nextIdx
                         ? 'bg-[#FF5A00]/40'
                         : 'bg-white/10'
                     }`}
@@ -237,10 +259,20 @@ export default function DriveSessionOverlay() {
                 ))}
               </div>
 
-              <p className="mb-5 text-[11px] font-light text-white/40">
-                전체 {segInfo.total}구간 중 {session.currentSegmentIdx}구간을 완료했어요.
-                {!segInfo.isLast && ` 다음 ${session.currentSegmentIdx + 1}구간을 안내할까요?`}
-              </p>
+              {/* 구간 설명 */}
+              <div className="mb-5 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
+                <p className="text-[11px] font-light leading-relaxed text-white/50">
+                  전체 경유지 <span className="font-semibold text-white/70">{segInfo.totalWpCount}개</span> 중{' '}
+                  <span className="font-semibold text-white/70">{segInfo.completedWpCount}개</span>가 포함된{' '}
+                  <span className="font-semibold text-[#FF5A00]">{segInfo.completedIdx + 1}구간</span>을 완료했습니다.
+                </p>
+                {!segInfo.isLast && (
+                  <p className="mt-1 text-[10px] font-light text-white/30">
+                    내비게이션 앱 경유지 제한으로 경로가 {segInfo.total}개 구간으로 분리됩니다.
+                    다음 <span className="text-white/50">{segInfo.nextIdx + 1}구간</span>을 안내할까요?
+                  </p>
+                )}
+              </div>
 
               {segInfo.isLast ? (
                 /* 마지막 구간 완료 */
