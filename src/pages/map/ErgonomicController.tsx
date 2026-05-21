@@ -39,24 +39,30 @@ const TAB_BAR_BOTTOM  = 20          // bottom-5 (px)
 const TAB_BAR_H       = 84          // 탭바 높이
 const TAB_BAR_TOP     = TAB_BAR_BOTTOM + TAB_BAR_H   // 104px — 탭바 상단 edge
 
-// ▲ 삼각형: 중심 Y = 탭바 상단 edge (절반 위, 절반 아래)
-const TRI_W           = 32          // 삼각형 너비
-const TRI_H           = 24          // 삼각형 높이
-const TRI_BASE_BOTTOM = TAB_BAR_TOP - TRI_H / 2      // 92px — 삼각형 하단 (화면 하단 기준)
-const TRI_TIP_BOTTOM  = TAB_BAR_TOP + TRI_H / 2      // 116px — 삼각형 꼭짓점
+// ▲ 삼각형: 크기 절반으로, 중심 Y = 탭바 상단 edge
+const TRI_W           = 16          // 삼각형 너비 (기존 32 → 16)
+const TRI_H           = 12          // 삼각형 높이 (기존 24 → 12)
+const TRI_BASE_BOTTOM = TAB_BAR_TOP - TRI_H / 2      // 98px
+const TRI_TIP_BOTTOM  = TAB_BAR_TOP + TRI_H / 2      // 110px
 
-// 터치 영역: 탭바 전체 + 삼각형 위쪽 여유
+// 터치 영역
 const TOUCH_W         = 72
 const TOUCH_BOTTOM    = TAB_BAR_BOTTOM                // 20px
-const TOUCH_H         = TRI_TIP_BOTTOM + 12 - TOUCH_BOTTOM  // 108px
+const TOUCH_H         = TRI_TIP_BOTTOM + 12 - TOUCH_BOTTOM  // 102px
 
-// 팬 버튼: 삼각형 꼭짓점 위에서 시작
+// 팬 버튼
 const FAN_BTN_SIZE    = 58
 const FAN_GAP         = 12
-const FAN_BASE_BOTTOM = TRI_TIP_BOTTOM + 10           // 126px — 첫 번째 팬 버튼 하단
+const FAN_BASE_BOTTOM = TRI_TIP_BOTTOM + 10           // 120px
 
-// 삼각형이 터치 div 내부에서 몇 px 위인지 (상대 좌표)
-const TRI_BOTTOM_IN_TOUCH = TRI_BASE_BOTTOM - TOUCH_BOTTOM  // 72px
+const TRI_BOTTOM_IN_TOUCH = TRI_BASE_BOTTOM - TOUCH_BOTTOM  // 78px
+
+// ── "기록" 탭 center 정렬 CSS calc ─────────────────────────────────────
+// 탭바: justify-around + px-1(4px씩) → 첫 번째 탭 center = 4px + (100%-8px)/10
+// 팬 버튼 left: 버튼 circle 왼쪽 edge = center - FAN_BTN_SIZE/2
+const FAN_LEFT   = `calc(4px + (100% - 8px) / 10 - ${FAN_BTN_SIZE / 2}px)`
+// 터치 div left: div 왼쪽 edge = center - TOUCH_W/2
+const TOUCH_LEFT = `calc(4px + (100% - 8px) / 10 - ${TOUCH_W / 2}px)`
 
 // ── 주행 완료 포맷 ───────────────────────────────────────────────────────
 function fmt(s: number): string {
@@ -198,9 +204,9 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
               key={item.key}
               className="pointer-events-auto absolute flex items-center gap-3"
               style={{
-                bottom:    FAN_BASE_BOTTOM + i * (FAN_BTN_SIZE + FAN_GAP),
-                left:      '10%',
-                transform: 'translateX(-50%)',
+                bottom: FAN_BASE_BOTTOM + i * (FAN_BTN_SIZE + FAN_GAP),
+                left:   FAN_LEFT,
+                // transform 없음 — Framer Motion animate와 충돌 방지
               }}
               initial={{ y: 14, opacity: 0, scale: 0.72 }}
               animate={{ y: 0,  opacity: 1, scale: 1 }}
@@ -249,10 +255,9 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
         <div
           className="pointer-events-auto absolute cursor-pointer"
           style={{
-            bottom:    TOUCH_BOTTOM,
-            left:      '10%',
-            transform: 'translateX(-50%)',
-            width:     TOUCH_W,
+            bottom: TOUCH_BOTTOM,
+            left:   TOUCH_LEFT,
+            width:  TOUCH_W,
             height:    TOUCH_H,
           }}
           onClick={() => setOpen(prev => !prev)}
@@ -275,10 +280,9 @@ function RidingController({ onStop }: { onStop: () => void }) {
       <div
         className="pointer-events-auto absolute cursor-pointer"
         style={{
-          bottom:    TOUCH_BOTTOM,
-          left:      '10%',
-          transform: 'translateX(-50%)',
-          width:     TOUCH_W,
+          bottom: TOUCH_BOTTOM,
+          left:   TOUCH_LEFT,
+          width:  TOUCH_W,
           height:    TOUCH_H,
           display:        'flex',
           alignItems:     'flex-end',
