@@ -4,7 +4,7 @@
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Square, Flag, Timer, Route, Gauge, Compass, Settings, Play } from 'lucide-react'
+import { Square, Flag, Timer, Route, Gauge, Compass, Settings, Play, AlertTriangle, X } from 'lucide-react'
 import { type RideStatus } from './types'
 
 interface Props {
@@ -292,11 +292,11 @@ const REC_BADGE_BOTTOM  = STOP_BTN_CENTER_Y + STOP_SIZE / 2 + 2        // 88px f
 
 
 function RidingController({ onStop }: { onStop: () => void }) {
-  // 정지 버튼 bottom (touch div 내부 기준) = 탭바 세로 중앙 - touch div 시작점 - 반지름
-  // = 62 - 20 - 24 = 18px
   const stopBtnBottom = STOP_BTN_CENTER_Y - TAB_BAR_BOTTOM - STOP_SIZE / 2  // 18px
+  const [showConfirm, setShowConfirm] = useState(false)
 
   return (
+    <>
     <div
       className="pointer-events-none fixed bottom-0 left-1/2 z-[35] -translate-x-1/2"
       style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
@@ -331,7 +331,7 @@ function RidingController({ onStop }: { onStop: () => void }) {
           width:  TOUCH_W,
           height: TAB_BAR_H,
         }}
-        onClick={onStop}
+        onClick={() => setShowConfirm(true)}
       >
         {/* 정지 버튼 */}
         <div
@@ -358,6 +358,58 @@ function RidingController({ onStop }: { onStop: () => void }) {
         </div>
       </div>
     </div>
+
+    {/* ── 중지 확인 모달 ── */}
+    <AnimatePresence>
+      {showConfirm && (
+        <>
+          <motion.div
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setShowConfirm(false)}
+          />
+          <motion.div
+            className="fixed inset-x-4 top-1/2 z-[201] -translate-y-1/2 rounded-3xl p-6"
+            style={{ background: '#111622', border: '1px solid rgba(255,255,255,0.10)', maxWidth: 360, margin: '0 auto' }}
+            initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+          >
+            <button
+              onClick={() => setShowConfirm(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full active:opacity-60"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            >
+              <X size={15} strokeWidth={1.5} className="text-white/50" />
+            </button>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.12)' }}>
+              <AlertTriangle size={22} strokeWidth={1.5} className="text-red-400" />
+            </div>
+            <p className="mb-1.5 text-[16px] font-bold text-white">기록을 중지할까요?</p>
+            <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
+              중지하면 현재까지의 경로가<br />저장 목록으로 이동합니다.
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex flex-1 items-center justify-center rounded-2xl py-3.5 text-sm font-semibold text-white/60 active:opacity-70"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+              >
+                계속 기록
+              </button>
+              <button
+                onClick={() => { setShowConfirm(false); onStop() }}
+                className="flex flex-[1.2] items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-bold text-white active:opacity-80"
+                style={{ background: 'rgba(239,68,68,0.80)' }}
+              >
+                <Square size={13} strokeWidth={0} fill="white" />
+                중지
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   )
 }
 
