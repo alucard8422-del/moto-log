@@ -4,9 +4,10 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import * as THREE from 'three'
 import type { ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../../constants/sampleGpxData'
-import { loadBikeImage } from '../../../lib/bikeUtils'
+import { getCurrentBikeColor } from '../../../lib/bikeUtils'
 import type { MemoryPin } from './pins/pinTypes'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string
@@ -172,14 +173,64 @@ function buildSampler(rawPts: Pt[]) {
   return { posAt, bearingAt, speedAt, trailAt, journeyMs }
 }
 
-// ── 바이크 심볼 GeoJSON ───────────────────────────────────────────────────────
+// ── Three.js 바이크 3D 씬 생성 ────────────────────────────────────────────────
+// 차고(GarageBike.tsx)와 동일한 지오메트리 — raw Three.js (React Three Fiber 없음)
 
-function bikeGeoJSON(lng: number, lat: number, bearing: number): GeoJSON.Feature {
-  return {
-    type: 'Feature',
-    properties: { bearing },
-    geometry: { type: 'Point', coordinates: [lng, lat] },
+function createBike3DScene(color: string): { scene: THREE.Scene; camera: THREE.Camera } {
+  const scene  = new THREE.Scene()
+  const camera = new THREE.Camera()
+
+  // 조명
+  scene.add(new THREE.AmbientLight(0xffffff, 0.9))
+  const dir = new THREE.DirectionalLight(0xffffff, 1.8)
+  dir.position.set(0.5, 2, 1)
+  scene.add(dir)
+
+  // 재질
+  const bodyMat   = new THREE.MeshStandardMaterial({ color,      metalness: 0.5, roughness: 0.3 })
+  const darkMat   = new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.7, roughness: 0.3 })
+  const metalMat  = new THREE.MeshStandardMaterial({ color: '#334155', metalness: 0.9, roughness: 0.1 })
+  const grayMat   = new THREE.MeshStandardMaterial({ color: '#475569', metalness: 0.9, roughness: 0.1 })
+  const seatMat   = new THREE.MeshStandardMaterial({ color: '#1E293B', roughness: 0.95 })
+  const mufMat    = new THREE.MeshStandardMaterial({ color: '#64748B', metalness: 0.85, roughness: 0.15 })
+  const hlMat     = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 0.4, toneMapped: false })
+
+  // 그룹: 앞면이 +X이므로 Y축 -90° 회전 → 앞면을 +Z 방향으로 (Mapbox bearing 회전과 맞춤)
+  const group = new THREE.Group()
+  group.rotation.y = -Math.PI / 2
+
+  function add(geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) {
+    const m = new THREE.Mesh(geo, mat)
+    m.position.set(x, y, z)
+    m.rotation.set(rx, ry, rz)
+    group.add(m)
   }
+
+  // 뒷바퀴 + 휠
+  add(new THREE.TorusGeometry(0.36, 0.09, 16, 40),        darkMat,  -0.75, 0.36, 0, Math.PI / 2)
+  add(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 16),   metalMat, -0.75, 0.36, 0, 0, 0, Math.PI / 2)
+  // 앞바퀴 + 휠
+  add(new THREE.TorusGeometry(0.36, 0.09, 16, 40),        darkMat,   0.78, 0.36, 0, Math.PI / 2)
+  add(new THREE.CylinderGeometry(0.22, 0.22, 0.06, 16),   metalMat,  0.78, 0.36, 0, 0, 0, Math.PI / 2)
+  // 메인 프레임
+  add(new THREE.BoxGeometry(1.3, 0.28, 0.32),              bodyMat,   0,    0.68, 0)
+  // 연료 탱크
+  add(new THREE.BoxGeometry(0.55, 0.22, 0.3),              bodyMat,   0.1,  0.88, 0)
+  // 시트
+  add(new THREE.BoxGeometry(0.55, 0.1, 0.26),              seatMat,  -0.3,  0.9,  0)
+  // 엔진
+  add(new THREE.BoxGeometry(0.38, 0.32, 0.34),             metalMat,  0.05, 0.48, 0)
+  // 앞 포크
+  add(new THREE.CylinderGeometry(0.025, 0.025, 0.55, 8),  grayMat,   0.72, 0.62, 0, 0, 0, 0.15)
+  // 핸들바
+  add(new THREE.BoxGeometry(0.08, 0.06, 0.6),              grayMat,   0.6,  0.98, 0)
+  // 머플러
+  add(new THREE.CylinderGeometry(0.04, 0.055, 0.7, 12),   mufMat,   -0.3,  0.28, 0.2, 0, -0.1, Math.PI / 2)
+  // 헤드라이트
+  add(new THREE.SphereGeometry(0.09, 12, 12),              hlMat,     0.88, 0.8,  0)
+
+  scene.add(group)
+  return { scene, camera }
 }
 
 // ── 컴포넌트 ─────────────────────────────────────────────────────────────────
@@ -208,10 +259,12 @@ interface Props {
 const DEFAULT_STYLE = 'mapbox://styles/mapbox/satellite-streets-v12'
 
 export default function MapboxPreview({ points, view, speed, isPaused, mapStyle = DEFAULT_STYLE, onProgress, onSpeed, onEnd, onSeekReady, pins, onCoordLookupReady, onPosition, onPinTapCheckReady, onManualRotateReady, onViewResetReady }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef       = useRef<mapboxgl.Map | null>(null)
-  const rafRef       = useRef(0)
-  const activeRef    = useRef(false)
+  const containerRef     = useRef<HTMLDivElement>(null)
+  const mapRef           = useRef<mapboxgl.Map | null>(null)
+  const rafRef           = useRef(0)
+  const activeRef        = useRef(false)
+  // 3D 바이크 레이어가 읽는 현재 위치·방위각
+  const bikeTransformRef = useRef<{ lng: number; lat: number; bearing: number }>({ lng: 0, lat: 0, bearing: 0 })
 
   const speedRef    = useRef(speed)
   const viewRef     = useRef(view)
@@ -489,39 +542,49 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
           paint: { 'line-color': '#2dd4bf', 'line-width': 3.5, 'line-opacity': 1.0 },
         })
 
-        // 바이크 아이콘 로드 후 소스·레이어 등록 (await 전에 route 레이어 먼저 추가 완료)
-        let bikeImg: HTMLImageElement | ImageData
-        try {
-          bikeImg = await loadBikeImage()
-        } catch {
-          // HTMLCanvasElement는 addImage 미지원 → ImageData로 변환
-          const canvas = document.createElement('canvas')
-          canvas.width = canvas.height = 32
-          const ctx = canvas.getContext('2d')!
-          ctx.beginPath(); ctx.arc(16, 16, 12, 0, Math.PI * 2)
-          ctx.fillStyle = '#2dd4bf'; ctx.fill()
-          bikeImg = ctx.getImageData(0, 0, 32, 32)
-        }
+        // ── Three.js 바이크 3D 커스텀 레이어 ──────────────────────────────────
+        // 차고와 동일한 모델을 Mapbox 위에 올려 경로를 따라 달리게 함
+        const DEG_TO_RAD = Math.PI / 180
+        const bikeColor  = getCurrentBikeColor()
+        const { scene: bikeScene, camera: bikeCamera } = createBike3DScene(bikeColor)
+        let bikeRenderer: THREE.WebGLRenderer | null = null
 
-        // await 사이에 컴포넌트가 언마운트됐을 경우 대비
-        if (!mapRef.current) return
+        // 초기 위치 세팅
+        bikeTransformRef.current = { lng: curLng, lat: curLat, bearing: curBrg }
 
-        map.addImage('bike-icon', bikeImg, { pixelRatio: 2 })
-        map.addSource('bike-pos', {
-          type: 'geojson', data: bikeGeoJSON(curLng, curLat, curBrg),
-        })
         map.addLayer({
-          id: 'bike-layer', type: 'symbol', source: 'bike-pos',
-          layout: {
-            'icon-image':              'bike-icon',
-            'icon-size':               1,
-            'icon-rotate':             ['get', 'bearing'],
-            'icon-rotation-alignment': 'map',
-            'icon-pitch-alignment':    'map',
-            'icon-allow-overlap':      true,
-            'icon-ignore-placement':   true,
+          id:             'bike-3d',
+          type:           'custom' as const,
+          renderingMode:  '3d',
+          onAdd(_: mapboxgl.Map, gl: WebGLRenderingContext) {
+            bikeRenderer = new THREE.WebGLRenderer({
+              canvas:    map.getCanvas(),
+              context:   gl,
+              antialias: true,
+            })
+            bikeRenderer.autoClear = false
           },
-        })
+          render(_: WebGLRenderingContext, matrix: number[]) {
+            if (!bikeRenderer) return
+            const { lng, lat, bearing } = bikeTransformRef.current
+            const mc = mapboxgl.MercatorCoordinate.fromLngLat([lng, lat], 0)
+            // 1미터를 Mercator 단위로 변환 후 스케일 계산 (20m 크기)
+            const s  = mc.meterInMercatorCoordinateUnits() * 20
+
+            // Mapbox 행렬 → Three.js Camera projection matrix
+            const m = new THREE.Matrix4().fromArray(matrix)
+            const l = new THREE.Matrix4()
+              .makeTranslation(mc.x, mc.y, mc.z)
+              .scale(new THREE.Vector3(s, -s, s))                          // Mercator Y축 반전 보정
+              .multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))   // 바이크를 수직으로 세움
+              .multiply(new THREE.Matrix4().makeRotationZ(-bearing * DEG_TO_RAD)) // 진행 방향으로 회전
+
+            bikeCamera.projectionMatrix = m.multiply(l)
+            bikeRenderer.resetState()
+            bikeRenderer.render(bikeScene, bikeCamera)
+            map.triggerRepaint()
+          },
+        } as unknown as mapboxgl.AnyLayer)
       }
 
       // ── 애니메이션 상태 — seekFn 과 tick 이 같은 closure 를 공유 ──────────
@@ -678,9 +741,7 @@ export default function MapboxPreview({ points, view, speed, isPaused, mapStyle 
             type: 'Feature', properties: {},
             geometry: { type: 'LineString', coordinates: sampler.trailAt(progress) },
           })
-          ;(map.getSource('bike-pos') as mapboxgl.GeoJSONSource | undefined)?.setData(
-            bikeGeoJSON(tLng, tLat, tBrg)
-          )
+          bikeTransformRef.current = { lng: tLng, lat: tLat, bearing: tBrg }
 
           const displayBrg = (camBrg + manualBrgOffset + 360) % 360
           map.jumpTo({ center: [tLng, tLat], bearing: displayBrg, pitch: camPitch, zoom: currentZoom })
