@@ -15,8 +15,10 @@ interface Props {
 }
 
 export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCreate, onDrive }: Props) {
-  const label   = cityLabel(course.gpxPoints)
-  const hasGpx  = !!course.gpxXml && course.gpxXml.length > 50
+  const label      = cityLabel(course.gpxPoints)
+  const hasGpx     = !!course.gpxXml && course.gpxXml.length > 50
+  // 경로 작성(RoutePlanner)으로 저장된 계획 경로 — 모의주행·영상·GPX 뱃지 숨김
+  const isPlanned  = Array.isArray(course.plannerWaypoints) && course.plannerWaypoints.length > 0
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
@@ -140,7 +142,7 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                 {fmtDur(course.durationMin)}
               </span>
               <span className="text-[11px] font-normal text-muted">{fmtDate(course.createdAt)}</span>
-              {hasGpx && (
+              {hasGpx && !isPlanned && (
                 <span
                   className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
                   style={{ background: 'rgba(99,102,241,0.10)', color: '#6366F1' }}
@@ -148,11 +150,19 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                   <FileDown size={8} strokeWidth={2} />GPX
                 </span>
               )}
+              {isPlanned && (
+                <span
+                  className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                  style={{ background: 'rgba(255,90,0,0.10)', color: '#FF5A00' }}
+                >
+                  경로계획
+                </span>
+              )}
             </div>
 
             {/* 버튼 */}
             <div className="flex gap-1.5">
-              {hasGpx && (
+              {!isPlanned && hasGpx && (
                 <button
                   onClick={e => { e.stopPropagation(); onVideoCreate?.(course) }}
                   className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-sub active:opacity-70"
@@ -161,12 +171,14 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                   <Clapperboard size={11} strokeWidth={1.8} />영상
                 </button>
               )}
-              <button
-                onClick={e => { e.stopPropagation(); onDrive?.(course) }}
-                className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-[11px] font-bold text-white active:opacity-70"
-              >
-                <Play size={10} strokeWidth={0} fill="white" />주행
-              </button>
+              {!isPlanned && (
+                <button
+                  onClick={e => { e.stopPropagation(); onDrive?.(course) }}
+                  className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-[11px] font-bold text-white active:opacity-70"
+                >
+                  <Play size={10} strokeWidth={0} fill="white" />주행
+                </button>
+              )}
             </div>
           </div>
         </div>
