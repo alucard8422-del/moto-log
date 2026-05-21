@@ -31,9 +31,8 @@ export default function Layout() {
   useModalBackButton(showExitConfirm, () => setShowExitConfirm(false))
 
   // ── 로그아웃 ───────────────────────────────────────────────────────────────
-  const handleLogout = async () => {
-    if (isRecording) { setShowExitConfirm(true); return }
-    await doLogout()
+  const handleLogout = () => {
+    setShowExitConfirm(true)
   }
   const doLogout = async () => {
     sessionStorage.removeItem('moto_splash')
