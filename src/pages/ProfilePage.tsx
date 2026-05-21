@@ -11,7 +11,7 @@ import SavedTab                       from './profile/SavedTab'
 
 // ── 공용 컴포넌트·서비스 ──────────────────────────────────────────────────
 import BadgeAchievementModal from '../components/BadgeAchievementModal'
-import GarageEditModal, { type GarageData } from './garage/GarageEditModal'
+import GarageEditModal, { type GarageData } from '../features/garage/GarageEditModal'
 import FuelLogTab                     from '../components/FuelLogTab'
 import FuelConfirmPopup               from '../components/FuelConfirmPopup'
 import { fetchProfile, upsertProfile } from '../lib/profileService'
