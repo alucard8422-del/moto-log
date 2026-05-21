@@ -13,8 +13,8 @@ import {
   advanceDriveSegment, hasRemainingSegments,
   type DriveSession,
 } from '../lib/driveSession'
-import { launchNaviSegment } from '../pages/map/naviUtils'
-import { NAVI_OPTIONS } from '../pages/map/types'
+import { launchNaviSegment } from '../lib/naviUtils'
+import { NAVI_OPTIONS } from '../types/ride'
 
 // ── 외부에서 "주행 시작" 요청 이벤트 ────────────────────────────────────
 // MyRoutesPage → CustomEvent('moto:startDrive', { detail: DriveSession })

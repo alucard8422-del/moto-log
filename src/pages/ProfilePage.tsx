@@ -16,7 +16,7 @@ import FuelLogTab                     from '../components/FuelLogTab'
 import FuelConfirmPopup               from '../components/FuelConfirmPopup'
 import { fetchProfile, upsertProfile } from '../lib/profileService'
 import { useFuel }                    from '../context/FuelContext'
-import { NAVI_STORAGE_KEY, type NavigationType } from './map/types'
+import { NAVI_STORAGE_KEY, type NavigationType } from '../types/ride'
 import { BADGES, type Tier }          from '../constants/BadgesData'
 
 type Tab = 'garage' | 'saved' | 'fuel'

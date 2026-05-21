@@ -1,6 +1,6 @@
 // useGeolocation.ts
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { Location, GeoErrorCode } from '../pages/map/types'
+import type { Location, GeoErrorCode } from './types'
 
 export const GEO_ERROR_MSG: Record<GeoErrorCode, string> = {
   NOT_SUPPORTED:       'GPS를 지원하지 않는 기기예요',

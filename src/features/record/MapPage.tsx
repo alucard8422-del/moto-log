@@ -1,20 +1,20 @@
 // MapPage.tsx — 기록 메뉴 메인 (상태 관리 + 레이아웃)
-// UI 수정 → map/ 폴더 각 파일 / 로직 수정 → 이 파일
+// UI 수정 → features/record/ 각 파일 / 로직 수정 → 이 파일
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useGeolocation }            from '../hooks/useGeolocation'
-import MapDisplay                    from './map/MapDisplay'
-import RideHUD                       from './map/RideHUD'
-import ErgonomicController           from './map/ErgonomicController'
-import NavigationCountdownPopup      from '../components/NavigationCountdownPopup'
-import { loadNaviPref, launchNavi }  from './map/naviUtils'
-import { buildGpxXml, saveCourse }   from '../lib/courseStorage'
-import { insertMyCourse }            from '../lib/courseService'
+import { useGeolocation }            from './useGeolocation'
+import MapDisplay                    from './MapDisplay'
+import RideHUD                       from './RideHUD'
+import ErgonomicController           from './ErgonomicController'
+import NavigationCountdownPopup      from '../../components/NavigationCountdownPopup'
+import { loadNaviPref, launchNavi }  from '../../lib/naviUtils'
+import { buildGpxXml, saveCourse }   from '../../lib/courseStorage'
+import { insertMyCourse }            from '../../lib/courseService'
 import {
   NAVI_OPTIONS, NAVI_STORAGE_KEY,
   type Location, type RideStatus, type NavigationType,
-} from './map/types'
-import NaviSettings from './map/NaviSettings'
+} from './types'
+import NaviSettings from './NaviSettings'
 
 // ── 하버사인 거리 계산 (km) ────────────────────────────────────────────
 function haversine(a: Location, b: Location): number {
@@ -161,7 +161,6 @@ export default function MapPage() {
       isShared:    false,
     }
     saveCourse(rideRecord)
-    // 서버 동기화 — 내 경로 이동 시 서버 기준 로드에서 바로 보이도록
     insertMyCourse(rideRecord).catch(e => console.warn('[MapPage] 서버 저장 실패:', e))
 
     setDuration(frozenDuration)

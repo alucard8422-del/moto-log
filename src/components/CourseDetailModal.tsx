@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, MapPin, Gauge, Map, Navigation, ThumbsUp, Bookmark, MessageCircle, Send } from 'lucide-react'
 import type { TourCardData } from './TourCard'
-import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../pages/map/types'
+import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../types/ride'
 import NavigationCountdownPopup from './NavigationCountdownPopup'
 import {
   loadCourses, addComment,

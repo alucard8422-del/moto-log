@@ -1,7 +1,7 @@
 // driveSession.ts — 주행 세션 localStorage 관리
 // 네비 앱 전환 중에도 어떤 코스의 몇 번째 구간인지 기억
 
-import type { NavigationType } from '../pages/map/types'
+import type { NavigationType } from '../types/ride'
 import type { SavedCourse } from './courseStorage'
 import { insertMyCourse } from './courseService'
 

@@ -22,7 +22,7 @@ import {
   fetchMyCoursesAuth, insertMyCourse, updateMyCourse, deleteMyCourse, uploadCourseImage,
 } from '../lib/courseService'
 import { saveDriveSession } from '../lib/driveSession'
-import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from './map/naviUtils'
+import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from '../lib/naviUtils'
 
 export default function MyRoutesPage() {
   const navigate = useNavigate()

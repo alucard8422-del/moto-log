@@ -2,7 +2,7 @@
 // 내비 선택 UI 수정 시 이 파일만 건드리면 됩니다.
 
 import { Check } from 'lucide-react'
-import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../map/types'
+import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../../types/ride'
 import { checkAndUnlockNaviBadge } from '../../components/BadgeAchievementModal'
 import type { Tier } from '../../constants/BadgesData'
 
