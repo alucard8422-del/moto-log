@@ -117,10 +117,7 @@ export default function Layout() {
           }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
-            const isActive    = pathname === path
-            const isRecordTab = path === '/map'
-            // 다른 메뉴에 있을 때 기록 탭에 ●REC 표시
-            const showRec     = isRecordTab && isRecording && !isMapPage
+            const isActive = pathname === path
 
             return (
               <button
@@ -128,26 +125,6 @@ export default function Layout() {
                 onClick={() => navigate(path)}
                 className="relative flex flex-1 flex-col items-center gap-1.5 py-4 transition-opacity active:opacity-60"
               >
-                {/* ●REC 배지 — CircleDot 아이콘 정중앙 (다른 탭에서만) */}
-                {showRec && (
-                  <span
-                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-1.5 py-[3px]"
-                    style={{
-                      top:                  '18px',
-                      background:           'rgba(10,15,30,0.72)',
-                      backdropFilter:       'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      border:               '1px solid rgba(239,68,68,0.25)',
-                      whiteSpace:           'nowrap',
-                    }}
-                  >
-                    <span
-                      className="h-1.5 w-1.5 rounded-full bg-red-500"
-                      style={{ animation: 'rec-dot-pulse 1.2s ease-in-out infinite' }}
-                    />
-                    <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
-                  </span>
-                )}
 
                 <Icon
                   size={22}
