@@ -8,6 +8,7 @@ import { type RankedCourse } from './SmartRecommendSection'
 import CourseDetailModal from '../../components/CourseDetailModal'
 import { loadCommunityCourses, type SavedCourse } from '../../lib/courseStorage'
 import type { CourseCardData } from './CourseCard'
+import { useModalBackButton } from '../../hooks/useModalBackButton'
 
 // ── 카테고리 필터 ──────────────────────────────────────────────────────────
 type FilterId = 'all' | 'short' | 'mid' | 'long' | 'cafe'
@@ -507,6 +508,9 @@ export default function TourPage() {
   const handleSelectCurated   = (c: CourseCardData) => { setSelected(c); setSelectedSavedId(undefined) }
   const handleSelectCommunity = (c: CourseCardData, savedId: string) => { setSelected(c); setSelectedSavedId(savedId) }
   const handleClose           = () => { setSelected(null); setSelectedSavedId(undefined); setCommunityKey((k) => k + 1) }
+
+  // 뒤로가기로 모달 닫기
+  useModalBackButton(selected !== null, handleClose)
 
   return (
     <div className="flex flex-col gap-6 px-4 pt-5 pb-32 bg-app min-h-screen">

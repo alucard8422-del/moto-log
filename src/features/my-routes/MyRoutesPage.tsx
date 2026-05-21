@@ -1,5 +1,6 @@
 // MyRoutesPage.tsx — 내 경로 메뉴 메인
 import { useState, useEffect }     from 'react'
+import { useModalBackButton }      from '../../hooks/useModalBackButton'
 import { CheckCircle }             from 'lucide-react'
 import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../../constants/BadgesData'
 import BadgeAchievementModal, { checkRideDiaryBadge } from '../../components/BadgeAchievementModal'
@@ -34,6 +35,14 @@ export default function MyRoutesPage() {
   const [badgeQueue, setBadgeQueue] = useState<Array<{ badgeId: string; tier: Tier }>>([])
   const currentBadge = badgeQueue[0] ?? null
   const dismissBadge = () => setBadgeQueue(prev => prev.slice(1))
+
+  // 뒤로가기로 모달/시트 닫기
+  const anyModalOpen = editTarget !== null || shareTarget !== null || videoTarget !== null
+  useModalBackButton(anyModalOpen, () => {
+    setEditTarget(null)
+    setShareTarget(null)
+    setVideoTarget(null)
+  })
 
   useEffect(() => {
     if (!toast) return
