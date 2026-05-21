@@ -4,6 +4,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { buildGpxXml, saveCourse } from '../lib/courseStorage'
 import { insertMyCourse }          from '../lib/courseService'
+import { approxCity }              from '../features/my-routes/routes/routeUtils'
 import type { Location, RideStatus } from '../features/record/types'
 
 // ── 하버사인 거리 계산 (km) ────────────────────────────────────────────────
@@ -21,16 +22,27 @@ function haversine(a: Location, b: Location): number {
 
 const CHECKPOINT_KEY = 'moto:ride_checkpoint'
 
+// ── 체크포인트 데이터 타입 ─────────────────────────────────────────────────
+export interface CheckpointData {
+  path:      Location[]
+  distance:  number
+  duration:  number
+  startedAt: string
+}
+
 // ── 컨텍스트 타입 ──────────────────────────────────────────────────────────
 interface RideRecordCtx {
-  status:          RideStatus
-  path:            Location[]
-  duration:        number
-  distance:        number
-  wakeLockActive:  boolean
-  startRecording:  () => void
-  stopRecording:   () => void
-  resetStatus:     () => void
+  status:                RideStatus
+  path:                  Location[]
+  duration:              number
+  distance:              number
+  wakeLockActive:        boolean
+  pendingCheckpoint:     CheckpointData | null   // 앱 재시작 후 복구 대기 중인 체크포인트
+  startRecording:        () => void
+  stopRecording:         () => void
+  resetStatus:           () => void
+  resumeFromCheckpoint:  () => void              // 체크포인트에서 이어달리기
+  discardCheckpoint:     () => void              // 체크포인트 버리고 새로 시작
 }
 
 const Ctx = createContext<RideRecordCtx | null>(null)
@@ -43,11 +55,19 @@ export function useRideRecord(): RideRecordCtx {
 
 // ── 프로바이더 ─────────────────────────────────────────────────────────────
 export function RideRecordProvider({ children }: { children: React.ReactNode }) {
-  const [status,         setStatus]        = useState<RideStatus>('idle')
-  const [path,           setPath]          = useState<Location[]>([])
-  const [duration,       setDuration]      = useState(0)
-  const [distance,       setDistance]      = useState(0)
-  const [wakeLockActive, setWakeLockActive] = useState(false)
+  const [status,            setStatus]           = useState<RideStatus>('idle')
+  const [path,              setPath]             = useState<Location[]>([])
+  const [duration,          setDuration]         = useState(0)
+  const [distance,          setDistance]         = useState(0)
+  const [wakeLockActive,    setWakeLockActive]   = useState(false)
+
+  // 앱 재시작 시 복구 대기 중인 체크포인트 (mount 시 1회 읽기)
+  const [pendingCheckpoint, setPendingCheckpoint] = useState<CheckpointData | null>(() => {
+    try {
+      const raw = localStorage.getItem(CHECKPOINT_KEY)
+      return raw ? (JSON.parse(raw) as CheckpointData) : null
+    } catch { return null }
+  })
 
   const rideWatchRef = useRef<number | null>(null)
   const startTimeRef = useRef<Date | null>(null)
@@ -117,19 +137,9 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
     return () => clearInterval(id)
   }, [status])
 
-  // ── GPS 기록 시작 ──────────────────────────────────────────────────────
-  const startRecording = () => {
-    startTimeRef.current = new Date()
-    prevPosRef.current   = null
-    distanceRef.current  = 0
-    durationRef.current  = 0
-    pathRef.current      = []
-    setPath([])
-    setDistance(0)
-    setDuration(0)
-    setStatus('riding')
-
-    acquireWakeLock()
+  // ── 공통 GPS watchPosition 시작 (startRecording / resumeFromCheckpoint 공유) ──
+  const startWatchPosition = (initialPrev: Location | null) => {
+    prevPosRef.current = initialPrev
 
     rideWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -137,9 +147,9 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
           lat:       pos.coords.latitude,
           lng:       pos.coords.longitude,
           timestamp: pos.timestamp,
-          altitude:  pos.coords.altitude ?? undefined,
-          speed:     pos.coords.speed    ?? undefined,
-          heading:   pos.coords.heading  ?? undefined,
+          altitude:  pos.coords.altitude  ?? undefined,
+          speed:     pos.coords.speed     ?? undefined,
+          heading:   pos.coords.heading   ?? undefined,
         }
         const prev = prevPosRef.current
         if (prev) {
@@ -164,6 +174,55 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
     )
   }
 
+  // ── GPS 기록 시작 (새 주행) ────────────────────────────────────────────
+  const startRecording = () => {
+    // 대기 중인 체크포인트가 있으면 버리기
+    if (pendingCheckpoint) {
+      localStorage.removeItem(CHECKPOINT_KEY)
+      setPendingCheckpoint(null)
+    }
+
+    startTimeRef.current = new Date()
+    distanceRef.current  = 0
+    durationRef.current  = 0
+    pathRef.current      = []
+    setPath([])
+    setDistance(0)
+    setDuration(0)
+    setStatus('riding')
+
+    acquireWakeLock()
+    startWatchPosition(null)
+  }
+
+  // ── 체크포인트에서 이어달리기 ─────────────────────────────────────────
+  const resumeFromCheckpoint = () => {
+    if (!pendingCheckpoint) return
+    const cp = pendingCheckpoint
+
+    startTimeRef.current = cp.startedAt ? new Date(cp.startedAt) : new Date()
+    distanceRef.current  = cp.distance
+    durationRef.current  = cp.duration
+    pathRef.current      = cp.path
+
+    setPath(cp.path)
+    setDistance(cp.distance)
+    setDuration(cp.duration)
+    setStatus('riding')
+    setPendingCheckpoint(null)
+    // localStorage 체크포인트는 남겨두되, 새 30초 interval이 덮어씀
+
+    const lastLoc = cp.path.length > 0 ? cp.path[cp.path.length - 1] : null
+    acquireWakeLock()
+    startWatchPosition(lastLoc)
+  }
+
+  // ── 체크포인트 버리기 ─────────────────────────────────────────────────
+  const discardCheckpoint = () => {
+    localStorage.removeItem(CHECKPOINT_KEY)
+    setPendingCheckpoint(null)
+  }
+
   // ── GPS 기록 종료 + 저장 ───────────────────────────────────────────────
   const stopRecording = () => {
     const frozenDuration = durationRef.current
@@ -177,6 +236,14 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
 
     releaseWakeLock()
     localStorage.removeItem(CHECKPOINT_KEY)
+
+    // 출발·도착 도시명 자동 계산
+    const startCity = frozenPath.length > 0
+      ? approxCity(frozenPath[0].lat, frozenPath[0].lng)
+      : undefined
+    const endCity = frozenPath.length > 0
+      ? approxCity(frozenPath[frozenPath.length - 1].lat, frozenPath[frozenPath.length - 1].lng)
+      : undefined
 
     const endTime   = new Date()
     const gpxPoints = frozenPath.map(p => ({
@@ -192,6 +259,8 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
       gpxXml:      buildGpxXml(gpxPoints),
       createdAt:   endTime.toISOString(),
       isShared:    false,
+      startCity,
+      endCity,
     }
     saveCourse(rideRecord)
     insertMyCourse(rideRecord).catch(e => console.warn('[RideRecord] 서버 저장 실패:', e))
@@ -220,7 +289,9 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
   return (
     <Ctx.Provider value={{
       status, path, duration, distance, wakeLockActive,
+      pendingCheckpoint,
       startRecording, stopRecording, resetStatus,
+      resumeFromCheckpoint, discardCheckpoint,
     }}>
       {children}
     </Ctx.Provider>

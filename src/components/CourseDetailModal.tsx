@@ -67,8 +67,31 @@ function ThumbsUpButton({ courseId, initialCount }: { courseId: string; initialC
   )
 }
 
-// ── 북마크(저장) 버튼 — Heart → Bookmark 대체, localStorage 영속 ──────────
-function BookmarkButton({ courseId, initialCount }: { courseId: string; initialCount: number }) {
+// ── 즐겨찾기 저장소 키 ────────────────────────────────────────────────────
+export const SAVED_COURSES_KEY = 'moto:saved_courses'
+
+export function loadSavedCourses(): TourCardData[] {
+  try { return JSON.parse(localStorage.getItem(SAVED_COURSES_KEY) ?? '[]') } catch { return [] }
+}
+
+function addSavedCourse(course: TourCardData) {
+  const list = loadSavedCourses().filter(c => c.id !== course.id)
+  localStorage.setItem(SAVED_COURSES_KEY, JSON.stringify([course, ...list]))
+}
+
+function removeSavedCourse(id: string) {
+  const list = loadSavedCourses().filter(c => c.id !== id)
+  localStorage.setItem(SAVED_COURSES_KEY, JSON.stringify(list))
+}
+
+// ── 북마크(저장) 버튼 — 누르면 SavedTab에도 실제 저장 ──────────────────────
+function BookmarkButton({
+  courseId, initialCount, course,
+}: {
+  courseId: string
+  initialCount: number
+  course: TourCardData
+}) {
   const lk = `moto:bookmarked:${courseId}`
   const ck = `moto:bookmarkCount:${courseId}`
   const [saved, setSaved] = useState(() => localStorage.getItem(lk) === '1')
@@ -84,10 +107,12 @@ function BookmarkButton({ courseId, initialCount }: { courseId: string; initialC
     localStorage.setItem(ck, String(nextCount))
     setSaved(next)
     setCount(nextCount)
+    // 저장 코스 탭과 연동
+    if (next) addSavedCourse(course)
+    else      removeSavedCourse(courseId)
   }
 
   return (
-    // 라벨 텍스트 제거 — 아이콘 + 숫자만
     <button onClick={toggle} className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 transition-transform active:scale-90">
       <Bookmark
         size={20}
@@ -338,6 +363,7 @@ export default function CourseDetailModal({
               <BookmarkButton
                 courseId={course.id}
                 initialCount={0}
+                course={course}
               />
             </div>
 
