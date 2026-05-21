@@ -97,10 +97,10 @@ export default function MapPage() {
 
   const handleGoToCourses = () => navigate('/my-routes')
 
-  // ── 이어달리기 팝업: "이어서 달리기" ───────────────────────────────
-  const handleResumeYes = () => {
+  // ── 이어달리기 팝업: "네비로 이어 달리기" ──────────────────────────
+  const handleResumeWithNavi = () => {
     setShowResumeSheet(false)
-    setShowResumeCountdown(true)    // 네비 카운트다운 → 재실행
+    setShowResumeCountdown(true)
   }
   const handleResumeCountdownLaunch = () => {
     setShowResumeCountdown(false)
@@ -109,7 +109,10 @@ export default function MapPage() {
   }
   const handleResumeCountdownCancel = () => {
     setShowResumeCountdown(false)
-    // 카운트다운 취소 → 네비 없이 바로 이어달리기
+  }
+  // ── 이어달리기 팝업: "네비 없이 이어 달리기" ────────────────────────
+  const handleResumeDirect = () => {
+    setShowResumeSheet(false)
     resumeFromCheckpoint()
   }
 
@@ -187,8 +190,8 @@ export default function MapPage() {
           {/* 시트 */}
           <div className="fixed inset-x-0 bottom-0 z-[70] flex justify-center">
             <div
-              className="w-full max-w-sm rounded-t-3xl border border-white/10 px-6 pb-10 pt-6"
-              style={{ background: '#111622' }}
+              className="w-full max-w-sm rounded-t-3xl px-6 pb-10 pt-6"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
             >
               {/* 드래그 핸들 */}
               <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/20" />
@@ -232,21 +235,30 @@ export default function MapPage() {
               </div>
 
               {/* 버튼 */}
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <button
-                  onClick={handleResumeNo}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-4 text-sm font-light text-white/50 active:opacity-70"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-                >
-                  <X size={14} strokeWidth={1.5} />
-                  새로 시작
-                </button>
-                <button
-                  onClick={handleResumeYes}
-                  className="flex flex-[2] items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-4 text-sm font-bold text-white active:opacity-80"
+                  onClick={handleResumeWithNavi}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white active:opacity-80"
+                  style={{ background: 'var(--brand)' }}
                 >
                   <Navigation size={15} strokeWidth={2} />
-                  이어서 달리기
+                  네비로 이어 달리기
+                </button>
+                <button
+                  onClick={handleResumeDirect}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-semibold active:opacity-70"
+                  style={{ background: 'var(--brand-soft)', color: 'var(--brand)', border: '1px solid var(--brand-soft)' }}
+                >
+                  <Navigation size={15} strokeWidth={2} />
+                  네비 없이 이어 달리기
+                </button>
+                <button
+                  onClick={handleResumeNo}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-light active:opacity-70"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <X size={14} strokeWidth={1.5} />
+                  취소
                 </button>
               </div>
             </div>
