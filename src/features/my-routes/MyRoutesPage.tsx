@@ -203,7 +203,7 @@ export default function MyRoutesPage() {
 
       {/* ── 전국 누적 동선 지도 ── */}
       <div className="mx-5 mb-5">
-        <KoreaRouteMap courses={courses} />
+        <KoreaRouteMap courses={courses} isLoading={isLoading} />
       </div>
 
       {/* ── 경로 카드 목록 ── */}

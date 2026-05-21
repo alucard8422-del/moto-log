@@ -12,10 +12,11 @@ declare global {
 }
 
 interface Props {
-  courses: SavedCourse[]
+  courses:   SavedCourse[]
+  isLoading?: boolean
 }
 
-export default function KoreaRouteMap({ courses }: Props) {
+export default function KoreaRouteMap({ courses, isLoading = false }: Props) {
   const containerRef  = useRef<HTMLDivElement>(null)
   const mapRef        = useRef<any>(null)
   const polylinesRef  = useRef<any[]>([])
@@ -103,7 +104,6 @@ export default function KoreaRouteMap({ courses }: Props) {
   useEffect(() => {
     if (!mapReady || !mapRef.current || !window.kakao?.maps) return
 
-    // courses가 바뀌면 이전 geolocation 콜백을 무효화
     let cancelled = false
 
     // 기존 폴리라인 제거
@@ -113,10 +113,13 @@ export default function KoreaRouteMap({ courses }: Props) {
     const validCourses = courses.filter(c => c.gpxPoints.length >= 2)
 
     if (validCourses.length === 0) {
-      // ── 경로 없음: 현재 위치로 중앙 이동 ──────────────────────────
+      // 아직 서버 응답 전이면 대기 — geolocation을 섣불리 호출하지 않음
+      if (isLoading) return () => { cancelled = true }
+
+      // ── 경로 없음(로딩 완료): 현재 위치로 중앙 이동 ───────────────
       navigator.geolocation.getCurrentPosition(
         ({ coords }) => {
-          if (cancelled || !mapRef.current) return   // 경로가 뒤늦게 로드되면 무시
+          if (cancelled || !mapRef.current) return
           mapRef.current.setCenter(
             new window.kakao.maps.LatLng(coords.latitude, coords.longitude)
           )
@@ -163,7 +166,7 @@ export default function KoreaRouteMap({ courses }: Props) {
     })
 
     return () => { cancelled = true }
-  }, [courses, mapReady])
+  }, [courses, mapReady, isLoading])
 
   const lineCount = courses.filter(c => c.gpxPoints.length >= 2).length
 
