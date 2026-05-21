@@ -8,15 +8,16 @@
 
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Link } from 'lucide-react'
 import type { DeleteTarget } from './plannerUtils'
 
 interface Props {
-  target:   DeleteTarget | null
-  onDelete: (idx: number) => void
+  target:     DeleteTarget | null
+  onDelete:   (idx: number) => void
+  onConnect?: (idx: number) => void  // 임포트 모드: 현재 위치 → 이 경유지 연결
 }
 
-export default function DeleteBubble({ target, onDelete }: Props) {
+export default function DeleteBubble({ target, onDelete, onConnect }: Props) {
   return createPortal(
     <AnimatePresence>
       {target && (
@@ -35,13 +36,24 @@ export default function DeleteBubble({ target, onDelete }: Props) {
           exit={{ opacity: 0, scale: 0.75 }}
           transition={{ type: 'spring', stiffness: 460, damping: 28 }}
         >
-          <button
-            onClick={() => onDelete(target.idx)}
-            className="flex items-center gap-2 rounded-2xl border border-rose-500/25 bg-slate-950/95 px-5 py-2.5 shadow-2xl shadow-black/60 backdrop-blur-md active:opacity-70"
-          >
-            <Trash2 size={13} strokeWidth={2.5} className="text-rose-400" />
-            <span className="text-sm font-bold text-rose-400">삭제</span>
-          </button>
+          <div className="flex gap-2">
+            {onConnect && (
+              <button
+                onClick={() => onConnect(target.idx)}
+                className="flex items-center gap-2 rounded-2xl border border-[#FF5A00]/30 bg-slate-950/95 px-5 py-2.5 shadow-2xl shadow-black/60 backdrop-blur-md active:opacity-70"
+              >
+                <Link size={13} strokeWidth={2.5} style={{ color: '#FF5A00' }} />
+                <span className="text-sm font-bold" style={{ color: '#FF5A00' }}>여기서 연결</span>
+              </button>
+            )}
+            <button
+              onClick={() => onDelete(target.idx)}
+              className="flex items-center gap-2 rounded-2xl border border-rose-500/25 bg-slate-950/95 px-5 py-2.5 shadow-2xl shadow-black/60 backdrop-blur-md active:opacity-70"
+            >
+              <Trash2 size={13} strokeWidth={2.5} className="text-rose-400" />
+              <span className="text-sm font-bold text-rose-400">삭제</span>
+            </button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>,

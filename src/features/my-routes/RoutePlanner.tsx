@@ -9,7 +9,7 @@
 //  짧은 탭 → 삭제 팝업 / 꾹 누르기(600ms) → 로드뷰
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import { useNavigate }                            from 'react-router-dom'
+import { useNavigate, useLocation }               from 'react-router-dom'
 import { motion, AnimatePresence }                from 'framer-motion'
 import { PenLine, Loader2 }                       from 'lucide-react'
 
@@ -27,6 +27,16 @@ import type { DeleteTarget } from './planner/plannerUtils'
 
 export default function RoutePlanner() {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // ── 코스 상세에서 "수정하기"로 진입 시 전달되는 상태 ──────────────────────
+  const importState = (location.state ?? {}) as {
+    importedWaypoints?: LatLng[]
+    userPos?: LatLng
+  }
+  const importedWaypoints = importState.importedWaypoints
+  const importUserPos     = importState.userPos ?? null
+  const isImportMode      = !!(importedWaypoints && importedWaypoints.length > 0)
 
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const exitingRef = useRef(false)
@@ -147,6 +157,41 @@ export default function RoutePlanner() {
     }
   }, [])
 
+  // ── 임포트 모드: 공유 경로 경유지 초기 로드 ──────────────────────────────
+  useEffect(() => {
+    if (!isImportMode || !importedWaypoints || importedWaypoints.length === 0) return
+    latestPointsRef.current = importedWaypoints
+    setPoints([...importedWaypoints])
+    if (importedWaypoints.length < 2) return
+    setRouting(true)
+    const pairs = importedWaypoints.slice(0, -1).map((from, i) =>
+      fetchRoute(from, importedWaypoints[i + 1])
+    )
+    Promise.all(pairs)
+      .then(segs => setSegments(segs))
+      .finally(() => setRouting(false))
+  }, []) // eslint-disable-line
+
+  // ── 임포트 모드: 경유지 선택 → 현재 위치에서 연결 ────────────────────────
+  const handleConnectFromHere = useCallback((idx: number) => {
+    if (!importUserPos) return
+    setDeleteTarget(null)
+    const tail      = latestPointsRef.current.slice(idx)   // 선택 경유지 + 이후 포인트
+    const newPoints = [importUserPos, ...tail]
+    latestPointsRef.current = newPoints
+    setPoints([...newPoints])
+    setRouting(true)
+    // 현재위치 → 선택 경유지 경로 계산 후 이후 세그먼트 유지
+    fetchRoute(importUserPos, tail[0])
+      .then(seg0 => {
+        setSegments(prev => {
+          const tailSegs = prev.slice(idx)   // 선택 경유지 이후 기존 세그먼트
+          return [seg0, ...tailSegs]
+        })
+      })
+      .finally(() => setRouting(false))
+  }, [importUserPos])
+
   // ── 실행취소 · 전체삭제 ──────────────────────────────────────────────────
   const handleUndo = useCallback(() => {
     latestPointsRef.current = latestPointsRef.current.slice(0, -1)
@@ -215,6 +260,12 @@ export default function RoutePlanner() {
         onMarkerTap={handleMarkerTap}
         onLongPress={handleLongPress}
         onDismissBubble={handleDismissBubble}
+        currentUserPos={importUserPos ?? undefined}
+        initialFitPoints={
+          isImportMode && importUserPos
+            ? [importUserPos, ...(importedWaypoints ?? [])]
+            : undefined
+        }
       />
 
       {/* ── 로드뷰 팝업 ── */}
@@ -228,8 +279,12 @@ export default function RoutePlanner() {
         )}
       </AnimatePresence>
 
-      {/* ── 마커 삭제 팝업 ── */}
-      <DeleteBubble target={deleteTarget} onDelete={handleDelete} />
+      {/* ── 마커 삭제/연결 팝업 ── */}
+      <DeleteBubble
+        target={deleteTarget}
+        onDelete={handleDelete}
+        onConnect={isImportMode && importUserPos ? handleConnectFromHere : undefined}
+      />
 
       {/* ── CONFIRM 오버레이 ── */}
       {locked && (

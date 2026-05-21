@@ -14,6 +14,30 @@ import { makeMarkerDataUrl } from './plannerUtils'
 
 declare global { interface Window { kakao: any } }
 
+// ── 현재 위치 마커 이미지 (파란 GPS 점) ────────────────────────────────────
+function makeUserPosMarkerUrl(): string {
+  const S = 36
+  const c = document.createElement('canvas')
+  c.width = c.height = S
+  const ctx = c.getContext('2d')!
+  // 바깥 흰 테두리
+  ctx.beginPath()
+  ctx.arc(S / 2, S / 2, S / 2 - 1, 0, Math.PI * 2)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fill()
+  // 파란 원
+  ctx.beginPath()
+  ctx.arc(S / 2, S / 2, S / 2 - 5, 0, Math.PI * 2)
+  ctx.fillStyle = '#3B82F6'
+  ctx.fill()
+  // 중앙 흰 점
+  ctx.beginPath()
+  ctx.arc(S / 2, S / 2, 4, 0, Math.PI * 2)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fill()
+  return c.toDataURL()
+}
+
 interface Props {
   points:           LatLng[]
   routePath:        LatLng[]   // 실제 도로 경로 (비어있으면 points 직선 사용)
@@ -23,17 +47,21 @@ interface Props {
   onMarkerTap:      (idx: number, screenX: number, screenY: number) => void
   onLongPress:      (lat: number, lng: number) => void
   onDismissBubble:  () => void
+  currentUserPos?:  LatLng    // 현재 위치 표시 (파란 점)
+  initialFitPoints?: LatLng[] // 진입 시 지도 범위 맞춤
 }
 
 export default function PlannerMap({
   points, routePath, locked, deleteTargetOpen,
   onAddPoint, onMarkerTap, onLongPress, onDismissBubble,
+  currentUserPos, initialFitPoints,
 }: Props) {
   const containerRef    = useRef<HTMLDivElement>(null)
   const mapRef          = useRef<any>(null)
   const markersRef      = useRef<any[]>([])
   const polylineGlowRef = useRef<any>(null)
   const polylineMainRef = useRef<any>(null)
+  const userPosMarkerRef = useRef<any>(null)
   const initDoneRef     = useRef(false)
   const [mapReady, setMapReady] = useState(false)
 
@@ -189,6 +217,38 @@ export default function PlannerMap({
       s.addEventListener('load', () => window.kakao.maps.load(doCreate))
     }
   }, [])
+
+  // ── 현재 위치 마커 (currentUserPos 변경 시) ──────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !window.kakao?.maps) return
+    if (userPosMarkerRef.current) {
+      userPosMarkerRef.current.setMap(null)
+      userPosMarkerRef.current = null
+    }
+    if (!currentUserPos) return
+    const ll = new window.kakao.maps.LatLng(currentUserPos.lat, currentUserPos.lng)
+    const markerImage = new window.kakao.maps.MarkerImage(
+      makeUserPosMarkerUrl(),
+      new window.kakao.maps.Size(36, 36),
+      { offset: new window.kakao.maps.Point(18, 18) },
+    )
+    userPosMarkerRef.current = new window.kakao.maps.Marker({
+      position: ll, image: markerImage, map: mapRef.current,
+    })
+  }, [currentUserPos, mapReady])
+
+  // ── 진입 시 범위 맞춤 (initialFitPoints) ──────────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !window.kakao?.maps) return
+    if (!initialFitPoints || initialFitPoints.length === 0) return
+    try {
+      const bounds = new window.kakao.maps.LatLngBounds()
+      initialFitPoints.forEach(p =>
+        bounds.extend(new window.kakao.maps.LatLng(p.lat, p.lng))
+      )
+      mapRef.current.setBounds(bounds, 80, 80, 80, 80)
+    } catch {}
+  }, [mapReady]) // eslint-disable-line
 
   // ── 마커 갱신 (points 변경 시) ────────────────────────────────────────────
   useEffect(() => {
