@@ -4,7 +4,7 @@
 
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Square, Flag, Timer, Route, Gauge, Compass, Settings, Play, AlertTriangle, X } from 'lucide-react'
+import { Square, Flag, Timer, Route, Gauge, Compass, Settings, Play, AlertTriangle } from 'lucide-react'
 import { type RideStatus } from './types'
 
 interface Props {
@@ -359,56 +359,38 @@ function RidingController({ onStop }: { onStop: () => void }) {
       </div>
     </div>
 
-    {/* ── 중지 확인 모달 ── */}
-    <AnimatePresence>
-      {showConfirm && (
-        <>
-          <motion.div
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+    {/* ── 중지 확인 바텀시트 ── */}
+    <div className={`fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${showConfirm ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={() => setShowConfirm(false)} />
+    <div className={`fixed bottom-0 left-0 right-0 z-[201] transition-transform duration-500 ease-out ${showConfirm ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className="mx-auto max-w-sm rounded-t-3xl bg-[#161B26]/98 px-6 pt-5 pb-12 backdrop-blur-xl">
+        <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-white/15" />
+        <div className="mb-4 flex items-center gap-2">
+          <AlertTriangle size={13} strokeWidth={1.5} className="text-red-400" />
+          <span className="text-[10px] font-light uppercase tracking-widest text-white/30">Stop Recording</span>
+        </div>
+        <p className="mb-1.5 text-[16px] font-bold text-white">기록을 중지할까요?</p>
+        <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
+          중지하면 현재까지의 경로가<br />저장 목록으로 이동합니다.
+        </p>
+        <div className="flex gap-2.5">
+          <button
             onClick={() => setShowConfirm(false)}
-          />
-          <motion.div
-            className="fixed inset-x-4 top-1/2 z-[201] -translate-y-1/2 rounded-3xl p-6"
-            style={{ background: '#111622', border: '1px solid rgba(255,255,255,0.10)', maxWidth: 360, margin: '0 auto' }}
-            initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+            className="flex flex-1 items-center justify-center rounded-2xl py-3.5 text-sm font-semibold text-white/60 active:opacity-70"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
           >
-            <button
-              onClick={() => setShowConfirm(false)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full active:opacity-60"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
-            >
-              <X size={15} strokeWidth={1.5} className="text-white/50" />
-            </button>
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.12)' }}>
-              <AlertTriangle size={22} strokeWidth={1.5} className="text-red-400" />
-            </div>
-            <p className="mb-1.5 text-[16px] font-bold text-white">기록을 중지할까요?</p>
-            <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
-              중지하면 현재까지의 경로가<br />저장 목록으로 이동합니다.
-            </p>
-            <div className="flex gap-2.5">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="flex flex-1 items-center justify-center rounded-2xl py-3.5 text-sm font-semibold text-white/60 active:opacity-70"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
-              >
-                계속 기록
-              </button>
-              <button
-                onClick={() => { setShowConfirm(false); onStop() }}
-                className="flex flex-[1.2] items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-bold text-white active:opacity-80"
-                style={{ background: 'rgba(239,68,68,0.80)' }}
-              >
-                <Square size={13} strokeWidth={0} fill="white" />
-                중지
-              </button>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            계속 기록
+          </button>
+          <button
+            onClick={() => { setShowConfirm(false); onStop() }}
+            className="flex flex-[1.2] items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-bold text-white active:opacity-80"
+            style={{ background: 'rgba(239,68,68,0.80)' }}
+          >
+            <Square size={13} strokeWidth={0} fill="white" />
+            중지
+          </button>
+        </div>
+      </div>
+    </div>
     </>
   )
 }
