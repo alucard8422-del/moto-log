@@ -19,10 +19,11 @@ import { totalDist, type LatLng }     from './routes/routeUtils'
 import { fetchRoute }                 from './planner/routing'
 import RoadviewModal                  from '../../components/RoadviewModal'
 
-import PlannerMap    from './planner/PlannerMap'
-import PlannerHeader from './planner/PlannerHeader'
-import DeleteBubble  from './planner/DeleteBubble'
-import ConfirmPanel  from './planner/ConfirmPanel'
+import PlannerMap         from './planner/PlannerMap'
+import PlannerHeader      from './planner/PlannerHeader'
+import DeleteBubble       from './planner/DeleteBubble'
+import ConfirmPanel       from './planner/ConfirmPanel'
+import WaypointListSheet  from './planner/WaypointListSheet'
 import type { DeleteTarget } from './planner/plannerUtils'
 
 export default function RoutePlanner() {
@@ -92,12 +93,13 @@ export default function RoutePlanner() {
   const latestPointsRef = useRef<LatLng[]>([])
 
   // ── 일반 UI 상태 ──────────────────────────────────────────────────────────
-  const [stage,        setStage]        = useState<'DRAW' | 'CONFIRM'>('DRAW')
-  const [title,        setTitle]        = useState(editCourseTitle)  // 수정 모드 시 기존 제목 유지
-  const [tip,          setTip]          = useState('')
-  const [done,         setDone]         = useState(false)
-  const [roadviewPos,  setRoadviewPos]  = useState<{ lat: number; lng: number } | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [stage,          setStage]          = useState<'DRAW' | 'CONFIRM'>('DRAW')
+  const [title,          setTitle]          = useState(editCourseTitle)
+  const [tip,            setTip]            = useState('')
+  const [done,           setDone]           = useState(false)
+  const [roadviewPos,    setRoadviewPos]    = useState<{ lat: number; lng: number } | null>(null)
+  const [deleteTarget,   setDeleteTarget]   = useState<DeleteTarget | null>(null)
+  const [showWpList,     setShowWpList]     = useState(false)
 
   const locked = stage === 'CONFIRM'
 
@@ -169,6 +171,37 @@ export default function RoutePlanner() {
       )
     }
   }, [])
+
+  // ── 경유지 순서 변경 (전체 세그먼트 재계산) ─────────────────────────────
+  const recomputeAllSegments = useCallback((pts: LatLng[]) => {
+    if (pts.length < 2) { setSegments([]); return }
+    setRouting(true)
+    const pairs = pts.slice(0, -1).map((from, i) => fetchRoute(from, pts[i + 1]))
+    Promise.all(pairs)
+      .then(segs => setSegments(segs))
+      .finally(() => setRouting(false))
+  }, [])
+
+  const handleMoveUp = useCallback((idx: number) => {
+    if (idx === 0) return
+    const next = [...latestPointsRef.current]
+    ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+    latestPointsRef.current = next
+    setPoints([...next])
+    setDeleteTarget(null)
+    recomputeAllSegments(next)
+  }, [recomputeAllSegments])
+
+  const handleMoveDown = useCallback((idx: number) => {
+    const pts = latestPointsRef.current
+    if (idx >= pts.length - 1) return
+    const next = [...pts]
+    ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
+    latestPointsRef.current = next
+    setPoints([...next])
+    setDeleteTarget(null)
+    recomputeAllSegments(next)
+  }, [recomputeAllSegments])
 
   // ── 임포트 모드: 공유 경로 경유지 초기 로드 ──────────────────────────────
   useEffect(() => {
@@ -360,31 +393,57 @@ export default function RoutePlanner() {
       </AnimatePresence>
 
 
-      {/* ── DRAW: 코스 확정 버튼 ── */}
+      {/* ── DRAW: 하단 버튼 영역 (경유지 목록 + 코스 확정) ── */}
       <AnimatePresence>
-        {points.length >= 2 && !locked && (
+        {!locked && (
           <motion.div
-            key="confirm-btn"
-            className="absolute inset-x-0 bottom-10 z-[1000] flex justify-center px-5"
+            key="draw-btns"
+            className="absolute inset-x-0 bottom-10 z-[1000] flex items-center justify-center gap-3 px-5"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 340, damping: 28 }}
           >
-            <button
-              onClick={handleConfirm}
-              disabled={routing}
-              className="flex items-center gap-2.5 rounded-2xl bg-[#FF5A00] px-8 py-4 text-sm font-bold text-white shadow-xl shadow-orange-900/40 active:opacity-80 disabled:opacity-60"
-            >
-              <PenLine size={16} strokeWidth={2} />
-              코스 확정
-              <span className="ml-1 rounded-full bg-slate-950/20 px-2 py-0.5 text-[10px] font-bold">
-                {dist.toFixed(1)} km
-              </span>
-            </button>
+            {/* 경유지 목록 버튼 — 경유지가 1개 이상일 때 표시 */}
+            {points.length >= 1 && (
+              <button
+                onClick={() => setShowWpList(v => !v)}
+                className="flex items-center gap-1.5 rounded-2xl border border-white/15 bg-slate-950/80 px-4 py-4 text-sm font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5A00] text-[10px] font-bold text-white">
+                  {points.length}
+                </span>
+                목록
+              </button>
+            )}
+
+            {/* 코스 확정 버튼 */}
+            {points.length >= 2 && (
+              <button
+                onClick={handleConfirm}
+                disabled={routing}
+                className="flex items-center gap-2.5 rounded-2xl bg-[#FF5A00] px-8 py-4 text-sm font-bold text-white shadow-xl shadow-orange-900/40 active:opacity-80 disabled:opacity-60"
+              >
+                <PenLine size={16} strokeWidth={2} />
+                코스 확정
+                <span className="ml-1 rounded-full bg-slate-950/20 px-2 py-0.5 text-[10px] font-bold">
+                  {dist.toFixed(1)} km
+                </span>
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── 경유지 목록 패널 ── */}
+      <WaypointListSheet
+        points={points}
+        isOpen={showWpList && !locked}
+        onClose={() => setShowWpList(false)}
+        onMoveUp={handleMoveUp}
+        onMoveDown={handleMoveDown}
+        onDelete={idx => { handleDelete(idx); if (points.length <= 1) setShowWpList(false) }}
+      />
 
       {/* ── CONFIRM: 정보 입력 패널 ── */}
       <AnimatePresence>
