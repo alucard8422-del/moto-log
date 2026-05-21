@@ -1,12 +1,12 @@
 // CourseDetailModal.tsx — 추천 코스 상세 + 내비 연동 + 3초 카운트다운 + 별점 + 댓글
 import { useState, useEffect, useRef } from 'react'
-import { X, MapPin, Gauge, Map, Navigation, ThumbsUp, Bookmark, MessageCircle, Send } from 'lucide-react'
+import { X, MapPin, Gauge, Map, Navigation, ThumbsUp, Bookmark, MessageCircle, Send, Route, LocateFixed } from 'lucide-react'
 import type { TourCardData } from './TourCard'
 import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../types/ride'
 import NavigationCountdownPopup from './NavigationCountdownPopup'
 import {
-  loadCourses, addComment,
-  type CourseComment,
+  loadCourses, loadCommunityCourses, addComment,
+  type CourseComment, type SavedCourse,
 } from '../lib/courseStorage'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
@@ -200,6 +200,15 @@ function CommentsSection({ courseId }: { courseId: string }) {
   )
 }
 
+// ── Haversine 거리 (km) ──────────────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 // ── 메인 모달 ────────────────────────────────────────────────────────────
 interface CourseDetailModalProps {
   course: TourCardData
@@ -217,6 +226,15 @@ export default function CourseDetailModal({
     () => (localStorage.getItem(NAVI_STORAGE_KEY) as NavigationType) ?? 'tmap'
   )
   const [showCountdown, setShowCountdown] = useState(false)
+
+  // ── 출발지 연결 시트 ──
+  const [showStartSheet,  setShowStartSheet]  = useState(false)
+  const [startSheetOpen,  setStartSheetOpen]  = useState(false)
+  // ── 내 경로 선택 시트 ──
+  const [showRouteSheet,  setShowRouteSheet]  = useState(false)
+  const [routeSheetOpen,  setRouteSheetOpen]  = useState(false)
+  const [nearbyRoutes,    setNearbyRoutes]    = useState<Array<SavedCourse & { distFromHere: number }>>([])
+  const [gpsPos,          setGpsPos]          = useState<{ lat: number; lng: number } | null>(null)
 
   // 모달 열린 동안 배경 스크롤 잠금
   useBodyScrollLock()
@@ -248,7 +266,58 @@ export default function CourseDetailModal({
 
   const naviLabel = NAVI_OPTIONS.find((o) => o.type === naviType)?.label ?? 'T map'
 
-  const handleNavigatePress = () => setShowCountdown(true)
+  const handleNavigatePress = () => {
+    if (!navigator.geolocation) { setShowCountdown(true); return }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setGpsPos({ lat, lng })
+
+        if (savedCourseId) {
+          const saved = loadCommunityCourses().find((c) => c.id === savedCourseId)
+          if (saved && saved.gpxPoints.length > 0) {
+            const start = saved.gpxPoints[0]
+            if (haversineKm(lat, lng, start.lat, start.lng) <= 2) {
+              setShowCountdown(true)
+              return
+            }
+          }
+        }
+        // 출발지와 멀거나 코스 데이터 없음 → 연결 시트
+        setShowStartSheet(true)
+        setTimeout(() => setStartSheetOpen(true), 16)
+      },
+      () => { setShowCountdown(true) },
+      { timeout: 5000, maximumAge: 30000 },
+    )
+  }
+
+  const openRouteSheet = () => {
+    const userRoutes = loadCourses().filter((c) => c.gpxPoints.length > 0)
+    const sorted = userRoutes
+      .map((r) => ({
+        ...r,
+        distFromHere: gpsPos
+          ? haversineKm(gpsPos.lat, gpsPos.lng, r.gpxPoints[0].lat, r.gpxPoints[0].lng)
+          : 9999,
+      }))
+      .sort((a, b) => a.distFromHere - b.distFromHere)
+      .slice(0, 4)
+    setNearbyRoutes(sorted)
+    setShowRouteSheet(true)
+    setTimeout(() => setRouteSheetOpen(true), 16)
+  }
+
+  const closeStartSheet = () => {
+    setStartSheetOpen(false)
+    setTimeout(() => setShowStartSheet(false), 400)
+  }
+  const closeRouteSheet = () => {
+    setRouteSheetOpen(false)
+    setTimeout(() => setShowRouteSheet(false), 400)
+  }
+
   const handleCountdownLaunch = () => {
     setShowCountdown(false)
     launchNavi(naviType, course.region)
@@ -427,6 +496,94 @@ export default function CourseDetailModal({
         onLaunch={handleCountdownLaunch}
         onCancel={handleCountdownCancel}
       />
+
+      {/* ── 출발지 연결 시트 ── */}
+      {showStartSheet && (
+        <>
+          <div
+            className={`fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${startSheetOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={closeStartSheet}
+          />
+          <div className={`fixed inset-x-0 bottom-0 z-[90] flex justify-center transition-transform duration-500 ease-out ${startSheetOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className="w-full max-w-sm rounded-t-3xl px-6 pb-10 pt-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/20" />
+              <div className="mb-1 text-[10px] font-light uppercase tracking-widest text-white/30">출발지 안내</div>
+              <p className="mb-5 text-base font-bold text-white">출발지와 거리가 멀어요</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { closeStartSheet(); setShowCountdown(true) }}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white active:opacity-80"
+                  style={{ background: 'var(--brand)' }}
+                >
+                  <LocateFixed size={15} strokeWidth={2} />
+                  현재 위치에서 바로 출발
+                </button>
+                <button
+                  onClick={() => { openRouteSheet() }}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-semibold active:opacity-70"
+                  style={{ background: 'var(--brand-soft)', color: 'var(--brand)', border: '1px solid var(--brand-soft)' }}
+                >
+                  <Route size={15} strokeWidth={2} />
+                  내 경로로 연결하기
+                </button>
+                <button
+                  onClick={closeStartSheet}
+                  className="w-full rounded-2xl py-3.5 text-sm font-light active:opacity-70"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── 내 경로 선택 시트 ── */}
+      {showRouteSheet && (
+        <>
+          <div
+            className={`fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${routeSheetOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={closeRouteSheet}
+          />
+          <div className={`fixed inset-x-0 bottom-0 z-[110] flex justify-center transition-transform duration-500 ease-out ${routeSheetOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+            <div className="w-full max-w-sm rounded-t-3xl px-6 pb-10 pt-5" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/20" />
+              <div className="mb-1 text-[10px] font-light uppercase tracking-widest text-white/30">경로 연결</div>
+              <p className="mb-5 text-base font-bold text-white">연결할 내 경로를 선택하세요</p>
+              {nearbyRoutes.length === 0 ? (
+                <p className="mb-5 text-sm font-light text-white/40">저장된 경로가 없습니다.</p>
+              ) : (
+                <div className="mb-4 flex flex-col gap-2">
+                  {nearbyRoutes.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => { closeRouteSheet(); closeStartSheet(); setShowCountdown(true) }}
+                      className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left active:opacity-70"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: 'var(--brand-soft)' }}>
+                        <Route size={16} strokeWidth={1.5} style={{ color: 'var(--brand)' }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">{r.title}</p>
+                        <p className="text-[11px] font-light text-white/40">{r.distanceKm.toFixed(1)} km 경로 · 현재 위치에서 {r.distFromHere.toFixed(1)} km</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={closeRouteSheet}
+                className="w-full rounded-2xl py-3.5 text-sm font-light active:opacity-70"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 라이트박스 — 슬라이더 사진 탭 시 원본 확대 */}
       {lightbox && photos.length > 0 && (
