@@ -13,7 +13,7 @@ import GaragePage from './features/garage/GaragePage'
 import VideoCreatorPage from './features/my-routes/video/VideoCreatorPage'
 import VideoPreviewPage from './features/my-routes/video/VideoPreviewPage'
 import AuthListener from './components/AuthListener'
-import FuelCompletePage from './pages/FuelCompletePage'
+import FuelCompletePage from './features/profile/FuelCompletePage'
 import { FuelProvider } from './context/FuelContext'
 import { ThemeProvider } from './context/ThemeContext'
 
