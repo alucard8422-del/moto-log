@@ -27,7 +27,7 @@ export default function AuthListener() {
       if (event === 'SIGNED_IN') {
         // 로그인 화면('/')에서만 앱으로 진입 — 앱 내 재검증 시 이탈 방지
         if (pathnameRef.current === '/') {
-          const lastTab = sessionStorage.getItem(LAST_TAB_KEY) || '/map'
+          const lastTab = sessionStorage.getItem(LAST_TAB_KEY) || '/courses'
           navigate(lastTab)
         }
       }
