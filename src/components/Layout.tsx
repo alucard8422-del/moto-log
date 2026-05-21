@@ -128,19 +128,9 @@ export default function Layout() {
               >
                 {showRec && (
                   <span
-                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-1.5 py-[3px]"
-                    style={{
-                      top:                  '18px',
-                      background:           'rgba(10,15,30,0.72)',
-                      backdropFilter:       'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      border:               '1px solid rgba(239,68,68,0.25)',
-                      whiteSpace:           'nowrap',
-                    }}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" style={{ animation: 'rec-dot-pulse 1.2s ease-in-out infinite' }} />
-                    <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
-                  </span>
+                    className="absolute right-3 top-3 h-2 w-2 rounded-full bg-red-500"
+                    style={{ animation: 'rec-dot-pulse 1.2s ease-in-out infinite' }}
+                  />
                 )}
 
                 <Icon
