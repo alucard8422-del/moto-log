@@ -5,6 +5,7 @@ import { CircleDot, Route, Compass, Warehouse, User, Navigation, LogOut } from '
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 import { supabase } from '../lib/supabaseClient'
+import { useRideRecord } from '../context/RideRecordContext'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'    },
@@ -20,6 +21,7 @@ const LAST_TAB_KEY = 'moto:lastTab'
 export default function Layout() {
   const navigate     = useNavigate()
   const { pathname } = useLocation()
+  const { status: rideStatus } = useRideRecord()
 
   const handleLogout = async () => {
     // 스플래시 재생 + 다음 로그인 시 /courses 기본 진입을 위해 세션 초기화
@@ -97,12 +99,14 @@ export default function Layout() {
           }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
-            const isActive = pathname === path
+            const isActive   = pathname === path
+            const isRecordTab = path === '/map'
+            const showDot    = isRecordTab && rideStatus === 'riding' && !isActive
             return (
               <button
                 key={path}
                 onClick={() => navigate(path)}
-                className="flex flex-1 flex-col items-center gap-1.5 py-4 transition-opacity active:opacity-60"
+                className="relative flex flex-1 flex-col items-center gap-1.5 py-4 transition-opacity active:opacity-60"
               >
                 <Icon
                   size={22}
@@ -118,6 +122,13 @@ export default function Layout() {
                 >
                   {label}
                 </span>
+                {/* 기록 중 빨간 점 — 다른 탭에 있을 때만 표시 */}
+                {showDot && (
+                  <span
+                    className="absolute right-[calc(50%-14px)] top-3 h-2 w-2 rounded-full bg-red-500"
+                    style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
+                  />
+                )}
               </button>
             )
           })}

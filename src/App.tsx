@@ -14,8 +14,9 @@ import VideoCreatorPage from './features/my-routes/video/VideoCreatorPage'
 import VideoPreviewPage from './features/my-routes/video/VideoPreviewPage'
 import AuthListener from './components/AuthListener'
 import FuelCompletePage from './features/profile/FuelCompletePage'
-import { FuelProvider } from './context/FuelContext'
-import { ThemeProvider } from './context/ThemeContext'
+import { FuelProvider }       from './context/FuelContext'
+import { ThemeProvider }      from './context/ThemeContext'
+import { RideRecordProvider } from './context/RideRecordContext'
 
 export default function App() {
   // 세션당 1회만 스플래시 표시
@@ -35,6 +36,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <FuelProvider>
+        <RideRecordProvider>
         <BrowserRouter>
           <AuthListener />
           <Routes>
@@ -54,6 +56,7 @@ export default function App() {
             </Route>
           </Routes>
         </BrowserRouter>
+        </RideRecordProvider>
       </FuelProvider>
     </ThemeProvider>
   )
