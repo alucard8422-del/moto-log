@@ -1,7 +1,7 @@
 // memoryPins.ts — 추억 핀 localStorage CRUD
 // 순수 스토리지 로직만. UI import 없음.
 
-import type { MemoryPin } from '../pages/video/pins/pinTypes'
+import type { MemoryPin } from '../types/video'
 
 const KEY = 'moto:memoryPins'
 

@@ -5,8 +5,8 @@ import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import type { ViewOption } from './videoTypes'
-import type { GpxPoint } from '../../constants/sampleGpxData'
-import { loadBikeImage } from '../../lib/bikeUtils'
+import type { GpxPoint } from '../../../constants/sampleGpxData'
+import { loadBikeImage } from '../../../lib/bikeUtils'
 import type { MemoryPin } from './pins/pinTypes'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN as string

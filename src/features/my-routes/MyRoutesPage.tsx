@@ -2,8 +2,8 @@
 import { useState, useEffect }     from 'react'
 import { useNavigate }             from 'react-router-dom'
 import { CheckCircle }             from 'lucide-react'
-import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../constants/BadgesData'
-import BadgeAchievementModal, { checkRideDiaryBadge } from '../components/BadgeAchievementModal'
+import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../../constants/BadgesData'
+import BadgeAchievementModal, { checkRideDiaryBadge } from '../../components/BadgeAchievementModal'
 
 import KoreaRouteMap      from './routes/KoreaRouteMap'
 import RouteCard          from './routes/RouteCard'
@@ -17,12 +17,12 @@ import { cityLabel, MOCK_SEED_KEY, MOCK_COURSES } from './routes/routeUtils'
 import {
   loadCourses, updateCourse, deleteCourse, shareToCommunity,
   type SavedCourse,
-} from '../lib/courseStorage'
+} from '../../lib/courseStorage'
 import {
   fetchMyCoursesAuth, insertMyCourse, updateMyCourse, deleteMyCourse, uploadCourseImage,
-} from '../lib/courseService'
-import { saveDriveSession } from '../lib/driveSession'
-import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from '../lib/naviUtils'
+} from '../../lib/courseService'
+import { saveDriveSession } from '../../lib/driveSession'
+import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from '../../lib/naviUtils'
 
 export default function MyRoutesPage() {
   const navigate = useNavigate()

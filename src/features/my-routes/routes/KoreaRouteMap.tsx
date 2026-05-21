@@ -4,8 +4,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { KAKAO_APP_KEY } from './routeUtils'
-import type { SavedCourse } from '../../lib/courseStorage'
-import RoadviewModal from '../../components/RoadviewModal'
+import type { SavedCourse } from '../../../lib/courseStorage'
+import RoadviewModal from '../../../components/RoadviewModal'
 
 declare global {
   interface Window { kakao: any }

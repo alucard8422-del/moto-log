@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Route, Clock, MapPin, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown, Play } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur, fmtDate } from './routeUtils'
 import DeleteModal from './DeleteModal'
-import type { SavedCourse } from '../../lib/courseStorage'
+import type { SavedCourse } from '../../../lib/courseStorage'
 
 interface Props {
   course:         SavedCourse

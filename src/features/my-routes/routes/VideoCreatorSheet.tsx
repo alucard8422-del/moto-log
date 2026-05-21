@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Clapperboard, Play } from 'lucide-react'
-import type { SavedCourse } from '../../lib/courseStorage'
+import type { SavedCourse } from '../../../lib/courseStorage'
 import { cityLabel } from './routeUtils'
 
 interface Props {

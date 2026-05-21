@@ -1,7 +1,7 @@
 // routeUtils.ts — 내 경로 / 경로 작성 공통 유틸리티
 // 타입·상수·포맷 함수·거리 계산·도시 매핑 수정 시 이 파일만 건드리면 됩니다.
 
-import type { SavedCourse } from '../../lib/courseStorage'
+import type { SavedCourse } from '../../../lib/courseStorage'
 
 export const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
 
@@ -68,7 +68,7 @@ export function cityLabel(pts: SavedCourse['gpxPoints']): string {
 }
 
 // ── 샘플 데이터 (최초 1회 localStorage 시딩) ──────────────────────────────
-import { YUSONG_SEOUL_POINTS, YUSONG_SEOUL_GPX_XML } from '../../constants/sampleGpxData'
+import { YUSONG_SEOUL_POINTS, YUSONG_SEOUL_GPX_XML } from '../../../constants/sampleGpxData'
 
 export const MOCK_SEED_KEY = 'moto:mock-seeded-v3'   // 이화령 실도로 GPX 샘플로 교체
 

@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ImagePlus, MapPin, X, Save, Loader2 } from 'lucide-react'
-import { compressPhoto } from '../../../lib/memoryPins'
+import { compressPhoto } from '../../../../lib/memoryPins'
 import type { MemoryPin } from './pinTypes'
 
 interface Props {

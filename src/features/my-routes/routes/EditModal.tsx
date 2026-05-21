@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Image, X, CheckCircle, Trash2, MoreHorizontal } from 'lucide-react'
 import { cityLabel } from './routeUtils'
-import type { SavedCourse } from '../../lib/courseStorage'
+import type { SavedCourse } from '../../../lib/courseStorage'
 
 interface Props {
   course:  SavedCourse
