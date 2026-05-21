@@ -13,8 +13,8 @@ import { useNavigate, useLocation }               from 'react-router-dom'
 import { motion, AnimatePresence }                from 'framer-motion'
 import { PenLine, Loader2 }                       from 'lucide-react'
 
-import { saveCourse, shareToCommunity, buildGpxXml, type SavedCourse } from '../../lib/courseStorage'
-import { insertMyCourse } from '../../lib/courseService'
+import { saveCourse, loadCourses, updateCourse, shareToCommunity, buildGpxXml, type SavedCourse } from '../../lib/courseStorage'
+import { insertMyCourse, updateMyCourse } from '../../lib/courseService'
 import { totalDist, type LatLng }     from './routes/routeUtils'
 import { fetchRoute }                 from './planner/routing'
 import RoadviewModal                  from '../../components/RoadviewModal'
@@ -32,11 +32,15 @@ export default function RoutePlanner() {
   // ── 코스 상세에서 "수정하기"로 진입 시 전달되는 상태 ──────────────────────
   const importState = (location.state ?? {}) as {
     importedWaypoints?: LatLng[]
-    userPos?: LatLng
+    userPos?:           LatLng
+    editCourseId?:      string   // 기존 경로계획 글 수정 모드
+    editCourseTitle?:   string
   }
   const importedWaypoints = importState.importedWaypoints
   const importUserPos     = importState.userPos ?? null
   const isImportMode      = !!(importedWaypoints && importedWaypoints.length > 0)
+  const editCourseId      = importState.editCourseId ?? null
+  const editCourseTitle   = importState.editCourseTitle ?? ''
 
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const exitingRef = useRef(false)
@@ -89,7 +93,7 @@ export default function RoutePlanner() {
 
   // ── 일반 UI 상태 ──────────────────────────────────────────────────────────
   const [stage,        setStage]        = useState<'DRAW' | 'CONFIRM'>('DRAW')
-  const [title,        setTitle]        = useState('')
+  const [title,        setTitle]        = useState(editCourseTitle)  // 수정 모드 시 기존 제목 유지
   const [tip,          setTip]          = useState('')
   const [done,         setDone]         = useState(false)
   const [roadviewPos,  setRoadviewPos]  = useState<{ lat: number; lng: number } | null>(null)
@@ -225,11 +229,39 @@ export default function RoutePlanner() {
   // ── 저장 ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback((isPublic: boolean) => {
     if (!canSave) return
-    const now      = Date.now()
-    const savePts  = displayPath.length >= 2 ? displayPath : points
-    const gpxPts   = savePts.map((p, i) => ({
+    const now     = Date.now()
+    const savePts = displayPath.length >= 2 ? displayPath : points
+    const gpxPts  = savePts.map((p, i) => ({
       lat: p.lat, lng: p.lng, timestamp: now + i * 1_000,
     }))
+    const newWaypoints = points.map(p => ({ lat: p.lat, lng: p.lng }))
+
+    // ── 수정 모드: 기존 코스의 경유지·경로만 갱신, 나머지(diary/photo 등) 유지 ──
+    if (editCourseId) {
+      const existing = loadCourses().find(c => c.id === editCourseId)
+      const patch: Partial<SavedCourse> = {
+        title:            title.trim(),
+        distanceKm:       parseFloat(dist.toFixed(1)),
+        durationMin:      Math.round((dist / 60) * 60),
+        gpxPoints:        gpxPts,
+        gpxXml:           buildGpxXml(gpxPts),
+        plannerWaypoints: newWaypoints,
+      }
+      updateCourse(editCourseId, patch)
+      // 서버 PATCH
+      updateMyCourse(editCourseId, patch).then(ok => {
+        if (!ok && existing) {
+          insertMyCourse({ ...existing, ...patch }).catch(e =>
+            console.warn('[RoutePlanner] 수정 서버 저장 실패:', e)
+          )
+        }
+      })
+      setDone(true)
+      setTimeout(() => navigate('/my-routes', { replace: true }), 1_200)
+      return
+    }
+
+    // ── 신규 저장 ──────────────────────────────────────────────────────────
     const course: SavedCourse = {
       id:               crypto.randomUUID(),
       title:            title.trim(),
@@ -241,19 +273,17 @@ export default function RoutePlanner() {
       isShared:         isPublic,
       communityShared:  isPublic,
       diary:            tip.trim() || undefined,
-      // 원본 경유지 저장 → 주행하기 네비 딥링크에 사용
-      plannerWaypoints: points.map(p => ({ lat: p.lat, lng: p.lng })),
+      plannerWaypoints: newWaypoints,
     }
     saveCourse(course)
     if (isPublic) {
       shareToCommunity(course.id)
       window.dispatchEvent(new CustomEvent('moto:community-updated'))
     }
-    // 서버 동기화 (fire-and-forget) — 내 경로 이동 후 서버 기준 로드에서 보이도록
     insertMyCourse(course).catch(e => console.warn('[RoutePlanner] 서버 저장 실패:', e))
     setDone(true)
     setTimeout(() => navigate('/my-routes', { replace: true }), 1_200)
-  }, [canSave, displayPath, points, title, dist, tip, navigate])
+  }, [canSave, displayPath, points, title, dist, tip, navigate, editCourseId])
 
   // ── 렌더 ──────────────────────────────────────────────────────────────────
   return (
@@ -366,6 +396,7 @@ export default function RoutePlanner() {
             tip={tip}
             done={done}
             canSave={canSave}
+            isEditMode={!!editCourseId}
             onReEdit={() => setStage('DRAW')}
             onTitleChange={setTitle}
             onTipChange={setTip}

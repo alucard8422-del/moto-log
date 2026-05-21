@@ -2,7 +2,7 @@
 // 코스 이름 · 한줄 팁 입력 → 내 경로 저장 / 커뮤니티 공유
 
 import { motion } from 'framer-motion'
-import { CheckCircle, RotateCcw, BookmarkPlus, Users } from 'lucide-react'
+import { CheckCircle, RotateCcw, BookmarkPlus, Users, PenLine } from 'lucide-react'
 import type { LatLng } from '../routes/routeUtils'
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
   tip:           string
   done:          boolean
   canSave:       boolean
+  isEditMode?:   boolean   // 기존 경로계획 수정 모드
   onReEdit:      () => void
   onTitleChange: (v: string) => void
   onTipChange:   (v: string) => void
@@ -19,7 +20,7 @@ interface Props {
 }
 
 export default function ConfirmPanel({
-  points, dist: _dist, title, tip, done, canSave,
+  points, dist: _dist, title, tip, done, canSave, isEditMode,
   onReEdit, onTitleChange, onTipChange, onSave,
 }: Props) {
   return (
@@ -86,8 +87,23 @@ export default function ConfirmPanel({
         {done ? (
           <div className="flex items-center justify-center gap-2 rounded-2xl bg-[#FF5A00]/15 py-4 text-sm font-bold text-[#FF5A00]">
             <CheckCircle size={16} strokeWidth={2} />
-            저장 완료 — 내 경로로 돌아갑니다
+            {isEditMode ? '수정 완료 — 내 경로로 돌아갑니다' : '저장 완료 — 내 경로로 돌아갑니다'}
           </div>
+        ) : isEditMode ? (
+          /* 수정 모드: 버튼 1개 */
+          <motion.button
+            onClick={() => onSave(false)}
+            disabled={!canSave}
+            whileTap={canSave ? { scale: 0.96 } : {}}
+            className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold transition-colors ${
+              canSave
+                ? 'bg-[#FF5A00] text-white active:opacity-80'
+                : 'cursor-not-allowed bg-white/5 text-white/20'
+            }`}
+          >
+            <PenLine size={15} strokeWidth={2} />
+            경유지 수정 완료
+          </motion.button>
         ) : (
           <div className="flex gap-2">
             <motion.button

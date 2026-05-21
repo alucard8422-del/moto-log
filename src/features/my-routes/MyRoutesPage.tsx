@@ -1,5 +1,6 @@
 // MyRoutesPage.tsx — 내 경로 메뉴 메인
 import { useState, useEffect }     from 'react'
+import { useNavigate }             from 'react-router-dom'
 import { useModalBackButton }      from '../../hooks/useModalBackButton'
 import { CheckCircle }             from 'lucide-react'
 import { BADGES, RIDE_DIARY_TIER_META, type Tier } from '../../constants/BadgesData'
@@ -25,6 +26,7 @@ import { saveDriveSession } from '../../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from '../../lib/naviUtils'
 
 export default function MyRoutesPage() {
+  const navigate = useNavigate()
   const [courses,     setCourses]     = useState<SavedCourse[]>([])
   const [isLoading,   setIsLoading]   = useState(true)
   const [editTarget,  setEditTarget]  = useState<SavedCourse | null>(null)
@@ -158,6 +160,18 @@ export default function MyRoutesPage() {
     window.dispatchEvent(new CustomEvent('moto:startDrive', { detail: session }))
   }
 
+  const handleEditRoute = () => {
+    if (!editTarget?.plannerWaypoints?.length) return
+    setEditTarget(null)
+    navigate('/route-planner', {
+      state: {
+        importedWaypoints: editTarget.plannerWaypoints,
+        editCourseId:      editTarget.id,
+        editCourseTitle:   editTarget.title ?? '',
+      },
+    })
+  }
+
   const handleShareConfirm = (id: string) => {
     shareToCommunity(id)                                    // 로컬
     updateMyCourse(id, { communityShared: true })           // 서버 (fire-and-forget)
@@ -255,7 +269,12 @@ export default function MyRoutesPage() {
       </div>
 
       {editTarget && (
-        <EditModal course={editTarget} onSave={handleSave} onClose={() => setEditTarget(null)} />
+        <EditModal
+          course={editTarget}
+          onSave={handleSave}
+          onClose={() => setEditTarget(null)}
+          onEditRoute={handleEditRoute}
+        />
       )}
       {videoTarget && (
         <VideoCreatorSheet course={videoTarget} onClose={() => setVideoTarget(null)} />

@@ -2,18 +2,20 @@
 // 공유 시 CourseDetailModal에 그대로 표시되므로 동일한 구조로 작성
 
 import { useState, useEffect, useRef } from 'react'
-import { MapPin, Route, Clock, Image, CheckCircle, Trash2, MoreHorizontal } from 'lucide-react'
+import { MapPin, Route, Clock, Image, CheckCircle, Trash2, MoreHorizontal, PenLine } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur } from './routeUtils'
 import type { SavedCourse } from '../../../lib/courseStorage'
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock'
 
 interface Props {
-  course:  SavedCourse
-  onSave:  (id: string, diary: string, photos: string[]) => void
-  onClose: () => void
+  course:        SavedCourse
+  onSave:        (id: string, diary: string, photos: string[]) => void
+  onClose:       () => void
+  onEditRoute?:  () => void   // 경로계획 글 전용: 경유지 수정
 }
 
-export default function EditModal({ course, onSave, onClose }: Props) {
+export default function EditModal({ course, onSave, onClose, onEditRoute }: Props) {
+  const isPlanned = Array.isArray(course.plannerWaypoints) && course.plannerWaypoints.length > 0
   const [open, setOpen]             = useState(false)
   const [diary, setDiary]           = useState(course.diary ?? '')
   const [photos, setPhotos]         = useState<string[]>(course.coverPhoto ? [course.coverPhoto] : [])
@@ -234,6 +236,17 @@ export default function EditModal({ course, onSave, onClose }: Props) {
               />
               <p className="text-right text-[10px] font-light text-white/20">{diary.length}/300</p>
             </div>
+
+            {/* 경로 수정하기 (경로계획 글 전용) */}
+            {isPlanned && onEditRoute && (
+              <button
+                onClick={onEditRoute}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] py-3.5 text-sm font-semibold text-white/70 active:opacity-60"
+              >
+                <PenLine size={15} strokeWidth={1.8} className="text-[#FF5A00]" />
+                경유지 수정하기
+              </button>
+            )}
 
             {/* 저장 버튼 */}
             <button
