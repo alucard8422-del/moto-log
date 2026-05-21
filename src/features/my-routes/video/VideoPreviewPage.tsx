@@ -3,11 +3,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Clapperboard, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Clapperboard, RotateCcw, ImagePlus, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { loadCourses } from '../../../lib/courseStorage'
 import { parseGpxPoints } from '../../../constants/sampleGpxData'
-import { loadPins, savePin, deletePin } from '../../../lib/memoryPins'
+import {
+  loadPins, savePins, savePin, deletePin,
+  extractExifGps, findClosestFraction, distToRoute, compressPhoto,
+} from '../../../lib/memoryPins'
 import MapboxPreview from './MapboxPreview'
 import { VIEW_OPTIONS, type ViewOption } from './videoTypes'
 import type { GpxPoint } from '../../../constants/sampleGpxData'
@@ -103,9 +106,13 @@ export default function VideoPreviewPage() {
   const isDraggingRef  = useRef(false)
 
   // ── 추억 핀 ──────────────────────────────────────────────────────────────────
-  const [pins,      setPins]      = useState<MemoryPin[]>([])
-  const [pinPopup,  setPinPopup]  = useState<{ lat: number; lng: number; fraction: number } | null>(null)
-  const [nearbyPin, setNearbyPin] = useState<MemoryPin | null>(null)
+  const [pins,          setPins]        = useState<MemoryPin[]>([])
+  const [pinPopup,      setPinPopup]    = useState<{ lat: number; lng: number; fraction: number } | null>(null)
+  const [nearbyPin,     setNearbyPin]   = useState<MemoryPin | null>(null)
+  // 사진 EXIF 자동 핀
+  const [photoImporting, setPhotoImporting] = useState(false)
+  const [importResult,   setImportResult]   = useState<{ added: number; noGps: number } | null>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const pinsRef            = useRef<MemoryPin[]>([])
   const nearbyPinRef       = useRef<MemoryPin | null>(null)
   const dismissedPinIdsRef = useRef(new Set<string>())
@@ -291,6 +298,61 @@ export default function VideoPreviewPage() {
     nearbyPinRef.current = null
     setNearbyPin(null)
     setPinPopup(null)
+  }
+
+  // ── 사진 EXIF 자동 추억핀 ────────────────────────────────────────────────
+  async function handlePhotoImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
+    e.target.value = ''   // 동일 파일 재선택 허용
+
+    setPhotoImporting(true)
+    setImportResult(null)
+
+    let added  = 0
+    let noGps  = 0
+    const newPins: MemoryPin[] = []
+
+    for (const file of files) {
+      try {
+        const gps = await extractExifGps(file)
+        if (!gps) { noGps++; continue }
+
+        // 경로와 너무 멀면 (>5km) 스킵 — 다른 날 찍은 사진 방지
+        const dist = distToRoute(gps.lat, gps.lng, points)
+        if (dist > 5000) { noGps++; continue }
+
+        const [photo, fraction] = await Promise.all([
+          compressPhoto(file),
+          Promise.resolve(findClosestFraction(gps.lat, gps.lng, points)),
+        ])
+
+        newPins.push({
+          id:        crypto.randomUUID(),
+          courseId:  courseId!,
+          lat:       gps.lat,
+          lng:       gps.lng,
+          fraction,
+          photo,
+          memo:      undefined,
+          createdAt: new Date().toISOString(),
+        })
+        added++
+      } catch {
+        noGps++
+      }
+    }
+
+    if (newPins.length > 0) {
+      savePins(newPins)
+      setPins(prev => [...prev, ...newPins])
+      // 새로 추가된 핀은 바로 카드 팝업되지 않도록 dismissedSet에 추가
+      newPins.forEach(p => dismissedPinIdsRef.current.add(p.id))
+    }
+
+    setPhotoImporting(false)
+    setImportResult({ added, noGps })
+    setTimeout(() => setImportResult(null), 4000)
   }
 
   function handleStyleChange(url: string) {
@@ -495,6 +557,19 @@ export default function VideoPreviewPage() {
             다시보기
           </button>
 
+          {/* 사진으로 추억핀 */}
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={photoImporting}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/15 bg-white/8 py-3.5 text-[12px] font-semibold text-white/70 active:opacity-70 disabled:opacity-50"
+          >
+            {photoImporting
+              ? <Loader2 size={13} strokeWidth={2} className="animate-spin" />
+              : <ImagePlus size={13} strokeWidth={2} />
+            }
+            사진 핀
+          </button>
+
           <button
             onClick={handleMakeVideo}
             disabled={!ended}
@@ -508,7 +583,53 @@ export default function VideoPreviewPage() {
             {ended ? `${view.emoji} 이대로 영상 만들기` : '경로 확인 중…'}
           </button>
         </div>
+
+        {/* 숨겨진 파일 입력 */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handlePhotoImport}
+          className="hidden"
+        />
       </div>
+
+      {/* 사진 임포트 결과 토스트 */}
+      <AnimatePresence>
+        {importResult && (
+          <motion.div
+            className="absolute inset-x-4 z-[300] flex items-center gap-3 rounded-2xl px-4 py-3"
+            style={{ bottom: '230px', background: 'rgba(15,20,35,0.92)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)' }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+          >
+            {importResult.added > 0
+              ? <CheckCircle size={18} strokeWidth={2} className="shrink-0 text-emerald-400" />
+              : <AlertCircle size={18} strokeWidth={2} className="shrink-0 text-amber-400" />
+            }
+            <div className="flex-1">
+              {importResult.added > 0 && (
+                <p className="text-[13px] font-bold text-white">
+                  추억 핀 {importResult.added}개 추가됨
+                </p>
+              )}
+              {importResult.noGps > 0 && (
+                <p className="text-[11px] font-light text-white/50">
+                  GPS 정보 없는 사진 {importResult.noGps}개 제외
+                </p>
+              )}
+              {importResult.added === 0 && importResult.noGps > 0 && (
+                <p className="text-[13px] font-bold text-amber-300">
+                  추가된 핀이 없어요
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* 추억 핀 팝업 — 일시정지 + 롱프레스 시 표시 */}
       <AnimatePresence>
         {pinPopup && (
