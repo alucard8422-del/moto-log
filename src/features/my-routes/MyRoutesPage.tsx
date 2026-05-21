@@ -172,6 +172,11 @@ export default function MyRoutesPage() {
         <h2 className="text-[28px] font-extrabold tracking-tight text-main">내 경로</h2>
       </div>
 
+      {/* ── 전국 누적 동선 지도 ── */}
+      <div className="mx-5 mb-5">
+        <KoreaRouteMap courses={courses} isLoading={isLoading} />
+      </div>
+
       {/* ── 요약 통계 ── */}
       {courses.length > 0 && (
         <div
@@ -200,11 +205,6 @@ export default function MyRoutesPage() {
           ))}
         </div>
       )}
-
-      {/* ── 전국 누적 동선 지도 ── */}
-      <div className="mx-5 mb-5">
-        <KoreaRouteMap courses={courses} isLoading={isLoading} />
-      </div>
 
       {/* ── 경로 카드 목록 ── */}
       <div className="px-5">
