@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
-const LAST_TAB_KEY = 'moto:lastTab'
-
 /**
  * BrowserRouter 안에 한 번만 렌더링되는 전역 Auth 상태 감지 컴포넌트.
  *
