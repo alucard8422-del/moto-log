@@ -1,7 +1,10 @@
-// RideHUD.tsx — 주행 중 상단 HUD (시간 / 거리 / 평균속도)
-// 주행 HUD UI 수정 시 이 파일만 건드리면 됩니다.
+// RideHUD.tsx — 주행 중 상단 HUD (3개 분리 카드)
+// 아이콘만으로 기능 구분 | tabular-nums + minWidth 고정으로 레이아웃 흔들림 없음
 
-// ── 시간 포맷 (초 → 00:00 or 0:00:00) ──────────────────────────────────
+import { Timer, Route, Gauge } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+
+// ── 시간 포맷 (초 → MM:SS or H:MM:SS) ────────────────────────────────────
 export function fmtTime(s: number): string {
   const h   = Math.floor(s / 3600)
   const m   = Math.floor((s % 3600) / 60)
@@ -11,48 +14,86 @@ export function fmtTime(s: number): string {
     : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
-// ── HUD 수치 한 칸 ────────────────────────────────────────────────────────
-function HUDCol({ value, label }: { value: string; label: string }) {
+// ── 카드 공통 ─────────────────────────────────────────────────────────────
+interface CardProps {
+  icon:    LucideIcon
+  value:   string
+  unit?:   string
+  valW:    number   // 숫자 칸 고정 너비(px) — 레이아웃 흔들림 방지
+}
+
+function HUDCard({ icon: Icon, value, unit, valW }: CardProps) {
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div
+      className="flex items-center gap-1.5 rounded-2xl px-3 py-2.5"
+      style={{
+        background:           'rgba(255,255,255,0.94)',
+        backdropFilter:       'blur(18px)',
+        WebkitBackdropFilter: 'blur(18px)',
+        border:               '1px solid rgba(255,90,0,0.18)',
+        boxShadow:            '0 2px 12px rgba(0,0,0,0.07), 0 0 0 0.5px rgba(255,90,0,0.08)',
+      }}
+    >
+      {/* 기능 아이콘 */}
+      <Icon
+        size={14}
+        strokeWidth={2.2}
+        style={{ color: '#FF5A00', flexShrink: 0 }}
+      />
+
+      {/* 숫자 — tabular-nums + 고정폭으로 레이아웃 고정 */}
       <span
-        className="text-3xl font-bold leading-none text-[#FF5A00] md:text-5xl [@media(orientation:landscape)]:text-2xl"
-        style={{
-          fontFamily: "'Orbitron', sans-serif",
-          textShadow: '0 0 10px rgba(255,90,0,0.5)',
-        }}
+        className="tabular-nums text-[13px] font-bold leading-none text-[#111827]"
+        style={{ minWidth: valW, display: 'inline-block' }}
       >
         {value}
       </span>
-      <span
-        className="whitespace-nowrap text-[9px] font-medium uppercase tracking-tighter text-white/50 [@media(orientation:landscape)]:text-[8px]"
-        style={{ fontFamily: "'Urbanist', sans-serif" }}
-      >
-        {label}
-      </span>
+
+      {/* 단위 */}
+      {unit && (
+        <span className="text-[10px] font-medium leading-none text-[#9CA3AF]">
+          {unit}
+        </span>
+      )}
     </div>
   )
 }
 
-// ── 주행 중 HUD 전체 ──────────────────────────────────────────────────────
+// ── 메인 HUD ─────────────────────────────────────────────────────────────
 interface RideHUDProps {
   duration: number   // 초
   distance: number   // km
 }
 
 export default function RideHUD({ duration, distance }: RideHUDProps) {
-  const avg = duration > 0 ? distance / (duration / 3600) : 0
+  const speed = duration > 0 ? distance / (duration / 3600) : 0
 
   return (
-    <div className="pointer-events-none fixed top-8 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-3 [@media(orientation:landscape)]:top-3">
-      <div className="flex items-center justify-center gap-x-10 md:gap-x-16">
-        <HUDCol value={fmtTime(duration)} label="주행시간" />
-        <HUDCol value={distance.toFixed(2)}  label="주행거리" />
-        <HUDCol value={avg.toFixed(0)}        label="평균속도" />
+    <div className="pointer-events-none fixed top-5 inset-x-0 z-50 flex justify-center">
+      <div className="flex items-center gap-2">
+        {/* 녹화 시간 */}
+        <HUDCard
+          icon={Timer}
+          value={fmtTime(duration)}
+          valW={52}   // "0:00:00" 최대 7자 커버
+        />
+
+        {/* 이동 거리 */}
+        <HUDCard
+          icon={Route}
+          value={distance.toFixed(1)}
+          unit="km"
+          valW={36}   // "999.9" 5자 커버
+        />
+
+        {/* 현재 속도 */}
+        <HUDCard
+          icon={Gauge}
+          value={speed.toFixed(0)}
+          unit="km/h"
+          valW={28}   // "999" 3자 커버
+        />
       </div>
-      <p className="text-xs font-medium text-[#FF5A00] animate-pulse drop-shadow-[0_0_5px_rgba(255,90,0,0.6)]">
-        • 경로를 기록중입니다
-      </p>
     </div>
   )
 }
