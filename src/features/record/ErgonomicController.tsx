@@ -2,7 +2,7 @@
 // ▲ 삼각형: 탭바 top edge에 절반 걸치는 구조 (상단=지도, 하단=탭바)
 // 팬 버튼 + ▲ 전부 동일 수직 중심축 정렬
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Square, Flag, Timer, Route, Gauge, Compass, Settings, Play } from 'lucide-react'
 import { type RideStatus } from './types'
@@ -160,15 +160,29 @@ function Triangle({ open }: { open: boolean }) {
 }
 
 // ── Idle 컨트롤러 ────────────────────────────────────────────────────────
+// 애니메이션 완료까지 대기 시간 (spring settle 기준)
+const TOGGLE_LOCK_MS = 420
+
 function IdleController({ onStart, onStartDirect, onNaviSelect }: {
   onStart:       () => void
   onStartDirect: () => void
   onNaviSelect:  () => void
 }) {
   const [open, setOpen] = useState(false)
+  const busyRef         = useRef(false)
+
+  const toggleOpen = () => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setOpen(prev => !prev)
+    setTimeout(() => { busyRef.current = false }, TOGGLE_LOCK_MS)
+  }
 
   const handleAction = (key: string) => {
+    if (busyRef.current) return
+    busyRef.current = true
     setOpen(false)
+    setTimeout(() => { busyRef.current = false }, TOGGLE_LOCK_MS)
     if      (key === 'direct')      onStartDirect()
     else if (key === 'navi')        onStart()
     else                            onNaviSelect()
@@ -187,7 +201,7 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            onClick={() => setOpen(false)}
+            onClick={toggleOpen}
           />
         )}
       </AnimatePresence>
@@ -260,7 +274,7 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
             width:  TOUCH_W,
             height:    TOUCH_H,
           }}
-          onClick={() => setOpen(prev => !prev)}
+          onClick={toggleOpen}
         >
           <Triangle open={open} />
         </div>

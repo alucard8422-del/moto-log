@@ -1,7 +1,7 @@
 // MyRoutesController.tsx — 내 경로 탭 위 ▲ 삼각형 + 수직 팬 메뉴
 // ErgonomicController(기록 탭, index 0)와 동일 원리 — index 1 (내 경로) 기준 정렬
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PenLine } from 'lucide-react'
@@ -79,13 +79,27 @@ function Triangle({ open }: { open: boolean }) {
   )
 }
 
+// 애니메이션 완료까지 대기 시간
+const TOGGLE_LOCK_MS = 420
+
 // ── 메인 컨트롤러 ────────────────────────────────────────────────────────
 export default function MyRoutesController() {
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]   = useState(false)
+  const busyRef           = useRef(false)
+
+  const toggleOpen = () => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setOpen(prev => !prev)
+    setTimeout(() => { busyRef.current = false }, TOGGLE_LOCK_MS)
+  }
 
   const handleAction = (path: string) => {
+    if (busyRef.current) return
+    busyRef.current = true
     setOpen(false)
+    setTimeout(() => { busyRef.current = false }, TOGGLE_LOCK_MS)
     navigate(path)
   }
 
@@ -102,7 +116,7 @@ export default function MyRoutesController() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            onClick={() => setOpen(false)}
+            onClick={toggleOpen}
           />
         )}
       </AnimatePresence>
@@ -169,7 +183,7 @@ export default function MyRoutesController() {
             width:  TOUCH_W,
             height: TOUCH_H,
           }}
-          onClick={() => setOpen(prev => !prev)}
+          onClick={toggleOpen}
         >
           <Triangle open={open} />
         </div>
