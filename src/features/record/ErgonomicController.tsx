@@ -284,17 +284,17 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
 }
 
 // ── Riding 컨트롤러 ──────────────────────────────────────────────────────
-// 기록 탭 ◎ 아이콘 중심 Y: 탭바 top(104) - py-4(16) - icon반지름(11) = 77px from screen bottom
-const RECORD_ICON_Y  = 77   // 기록 탭 아이콘 중심 (screen bottom 기준)
-const STOP_SIZE      = 48   // 정지 버튼 직경
+// 정지 버튼을 탭바 세로 중앙에 배치: TAB_BAR_BOTTOM(20) + TAB_BAR_H/2(42) = 62px
+const STOP_BTN_CENTER_Y = TAB_BAR_BOTTOM + Math.floor(TAB_BAR_H / 2)   // 62px from screen bottom
+const STOP_SIZE         = 48   // 정지 버튼 직경
+// ●REC 배지: 정지 버튼 상단 + 2px 위 (탭바 안에 유지)
+const REC_BADGE_BOTTOM  = STOP_BTN_CENTER_Y + STOP_SIZE / 2 + 2        // 88px from screen bottom
 
-// 정지 버튼 원 중심 → 화면 하단 기준 77px
-// 원 상단 edge → 77 + 24 = 101px
-// ●REC 배지 bottom: 원 상단 + 6px 여백 = 107px (화면 하단 기준)
-const REC_BADGE_BOTTOM = RECORD_ICON_Y + STOP_SIZE / 2 + 6   // 107px
 
 function RidingController({ onStop }: { onStop: () => void }) {
-  const stopBtnBottom = RECORD_ICON_Y - TAB_BAR_BOTTOM - STOP_SIZE / 2  // 33px
+  // 정지 버튼 bottom (touch div 내부 기준) = 탭바 세로 중앙 - touch div 시작점 - 반지름
+  // = 62 - 20 - 24 = 18px
+  const stopBtnBottom = STOP_BTN_CENTER_Y - TAB_BAR_BOTTOM - STOP_SIZE / 2  // 18px
 
   return (
     <div

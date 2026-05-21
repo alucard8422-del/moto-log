@@ -1,12 +1,11 @@
 // Layout.tsx — 공통 헤더 + 탭바
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { CircleDot, Route, Compass, Warehouse, User, Navigation, LogOut, X, AlertTriangle } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 import { supabase } from '../lib/supabaseClient'
 import { useRideRecord } from '../context/RideRecordContext'
-import { useModalBackButton } from '../hooks/useModalBackButton'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'    },
@@ -23,36 +22,82 @@ export default function Layout() {
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const { status: rideStatus } = useRideRecord()
-  const isRecording = rideStatus === 'riding'
+  const isRecording  = rideStatus === 'riding'
 
+  // ── 상태 ──────────────────────────────────────────────────────────────────
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [showExitToast,   setShowExitToast]   = useState(false)
 
-  // 뒤로가기로 확인 모달 닫기
-  useModalBackButton(showExitConfirm, () => setShowExitConfirm(false))
+  const showExitConfirmRef = useRef(showExitConfirm)
+  const exitReadyRef       = useRef(false)   // 뒤로가기 두 번 대기 중
+  const exitTimerRef       = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  const handleLogout = async () => {
-    if (isRecording) {
-      setShowExitConfirm(true)
-      return
+  useEffect(() => { showExitConfirmRef.current = showExitConfirm }, [showExitConfirm])
+
+  // ── 탭 페이지 진입 시 뒤로가기 센티넬 + 두 번 종료 로직 ──────────────────
+  useEffect(() => {
+    if (!TAB_PATHS.includes(pathname as typeof TAB_PATHS[number])) return
+
+    // 센티넬 쌓기
+    window.history.pushState({ motoTabSentinel: true }, '')
+
+    const onPop = () => {
+      // ① 로그아웃 확인 모달이 열려 있으면 모달만 닫기
+      if (showExitConfirmRef.current) {
+        setShowExitConfirm(false)
+        window.history.pushState({ motoTabSentinel: true }, '')  // 센티넬 복원
+        return
+      }
+
+      // ② 이미 토스트가 떠 있으면 → 진짜 종료 허용 (센티넬 재push 안 함)
+      if (exitReadyRef.current) {
+        clearTimeout(exitTimerRef.current)
+        exitReadyRef.current = false
+        setShowExitToast(false)
+        return
+      }
+
+      // ③ 첫 번째 뒤로가기 → 토스트 표시 + 센티넬 복원
+      window.history.pushState({ motoTabSentinel: true }, '')
+      exitReadyRef.current = true
+      setShowExitToast(true)
+      clearTimeout(exitTimerRef.current)
+      exitTimerRef.current = setTimeout(() => {
+        exitReadyRef.current = false
+        setShowExitToast(false)
+      }, 2500)
     }
+
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      clearTimeout(exitTimerRef.current)
+      exitReadyRef.current = false
+      setShowExitToast(false)
+    }
+  }, [pathname]) // eslint-disable-line
+
+  // ── 로그아웃 ───────────────────────────────────────────────────────────────
+  const handleLogout = async () => {
+    if (isRecording) { setShowExitConfirm(true); return }
     await doLogout()
   }
-
   const doLogout = async () => {
     sessionStorage.removeItem('moto_splash')
     sessionStorage.removeItem(LAST_TAB_KEY)
     await supabase.auth.signOut()
   }
 
-  const isMapPage    = pathname === '/map'
-  const isPlanner    = pathname === '/route-planner'
-  const isFullScreen = isMapPage || isPlanner
-
+  // ── 탭 저장 ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (TAB_PATHS.includes(pathname as typeof TAB_PATHS[number])) {
       sessionStorage.setItem(LAST_TAB_KEY, pathname)
     }
   }, [pathname])
+
+  const isMapPage    = pathname === '/map'
+  const isPlanner    = pathname === '/route-planner'
+  const isFullScreen = isMapPage || isPlanner
 
   return (
     <div className="relative flex min-h-svh flex-col bg-app">
@@ -68,28 +113,21 @@ export default function Layout() {
             borderBottom:          '1px solid var(--glass-border)',
           }}
         >
-          {/* 로고 */}
           <div className="flex items-center gap-2">
             <Navigation size={18} strokeWidth={1.5} className="text-brand" />
-            <span className="text-[17px] font-extrabold tracking-tight text-main">
-              MotoLog
-            </span>
+            <span className="text-[17px] font-extrabold tracking-tight text-main">MotoLog</span>
           </div>
 
           {/* 기록중 문구 — 헤더 정중앙 */}
           {isRecording && (
             <span
               className="absolute left-1/2 -translate-x-1/2 text-[12px] font-bold tracking-wide"
-              style={{
-                color:     'var(--brand)',
-                animation: 'recording-pulse 1.6s ease-in-out infinite',
-              }}
+              style={{ color: 'var(--brand)', animation: 'recording-pulse 1.6s ease-in-out infinite' }}
             >
               ● 경로 기록중
             </span>
           )}
 
-          {/* 로그아웃 */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-opacity active:opacity-60"
@@ -126,13 +164,38 @@ export default function Layout() {
           }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
-            const isActive = pathname === path
+            const isActive    = pathname === path
+            const isRecordTab = path === '/map'
+            // 다른 메뉴에 있을 때 기록 탭에 ●REC 표시 (기록 메뉴에서는 ErgonomicController가 담당)
+            const showRec     = isRecordTab && isRecording && !isMapPage
+
             return (
               <button
                 key={path}
                 onClick={() => navigate(path)}
                 className="relative flex flex-1 flex-col items-center gap-1.5 py-4 transition-opacity active:opacity-60"
               >
+                {/* ●REC 배지 — 탭바 안쪽 기록 아이콘 상단 (다른 탭에서만) */}
+                {showRec && (
+                  <span
+                    className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-1.5 py-[3px]"
+                    style={{
+                      top:                  '4px',
+                      background:           'rgba(10,15,30,0.72)',
+                      backdropFilter:       'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)',
+                      border:               '1px solid rgba(239,68,68,0.25)',
+                      whiteSpace:           'nowrap',
+                    }}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-red-500"
+                      style={{ animation: 'rec-dot-pulse 1.2s ease-in-out infinite' }}
+                    />
+                    <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
+                  </span>
+                )}
+
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.2 : 1.6}
@@ -153,21 +216,35 @@ export default function Layout() {
         </div>
       </nav>
 
+      {/* ── 뒤로가기 두 번 종료 토스트 — 화면 중앙 텍스트 ── */}
+      {showExitToast && (
+        <div
+          className="pointer-events-none fixed inset-0 z-[500] flex items-center justify-center"
+        >
+          <span
+            className="rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80"
+            style={{
+              background:           'rgba(10,15,30,0.72)',
+              backdropFilter:       'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}
+          >
+            한 번 더 뒤로가기하면 종료합니다
+          </span>
+        </div>
+      )}
+
       {/* ── 기록 중 로그아웃 확인 모달 ── */}
       {showExitConfirm && (
         <>
-          {/* 딤 */}
           <div
             className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
             onClick={() => setShowExitConfirm(false)}
           />
-
-          {/* 모달 패널 */}
           <div
             className="fixed inset-x-4 top-1/2 z-[201] -translate-y-1/2 rounded-3xl p-6"
             style={{ background: '#111622', border: '1px solid rgba(255,255,255,0.10)', maxWidth: 360, margin: '0 auto' }}
           >
-            {/* 닫기 */}
             <button
               onClick={() => setShowExitConfirm(false)}
               className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full active:opacity-60"
@@ -175,19 +252,13 @@ export default function Layout() {
             >
               <X size={15} strokeWidth={1.5} className="text-white/50" />
             </button>
-
-            {/* 경고 아이콘 */}
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.12)' }}>
               <AlertTriangle size={22} strokeWidth={1.5} className="text-red-400" />
             </div>
-
-            {/* 제목 / 설명 */}
             <p className="mb-1.5 text-[16px] font-bold text-white">경로 기록 중이에요</p>
             <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
               지금 로그아웃하면 현재까지의<br />기록이 저장되지 않습니다.
             </p>
-
-            {/* 버튼 */}
             <div className="flex gap-2.5">
               <button
                 onClick={() => setShowExitConfirm(false)}
