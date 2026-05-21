@@ -7,7 +7,7 @@ import { NAVI_OPTIONS, NAVI_STORAGE_KEY, type NavigationType } from '../types/ri
 import NavigationCountdownPopup from './NavigationCountdownPopup'
 import {
   loadCourses, loadCommunityCourses, addComment,
-  type CourseComment, type SavedCourse,
+  type CourseComment,
 } from '../lib/courseStorage'
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
