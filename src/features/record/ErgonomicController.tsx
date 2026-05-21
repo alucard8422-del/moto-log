@@ -22,7 +22,7 @@ interface Props {
 const FAN_ITEMS = [
   { key: 'direct',      Icon: Play,     label: '바로 시작',   fill: true,  color: '#FF5A00' },
   { key: 'navi',        Icon: Compass,  label: '내비로 시작', fill: false, color: '#0F172A' },
-  { key: 'navi-select', Icon: Settings, label: '네비 선택',   fill: false, color: '#475569' },
+  { key: 'navi-select', Icon: Settings, label: '내비 선택',   fill: false, color: '#475569' },
 ] as const
 
 // ── 글래스 스타일 ────────────────────────────────────────────────────────

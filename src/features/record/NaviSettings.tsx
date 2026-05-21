@@ -1,4 +1,5 @@
 // NaviSettings.tsx
+import { useState, useEffect } from 'react'
 import { Check, ChevronRight } from 'lucide-react'
 import { NAVI_OPTIONS, type NavigationType } from './types'
 
@@ -17,14 +18,17 @@ export default function NaviSettings({
   onClose,
   isFirstLaunch,
 }: Props) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
+
   return (
     <>
       <div
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        className={`fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={isFirstLaunch ? undefined : onClose}
       />
 
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-500 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="mx-auto max-w-sm rounded-t-3xl bg-[#161B26]/98 px-5 pt-5 pb-10 backdrop-blur-xl">
           <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
 
@@ -48,7 +52,6 @@ export default function NaviSettings({
                       : 'bg-white/5 ring-0'
                   }`}
                 >
-                  {/* 배지 */}
                   <div
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-black ${
                       isSelected
@@ -59,7 +62,6 @@ export default function NaviSettings({
                     {opt.badge}
                   </div>
 
-                  {/* 텍스트 */}
                   <div className="flex-1 text-left">
                     <p className={`text-sm font-bold ${isSelected ? 'text-[#FF5A00]' : 'text-white/70'}`}>
                       {opt.label}
@@ -67,7 +69,6 @@ export default function NaviSettings({
                     <p className="text-[11px] font-light text-white/30">{opt.label}</p>
                   </div>
 
-                  {/* 체크 */}
                   <div
                     className={`flex h-5 w-5 items-center justify-center rounded-full ${
                       isSelected ? 'bg-[#FF5A00]' : 'bg-white/8'
