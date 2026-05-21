@@ -88,10 +88,11 @@ export function buildSegmentDeepLink(
   }
 
   if (type === 'kakao') {
-    // 카카오내비 공식 딥링크: ep=경도,위도 (sp 미지원 — 현재위치 자동 사용)
-    // via1=경도,위도&via1name=이름 형식 (최대 5개)
+    // 카카오내비 딥링크: appkey 인증 필수, ep=경도,위도 형식
+    const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
     let url = `kakaonavi://navigate`
-    url += `?ep=${goal.lng},${goal.lat}&epname=${enc(goalName)}`
+    url += `?appkey=${KAKAO_APP_KEY}`
+    url += `&ep=${goal.lng},${goal.lat}&epname=${enc(goalName)}`
     vias.forEach((v, i) => {
       url += `&via${i + 1}=${v.lng},${v.lat}&via${i + 1}name=${enc(`경유${i + 1}`)}`
     })
