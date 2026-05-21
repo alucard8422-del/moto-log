@@ -88,13 +88,13 @@ export function buildSegmentDeepLink(
   }
 
   if (type === 'kakao') {
-    // 카카오내비는 sp(출발지) 파라미터를 지원하지 않음 — 현재 위치를 자동 출발지로 사용
-    // via 파라미터: via1x/via1y 형식 사용
+    // 카카오내비 딥링크: epx/epy 분리 형식 (ep=lng,lat 합산 형식 미지원)
+    // 출발지(sp)는 현재 위치 자동 사용 — sp 파라미터 불필요
+    // 경유지: via1x/via1y/via1name 형식
     let url = `kakaonavi://navigate`
-    url += `?ep=${goal.lng},${goal.lat}&epname=${enc(goalName)}`
-    url += `&coordType=wgs84`
+    url += `?epx=${goal.lng}&epy=${goal.lat}&epname=${enc(goalName)}`
     vias.forEach((v, i) => {
-      url += `&via${i + 1}x=${v.lng}&via${i + 1}y=${v.lat}`
+      url += `&via${i + 1}x=${v.lng}&via${i + 1}y=${v.lat}&via${i + 1}name=${enc(`경유${i + 1}`)}`
     })
     return url
   }
