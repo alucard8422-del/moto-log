@@ -103,6 +103,9 @@ export default function KoreaRouteMap({ courses }: Props) {
   useEffect(() => {
     if (!mapReady || !mapRef.current || !window.kakao?.maps) return
 
+    // courses가 바뀌면 이전 geolocation 콜백을 무효화
+    let cancelled = false
+
     // 기존 폴리라인 제거
     polylinesRef.current.forEach(p => p.setMap(null))
     polylinesRef.current = []
@@ -113,20 +116,20 @@ export default function KoreaRouteMap({ courses }: Props) {
       // ── 경로 없음: 현재 위치로 중앙 이동 ──────────────────────────
       navigator.geolocation.getCurrentPosition(
         ({ coords }) => {
-          if (!mapRef.current) return
+          if (cancelled || !mapRef.current) return   // 경로가 뒤늦게 로드되면 무시
           mapRef.current.setCenter(
             new window.kakao.maps.LatLng(coords.latitude, coords.longitude)
           )
-          mapRef.current.setLevel(5)   // 시/군 단위
+          mapRef.current.setLevel(5)
         },
         () => {
-          // 위치 권한 거부 시 대한민국 중앙 유지
-          mapRef.current?.setCenter(new window.kakao.maps.LatLng(36.2, 127.9))
-          mapRef.current?.setLevel(13)
+          if (cancelled || !mapRef.current) return
+          mapRef.current.setCenter(new window.kakao.maps.LatLng(36.2, 127.9))
+          mapRef.current.setLevel(13)
         },
         { timeout: 5000 }
       )
-      return
+      return () => { cancelled = true }
     }
 
     // ── 경로 있음: 폴리라인 그리고 전체 경로가 보이도록 bounds 맞춤 ──
@@ -151,13 +154,15 @@ export default function KoreaRouteMap({ courses }: Props) {
       polylinesRef.current.push(glow, main)
     })
 
-    // 경로 수에 따라 자동 줌아웃 — 여백 확보를 위해 relayout 후 setBounds
     requestAnimationFrame(() => {
+      if (cancelled) return
       try {
         mapRef.current.relayout()
         mapRef.current.setBounds(bounds)
       } catch {}
     })
+
+    return () => { cancelled = true }
   }, [courses, mapReady])
 
   const lineCount = courses.filter(c => c.gpxPoints.length >= 2).length
