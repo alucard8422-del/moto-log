@@ -1,10 +1,37 @@
 // WaypointListSheet.tsx — 경유지 목록 + 순서 변경 패널
 // 위/아래 버튼으로 경유지 순서 조정, 삭제 가능
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronUp, ChevronDown, Trash2, X, GripVertical } from 'lucide-react'
+import { ChevronUp, ChevronDown, Trash2, X, GripVertical, CheckCircle2, MapPin } from 'lucide-react'
 import type { LatLng } from '../routes/routeUtils'
+import { loadCourses } from '../../../lib/courseStorage'
+
+// ── 방문 여부 판단 ─────────────────────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+function computeVisited(points: LatLng[]): boolean[] {
+  const THRESHOLD = 0.5   // 500m 이내
+  // 실제 GPX 기록만 (plannerWaypoints 없는 코스)
+  const gpxCourses = loadCourses().filter(
+    c => !(c.plannerWaypoints?.length) && c.gpxPoints?.length > 0
+  )
+  return points.map(pt =>
+    gpxCourses.some(course =>
+      // 5포인트 간격으로 샘플링해서 성능 절약
+      course.gpxPoints.some((g, i) =>
+        i % 5 === 0 && haversineKm(g.lat, g.lng, pt.lat, pt.lng) < THRESHOLD
+      )
+    )
+  )
+}
 
 interface Props {
   points:      LatLng[]
@@ -29,6 +56,9 @@ function waypointColor(idx: number, total: number): string {
 }
 
 export default function WaypointListSheet({ points, pointNames, isOpen, onClose, onMoveUp, onMoveDown, onDelete }: Props) {
+  // ── 방문 여부 (패널 열릴 때 한 번 계산) ──────────────────────────────
+  const visitedFlags = useMemo(() => isOpen ? computeVisited(points) : [], [isOpen, points])
+
   // ── 터치 드래그 reorder ───────────────────────────────────────────────
   const [dragIdx,  setDragIdx]  = useState<number | null>(null)
   const [overIdx,  setOverIdx]  = useState<number | null>(null)
@@ -140,9 +170,25 @@ export default function WaypointListSheet({ points, pointNames, isOpen, onClose,
                         {idx + 1}
                       </div>
 
-                      {/* 라벨 + 주소 */}
+                      {/* 라벨 + 주소 + 방문 태그 */}
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold text-white/50">{label}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[11px] font-semibold text-white/50">{label}</p>
+                          {/* 방문 여부 태그 */}
+                          {visitedFlags[idx] !== undefined && (
+                            visitedFlags[idx] ? (
+                              <span className="flex items-center gap-0.5 rounded-full bg-[#FF5A00]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#FF5A00]">
+                                <CheckCircle2 size={8} strokeWidth={2.5} />
+                                다녀온 곳
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-0.5 rounded-full bg-white/6 px-1.5 py-0.5 text-[9px] font-bold text-white/30">
+                                <MapPin size={8} strokeWidth={2} />
+                                가보지 않은 곳
+                              </span>
+                            )
+                          )}
+                        </div>
                         <p className="truncate text-[12px] font-light text-white/80">
                           {pointNames[idx] || '주소 불러오는 중…'}
                         </p>
