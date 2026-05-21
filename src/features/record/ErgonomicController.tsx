@@ -288,29 +288,52 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
 const RECORD_ICON_Y  = 77   // 기록 탭 아이콘 중심 (screen bottom 기준)
 const STOP_SIZE      = 48   // 정지 버튼 직경
 
+// 정지 버튼 원 중심 → 화면 하단 기준 77px
+// 원 상단 edge → 77 + 24 = 101px
+// ●REC 배지 bottom: 원 상단 + 6px 여백 = 107px (화면 하단 기준)
+const REC_BADGE_BOTTOM = RECORD_ICON_Y + STOP_SIZE / 2 + 6   // 107px
+
 function RidingController({ onStop }: { onStop: () => void }) {
-  // 정지 버튼 bottom (touch div 내부 기준)
-  // = RECORD_ICON_Y - TAB_BAR_BOTTOM - STOP_SIZE/2
-  // = 77 - 20 - 24 = 33px
-  const stopBtnBottom = RECORD_ICON_Y - TAB_BAR_BOTTOM - STOP_SIZE / 2
+  const stopBtnBottom = RECORD_ICON_Y - TAB_BAR_BOTTOM - STOP_SIZE / 2  // 33px
 
   return (
     <div
       className="pointer-events-none fixed bottom-0 left-1/2 z-[35] -translate-x-1/2"
       style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
     >
+      {/* ●REC 배지 — 정지 버튼 원 바로 위 중앙 */}
+      <div
+        className="pointer-events-none absolute flex items-center gap-1 rounded-full px-2 py-0.5"
+        style={{
+          bottom:    REC_BADGE_BOTTOM,
+          left:      `calc(4px + (100% - 8px) / 10)`,   // 기록 탭 center
+          transform: 'translateX(-50%)',
+          background:           'rgba(10,15,30,0.72)',
+          backdropFilter:       'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          border:               '1px solid rgba(239,68,68,0.25)',
+          whiteSpace:           'nowrap',
+        }}
+      >
+        <span
+          className="h-1.5 w-1.5 rounded-full bg-red-500"
+          style={{ animation: 'rec-dot-pulse 1.2s ease-in-out infinite' }}
+        />
+        <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
+      </div>
+
       {/* 터치 영역: 기록 탭 전체 영역 */}
       <div
         className="pointer-events-auto absolute cursor-pointer"
         style={{
-          bottom: TAB_BAR_BOTTOM,  // 20px
+          bottom: TAB_BAR_BOTTOM,
           left:   TOUCH_LEFT,
           width:  TOUCH_W,
-          height: TAB_BAR_H,       // 84px — 탭바 전체 높이
+          height: TAB_BAR_H,
         }}
         onClick={onStop}
       >
-        {/* 위치 고정 래퍼 — Framer Motion animate 와 transform 충돌 방지 */}
+        {/* 정지 버튼 */}
         <div
           style={{
             position:  'absolute',

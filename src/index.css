@@ -214,6 +214,16 @@
   to   { width: 100% }
 }
 
+@keyframes recording-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+@keyframes rec-dot-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
 * {
   margin: 0;
   padding: 0;

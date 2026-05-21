@@ -1,11 +1,12 @@
 // Layout.tsx — 공통 헤더 + 탭바
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { CircleDot, Route, Compass, Warehouse, User, Navigation, LogOut } from 'lucide-react'
+import { CircleDot, Route, Compass, Warehouse, User, Navigation, LogOut, X, AlertTriangle } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 import { supabase } from '../lib/supabaseClient'
 import { useRideRecord } from '../context/RideRecordContext'
+import { useModalBackButton } from '../hooks/useModalBackButton'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'    },
@@ -22,14 +23,27 @@ export default function Layout() {
   const navigate     = useNavigate()
   const { pathname } = useLocation()
   const { status: rideStatus } = useRideRecord()
+  const isRecording = rideStatus === 'riding'
+
+  const [showExitConfirm, setShowExitConfirm] = useState(false)
+
+  // 뒤로가기로 확인 모달 닫기
+  useModalBackButton(showExitConfirm, () => setShowExitConfirm(false))
 
   const handleLogout = async () => {
-    // 스플래시 재생 + 다음 로그인 시 /courses 기본 진입을 위해 세션 초기화
+    if (isRecording) {
+      setShowExitConfirm(true)
+      return
+    }
+    await doLogout()
+  }
+
+  const doLogout = async () => {
     sessionStorage.removeItem('moto_splash')
     sessionStorage.removeItem(LAST_TAB_KEY)
     await supabase.auth.signOut()
-    // AuthListener가 SIGNED_OUT 이벤트로 '/'로 navigate 처리
   }
+
   const isMapPage    = pathname === '/map'
   const isPlanner    = pathname === '/route-planner'
   const isFullScreen = isMapPage || isPlanner
@@ -54,19 +68,32 @@ export default function Layout() {
             borderBottom:          '1px solid var(--glass-border)',
           }}
         >
+          {/* 로고 */}
           <div className="flex items-center gap-2">
             <Navigation size={18} strokeWidth={1.5} className="text-brand" />
             <span className="text-[17px] font-extrabold tracking-tight text-main">
               MotoLog
             </span>
           </div>
+
+          {/* 기록중 문구 — 헤더 정중앙 */}
+          {isRecording && (
+            <span
+              className="absolute left-1/2 -translate-x-1/2 text-[12px] font-bold tracking-wide"
+              style={{
+                color:     'var(--brand)',
+                animation: 'recording-pulse 1.6s ease-in-out infinite',
+              }}
+            >
+              ● 경로 기록중
+            </span>
+          )}
+
+          {/* 로그아웃 */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-opacity active:opacity-60"
-            style={{
-              background: 'var(--brand)',
-              color:      'white',
-            }}
+            style={{ background: 'var(--brand)', color: 'white' }}
           >
             <LogOut size={13} strokeWidth={2} />
             로그아웃
@@ -99,9 +126,7 @@ export default function Layout() {
           }}
         >
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
-            const isActive   = pathname === path
-            const isRecordTab = path === '/map'
-            const showDot    = isRecordTab && rideStatus === 'riding' && !isActive
+            const isActive = pathname === path
             return (
               <button
                 key={path}
@@ -122,18 +147,67 @@ export default function Layout() {
                 >
                   {label}
                 </span>
-                {/* 기록 중 빨간 점 — 다른 탭에 있을 때만 표시 */}
-                {showDot && (
-                  <span
-                    className="absolute right-[calc(50%-14px)] top-3 h-2 w-2 rounded-full bg-red-500"
-                    style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
-                  />
-                )}
               </button>
             )
           })}
         </div>
       </nav>
+
+      {/* ── 기록 중 로그아웃 확인 모달 ── */}
+      {showExitConfirm && (
+        <>
+          {/* 딤 */}
+          <div
+            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowExitConfirm(false)}
+          />
+
+          {/* 모달 패널 */}
+          <div
+            className="fixed inset-x-4 top-1/2 z-[201] -translate-y-1/2 rounded-3xl p-6"
+            style={{ background: '#111622', border: '1px solid rgba(255,255,255,0.10)', maxWidth: 360, margin: '0 auto' }}
+          >
+            {/* 닫기 */}
+            <button
+              onClick={() => setShowExitConfirm(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full active:opacity-60"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            >
+              <X size={15} strokeWidth={1.5} className="text-white/50" />
+            </button>
+
+            {/* 경고 아이콘 */}
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.12)' }}>
+              <AlertTriangle size={22} strokeWidth={1.5} className="text-red-400" />
+            </div>
+
+            {/* 제목 / 설명 */}
+            <p className="mb-1.5 text-[16px] font-bold text-white">경로 기록 중이에요</p>
+            <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
+              지금 로그아웃하면 현재까지의<br />기록이 저장되지 않습니다.
+            </p>
+
+            {/* 버튼 */}
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="flex flex-1 items-center justify-center rounded-2xl py-3.5 text-sm font-semibold text-white/60 active:opacity-70"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+              >
+                계속 기록
+              </button>
+              <button
+                onClick={() => { setShowExitConfirm(false); doLogout() }}
+                className="flex flex-[1.2] items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-bold text-white active:opacity-80"
+                style={{ background: 'rgba(239,68,68,0.80)' }}
+              >
+                <LogOut size={14} strokeWidth={2} />
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
