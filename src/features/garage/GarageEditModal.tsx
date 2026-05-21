@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Bike } from 'lucide-react'
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
 
 export interface GarageData {
   bikeModel: string
@@ -15,6 +16,7 @@ interface GarageEditModalProps {
 }
 
 export default function GarageEditModal({ data, onClose, onSave }: GarageEditModalProps) {
+  useBodyScrollLock()
   const [bikeModel, setBikeModel] = useState(data.bikeModel)
   const [totalKm, setTotalKm] = useState(String(data.totalKm))
   const [ridingHours, setRidingHours] = useState(data.ridingHours)

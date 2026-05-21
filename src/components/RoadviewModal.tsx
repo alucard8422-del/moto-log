@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Camera, Loader2 } from 'lucide-react'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface Props {
   lat: number
@@ -15,6 +16,7 @@ interface Props {
 type Status = 'loading' | 'ok' | 'none'
 
 export default function RoadviewModal({ lat, lng, onClose }: Props) {
+  useBodyScrollLock()
   const rvRef      = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose          // 렌더링마다 최신 값으로 갱신

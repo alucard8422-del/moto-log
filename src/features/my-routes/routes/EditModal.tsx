@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { X, MapPin, Route, Clock, Image, CheckCircle, Trash2, MoreHorizontal } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur } from './routeUtils'
 import type { SavedCourse } from '../../../lib/courseStorage'
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock'
 
 interface Props {
   course:  SavedCourse
@@ -24,6 +25,8 @@ export default function EditModal({ course, onSave, onClose }: Props) {
   const sheetWrapRef  = useRef<HTMLDivElement>(null)
   const dragHandleRef = useRef<HTMLDivElement>(null)
   const onCloseRef    = useRef(onClose)
+
+  useBodyScrollLock()
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
   useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])

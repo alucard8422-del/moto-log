@@ -8,6 +8,7 @@ import {
   loadCourses, addComment,
   type CourseComment,
 } from '../lib/courseStorage'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 const MOOD_COLOR: Record<NonNullable<TourCardData['mood']>, string> = {
   '여유로운': 'bg-emerald-400/15 text-emerald-300',
@@ -217,6 +218,9 @@ export default function CourseDetailModal({
   )
   const [showCountdown, setShowCountdown] = useState(false)
 
+  // 모달 열린 동안 배경 스크롤 잠금
+  useBodyScrollLock()
+
   // ── 슬라이더 ──
   // imageUrl 단일 → 배열 (추후 multi-photo 확장 포인트)
   const photos        = course.imageUrl ? [course.imageUrl] : []
@@ -334,7 +338,7 @@ export default function CourseDetailModal({
           </div>
 
           {/* ── 스크롤 가능 본문 (스크롤바 완전 숨김) ── */}
-          <div className="flex flex-col gap-5 overflow-y-auto px-5 pb-8 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-col gap-5 overflow-y-auto px-5 pb-8 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ overscrollBehavior: 'contain' }}>
 
             {/* 헤더 */}
             <div>

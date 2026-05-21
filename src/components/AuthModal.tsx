@@ -1,5 +1,6 @@
 import { X, Navigation } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
 
 interface AuthModalProps {
   onClose: () => void
@@ -46,6 +47,7 @@ function KakaoLogo() {
 }
 
 export default function AuthModal({ onClose }: AuthModalProps) {
+  useBodyScrollLock()
   const handleGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
