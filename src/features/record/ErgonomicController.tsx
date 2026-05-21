@@ -301,17 +301,17 @@ function RidingController({ onStop }: { onStop: () => void }) {
       className="pointer-events-none fixed bottom-0 left-1/2 z-[35] -translate-x-1/2"
       style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
     >
-      {/* ●REC 배지 — 정지 버튼 원 바로 위 중앙 */}
+      {/* 경로 기록중 배지 — 정지 버튼 원 바로 위 중앙 */}
       <div
-        className="pointer-events-none absolute flex items-center gap-1 rounded-full px-2 py-0.5"
+        className="pointer-events-none absolute flex items-center gap-1 rounded-full px-3 py-1"
         style={{
-          bottom:    REC_BADGE_BOTTOM,
-          left:      `calc(4px + (100% - 8px) / 10)`,   // 기록 탭 center
-          transform: 'translateX(-50%)',
-          background:           'rgba(10,15,30,0.72)',
-          backdropFilter:       'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          border:               '1px solid rgba(239,68,68,0.25)',
+          bottom:               REC_BADGE_BOTTOM,
+          left:                 `calc(4px + (100% - 8px) / 10)`,
+          transform:            'translateX(-50%)',
+          background:           'rgba(255,255,255,0.82)',
+          backdropFilter:       'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border:               '1px solid rgba(255,255,255,0.65)',
           whiteSpace:           'nowrap',
         }}
       >
@@ -319,7 +319,7 @@ function RidingController({ onStop }: { onStop: () => void }) {
           className="h-1.5 w-1.5 rounded-full bg-red-500"
           style={{ animation: 'rec-dot-pulse 1.2s ease-in-out infinite' }}
         />
-        <span className="text-[10px] font-bold tracking-widest text-red-400">REC</span>
+        <span className="text-[10px] font-semibold text-[#111827]">경로 기록중</span>
       </div>
 
       {/* 터치 영역: 기록 탭 전체 영역 */}
