@@ -19,7 +19,7 @@ import { useRideRecord } from '../../context/RideRecordContext'
 
 export default function MapPage() {
   const navigate = useNavigate()
-  const { position } = useGeolocation()
+  const { position, errorCode: gpsError, loading: gpsLoading } = useGeolocation()
 
   const {
     status, path, duration, distance, wakeLockActive,
@@ -134,6 +134,8 @@ export default function MapPage() {
           currentPosition={position}
           isRiding={status === 'riding'}
           mapRef={mapRef}
+          gpsLoading={gpsLoading}
+          gpsError={gpsError}
         />
       </div>
 

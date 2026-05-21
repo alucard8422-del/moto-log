@@ -1,9 +1,10 @@
 // MapDisplay.tsx — 카카오맵 기반 주행 지도
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { LocateFixed } from 'lucide-react'
-import type { Location } from './types'
+import { LocateFixed, Satellite, WifiOff, Loader2, X } from 'lucide-react'
+import type { Location, GeoErrorCode } from './types'
 import RoadviewModal from '../../components/RoadviewModal'
+import { GEO_ERROR_MSG } from './useGeolocation'
 
 const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
 
@@ -18,6 +19,8 @@ interface Props {
   currentPosition: Location | null
   isRiding: boolean
   mapRef?: React.MutableRefObject<any>
+  gpsLoading?: boolean
+  gpsError?: GeoErrorCode | null
 }
 
 // 현재 위치 CustomOverlay — 원형 나침반 스타일, 방향 화살표 회전 가능
@@ -55,7 +58,7 @@ function makeCompassOverlay(): { wrap: HTMLElement; arrowEl: HTMLElement } {
   return { wrap, arrowEl }
 }
 
-export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: Props) {
+export default function MapDisplay({ path, currentPosition, isRiding, mapRef, gpsLoading, gpsError }: Props) {
   const containerRef      = useRef<HTMLDivElement>(null)
   const mapInstanceRef    = useRef<any>(null)
   const glowLineRef       = useRef<any>(null)
@@ -301,6 +304,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.4)', pointerEvents: 'none', zIndex: 1 }} />
 
 
+      {/* GPS 상태 버튼 — 현재위치 버튼 위 */}
+      <GpsStatusButton gpsLoading={gpsLoading} gpsError={gpsError} />
+
       {/* 현재위치 버튼 — 우하단 */}
       <button
         onClick={handleLocate}
@@ -309,5 +315,81 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef }: 
         <LocateFixed size={20} strokeWidth={1.8} className="text-[#FF5A00]" />
       </button>
     </div>
+  )
+}
+
+// ── GPS 상태 버튼 + 팝업 ─────────────────────────────────────────────────────
+function GpsStatusButton({ gpsLoading, gpsError }: { gpsLoading?: boolean; gpsError?: GeoErrorCode | null }) {
+  const [showPopup, setShowPopup] = useState(false)
+
+  const isOk      = !gpsLoading && !gpsError
+  const isLoading = gpsLoading
+
+  const iconColor = isLoading ? '#94A3B8' : isOk ? '#22C55E' : '#EF4444'
+  const bgStyle   = isLoading
+    ? 'rgba(148,163,184,0.15)'
+    : isOk
+    ? 'rgba(34,197,94,0.15)'
+    : 'rgba(239,68,68,0.15)'
+  const borderStyle = isLoading
+    ? 'rgba(148,163,184,0.3)'
+    : isOk
+    ? 'rgba(34,197,94,0.3)'
+    : 'rgba(239,68,68,0.3)'
+
+  const statusText = isLoading ? 'GPS 연결 중...' : isOk ? 'GPS 정상 연결됨' : 'GPS 연결 끊김'
+  const detailText = isLoading
+    ? '위성 신호를 탐색하고 있습니다'
+    : isOk
+    ? '위치 정보를 정상적으로 수신 중입니다'
+    : (gpsError ? GEO_ERROR_MSG[gpsError] : '')
+
+  return (
+    <>
+      {/* GPS 아이콘 버튼 */}
+      <button
+        onClick={() => setShowPopup(v => !v)}
+        className="absolute right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full shadow-lg backdrop-blur-md active:opacity-70"
+        style={{ bottom: '15rem', border: `1px solid ${borderStyle}`, background: bgStyle }}
+      >
+        {isLoading
+          ? <Loader2 size={20} strokeWidth={1.8} color={iconColor} className="animate-spin" />
+          : isOk
+          ? <Satellite size={20} strokeWidth={1.8} color={iconColor} />
+          : <WifiOff size={20} strokeWidth={1.8} color={iconColor} />
+        }
+      </button>
+
+      {/* 팝업 */}
+      {showPopup && (
+        <>
+          <div className="fixed inset-0 z-[50]" onClick={() => setShowPopup(false)} />
+          <div
+            className="absolute right-16 z-[51] w-56 rounded-2xl p-4 shadow-2xl"
+            style={{ bottom: '15rem', background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(16px)' }}
+          >
+            <button
+              onClick={() => setShowPopup(false)}
+              className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            >
+              <X size={12} strokeWidth={1.5} className="text-white/50" />
+            </button>
+            <div className="mb-2 flex items-center gap-2">
+              {isLoading
+                ? <Loader2 size={14} color={iconColor} className="animate-spin" />
+                : isOk
+                ? <Satellite size={14} color={iconColor} />
+                : <WifiOff size={14} color={iconColor} />
+              }
+              <span className="text-[12px] font-bold" style={{ color: iconColor }}>{statusText}</span>
+            </div>
+            <p className="text-[11px] font-light leading-relaxed text-white/40" style={{ whiteSpace: 'pre-line' }}>
+              {detailText}
+            </p>
+          </div>
+        </>
+      )}
+    </>
   )
 }
