@@ -87,13 +87,25 @@ export default function EditModal({ course, onSave, onClose }: Props) {
     }
   }, [])
 
+  const MAX_PHOTOS = 10
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setPhotos(prev => [...prev, reader.result as string])
-    reader.readAsDataURL(file)
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
+    if (files.length === 0) return
+    setPhotos(prev => {
+      const slots = MAX_PHOTOS - prev.length
+      if (slots <= 0) return prev
+      const toAdd = files.slice(0, slots)
+      // FileReader는 비동기라 각각 읽어서 순서 보장
+      toAdd.forEach(file => {
+        const reader = new FileReader()
+        reader.onload = () =>
+          setPhotos(p => p.length < MAX_PHOTOS ? [...p, reader.result as string] : p)
+        reader.readAsDataURL(file)
+      })
+      return prev  // 실제 추가는 reader.onload에서
+    })
   }
 
   const deleteCurrentPhoto = () => {
@@ -168,7 +180,7 @@ export default function EditModal({ course, onSave, onClose }: Props) {
               >
                 <Image size={28} strokeWidth={1.2} />
                 <span className="text-xs font-light">대표 사진 추가</span>
-                <span className="text-[10px] font-light text-white/20">여러 장 등록 가능</span>
+                <span className="text-[10px] font-light text-white/20">최대 {MAX_PHOTOS}장 동시 선택 가능</span>
               </button>
             )}
 
@@ -235,7 +247,7 @@ export default function EditModal({ course, onSave, onClose }: Props) {
         </div>
       </div>
 
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif" className="hidden" onChange={handleFile} />
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif" multiple className="hidden" onChange={handleFile} />
 
       {/* 액션 시트 (사진 메뉴) */}
       {showActionSheet && (
