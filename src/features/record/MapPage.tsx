@@ -33,13 +33,14 @@ export default function MapPage() {
   const navigate        = useNavigate()
   const { position }   = useGeolocation()
 
-  const [status,        setStatus]        = useState<RideStatus>('idle')
-  const [path,          setPath]          = useState<Location[]>([])
-  const [duration,      setDuration]      = useState(0)
-  const [distance,      setDistance]      = useState(0)
-  const [showCountdown, setShowCountdown] = useState(false)
-  const [showNaviSheet, setShowNaviSheet] = useState(false)
-  const [naviPref,      setNaviPref]      = useState<NavigationType>(loadNaviPref)
+  const [status,         setStatus]        = useState<RideStatus>('idle')
+  const [path,           setPath]          = useState<Location[]>([])
+  const [duration,       setDuration]      = useState(0)
+  const [distance,       setDistance]      = useState(0)
+  const [showCountdown,  setShowCountdown] = useState(false)
+  const [showNaviSheet,  setShowNaviSheet] = useState(false)
+  const [naviPref,       setNaviPref]      = useState<NavigationType>(loadNaviPref)
+  const [wakeLockActive, setWakeLockActive] = useState(false)
 
   const rideWatchRef  = useRef<number | null>(null)
   const startTimeRef  = useRef<Date | null>(null)
@@ -47,6 +48,60 @@ export default function MapPage() {
   const distanceRef   = useRef(0)
   const durationRef   = useRef(0)
   const mapRef        = useRef<any>(null)
+  const wakeLockRef   = useRef<WakeLockSentinel | null>(null)
+  const pathRef       = useRef<Location[]>([])   // 체크포인트 저장용 최신 path 미러
+
+  // ── Wake Lock 요청 ───────────────────────────────────────────────────
+  const acquireWakeLock = async () => {
+    if (!('wakeLock' in navigator)) return
+    try {
+      wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      setWakeLockActive(true)
+      wakeLockRef.current.addEventListener('release', () => {
+        wakeLockRef.current = null
+        setWakeLockActive(false)
+      })
+    } catch {
+      setWakeLockActive(false)
+    }
+  }
+
+  // ── Wake Lock 해제 ───────────────────────────────────────────────────
+  const releaseWakeLock = () => {
+    wakeLockRef.current?.release().catch(() => {})
+    wakeLockRef.current = null
+    setWakeLockActive(false)
+  }
+
+  // ── 화면 복귀 시 Wake Lock 재취득 + GPS 살아있는지 확인 ─────────────
+  useEffect(() => {
+    const onVisibility = async () => {
+      if (document.visibilityState === 'visible' && rideWatchRef.current !== null) {
+        // Wake Lock이 해제됐으면 재취득
+        if (!wakeLockRef.current) await acquireWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  // ── 주행 중 체크포인트 자동 저장 (30초마다, 앱 강제종료 대비) ─────────
+  const CHECKPOINT_KEY = 'moto:ride_checkpoint'
+  useEffect(() => {
+    if (status !== 'riding') return
+    const id = setInterval(() => {
+      if (pathRef.current.length < 2) return
+      try {
+        localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({
+          path:     pathRef.current,
+          distance: distanceRef.current,
+          duration: durationRef.current,
+          startedAt: startTimeRef.current?.toISOString(),
+        }))
+      } catch {}
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [status])
 
   // ── 웹뷰 바운스/오버스크롤 방지 ─────────────────────────────────────
   useEffect(() => {
@@ -82,10 +137,14 @@ export default function MapPage() {
     prevPosRef.current   = null
     distanceRef.current  = 0
     durationRef.current  = 0
+    pathRef.current      = []
     setPath([])
     setDistance(0)
     setDuration(0)
     setStatus('riding')
+
+    // 화면 꺼짐 방지 — 배터리 소모 있지만 GPS 기록 유지에 필수
+    acquireWakeLock()
 
     rideWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
@@ -103,10 +162,15 @@ export default function MapPage() {
           if (delta > 0.005) {
             distanceRef.current += delta
             setDistance(distanceRef.current)
-            setPath(p => [...p, loc])
+            setPath(p => {
+              const next = [...p, loc]
+              pathRef.current = next   // ref 미러 업데이트 (체크포인트용)
+              return next
+            })
           }
         } else {
           setPath([loc])
+          pathRef.current = [loc]
         }
         prevPosRef.current = loc
       },
@@ -147,6 +211,10 @@ export default function MapPage() {
       navigator.geolocation.clearWatch(rideWatchRef.current)
       rideWatchRef.current = null
     }
+
+    // Wake Lock 해제 + 체크포인트 삭제 (정상 저장됐으므로)
+    releaseWakeLock()
+    localStorage.removeItem(CHECKPOINT_KEY)
 
     const endTime  = new Date()
     const gpxPoints = path.map((p) => ({ lat: p.lat, lng: p.lng, timestamp: p.timestamp, altitude: p.altitude, speed: p.speed, heading: p.heading }))
@@ -195,7 +263,7 @@ export default function MapPage() {
 
       {/* [1층] 주행 중 HUD */}
       {status === 'riding' && (
-        <RideHUD duration={duration} distance={distance} />
+        <RideHUD duration={duration} distance={distance} wakeLockActive={wakeLockActive} />
       )}
 
       {/* [2층] 하단 컨트롤러 */}

@@ -1,7 +1,7 @@
 // RideHUD.tsx — 주행 중 상단 HUD (3개 분리 카드)
 // 아이콘만으로 기능 구분 | tabular-nums + minWidth 고정으로 레이아웃 흔들림 없음
 
-import { Timer, Route, Gauge } from 'lucide-react'
+import { Timer, Route, Gauge, MonitorSmartphone } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 // ── 시간 포맷 (초 → MM:SS or H:MM:SS) ────────────────────────────────────
@@ -61,21 +61,22 @@ function HUDCard({ icon: Icon, value, unit, valW }: CardProps) {
 
 // ── 메인 HUD ─────────────────────────────────────────────────────────────
 interface RideHUDProps {
-  duration: number   // 초
-  distance: number   // km
+  duration:      number   // 초
+  distance:      number   // km
+  wakeLockActive?: boolean
 }
 
-export default function RideHUD({ duration, distance }: RideHUDProps) {
+export default function RideHUD({ duration, distance, wakeLockActive }: RideHUDProps) {
   const speed = duration > 0 ? distance / (duration / 3600) : 0
 
   return (
-    <div className="pointer-events-none fixed top-5 inset-x-0 z-50 flex justify-center">
+    <div className="pointer-events-none fixed top-5 inset-x-0 z-50 flex flex-col items-center gap-2">
       <div className="flex items-center gap-2">
         {/* 녹화 시간 */}
         <HUDCard
           icon={Timer}
           value={fmtTime(duration)}
-          valW={52}   // "0:00:00" 최대 7자 커버
+          valW={52}
         />
 
         {/* 이동 거리 */}
@@ -83,7 +84,7 @@ export default function RideHUD({ duration, distance }: RideHUDProps) {
           icon={Route}
           value={distance.toFixed(1)}
           unit="km"
-          valW={36}   // "999.9" 5자 커버
+          valW={36}
         />
 
         {/* 현재 속도 */}
@@ -91,9 +92,36 @@ export default function RideHUD({ duration, distance }: RideHUDProps) {
           icon={Gauge}
           value={speed.toFixed(0)}
           unit="km/h"
-          valW={28}   // "999" 3자 커버
+          valW={28}
         />
       </div>
+
+      {/* Wake Lock 상태 표시 */}
+      {wakeLockActive !== undefined && (
+        <div
+          className="flex items-center gap-1 rounded-full px-2.5 py-1"
+          style={{
+            background: wakeLockActive
+              ? 'rgba(34,197,94,0.15)'
+              : 'rgba(239,68,68,0.15)',
+            border: wakeLockActive
+              ? '1px solid rgba(34,197,94,0.35)'
+              : '1px solid rgba(239,68,68,0.35)',
+          }}
+        >
+          <MonitorSmartphone
+            size={10}
+            strokeWidth={2}
+            style={{ color: wakeLockActive ? '#22c55e' : '#ef4444' }}
+          />
+          <span
+            className="text-[9px] font-semibold"
+            style={{ color: wakeLockActive ? '#22c55e' : '#ef4444' }}
+          >
+            {wakeLockActive ? '화면 유지 중' : '화면 꺼짐 주의'}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
