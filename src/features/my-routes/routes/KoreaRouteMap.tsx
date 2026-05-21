@@ -99,31 +99,65 @@ export default function KoreaRouteMap({ courses }: Props) {
     return () => { cancelled = true }
   }, [])
 
-  // ── 경로 폴리라인 갱신 ─────────────────────────────────────────────────
+  // ── 경로 폴리라인 갱신 + 뷰 자동 조정 ────────────────────────────────
   useEffect(() => {
     if (!mapReady || !mapRef.current || !window.kakao?.maps) return
 
+    // 기존 폴리라인 제거
     polylinesRef.current.forEach(p => p.setMap(null))
     polylinesRef.current = []
 
-    courses
-      .filter(c => c.gpxPoints.length >= 2)
-      .forEach(course => {
-        const path = course.gpxPoints.map(p =>
-          new window.kakao.maps.LatLng(p.lat, p.lng)
-        )
-        const glow = new window.kakao.maps.Polyline({
-          path, strokeWeight: 10, strokeColor: '#FF5A00',
-          strokeOpacity: 0.18, strokeStyle: 'solid',
-        })
-        const main = new window.kakao.maps.Polyline({
-          path, strokeWeight: 2.5, strokeColor: '#FF5A00',
-          strokeOpacity: 0.9, strokeStyle: 'solid',
-        })
-        glow.setMap(mapRef.current)
-        main.setMap(mapRef.current)
-        polylinesRef.current.push(glow, main)
+    const validCourses = courses.filter(c => c.gpxPoints.length >= 2)
+
+    if (validCourses.length === 0) {
+      // ── 경로 없음: 현재 위치로 중앙 이동 ──────────────────────────
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          if (!mapRef.current) return
+          mapRef.current.setCenter(
+            new window.kakao.maps.LatLng(coords.latitude, coords.longitude)
+          )
+          mapRef.current.setLevel(5)   // 시/군 단위
+        },
+        () => {
+          // 위치 권한 거부 시 대한민국 중앙 유지
+          mapRef.current?.setCenter(new window.kakao.maps.LatLng(36.2, 127.9))
+          mapRef.current?.setLevel(13)
+        },
+        { timeout: 5000 }
+      )
+      return
+    }
+
+    // ── 경로 있음: 폴리라인 그리고 전체 경로가 보이도록 bounds 맞춤 ──
+    const bounds = new window.kakao.maps.LatLngBounds()
+
+    validCourses.forEach(course => {
+      const path = course.gpxPoints.map(p =>
+        new window.kakao.maps.LatLng(p.lat, p.lng)
+      )
+      path.forEach(ll => bounds.extend(ll))
+
+      const glow = new window.kakao.maps.Polyline({
+        path, strokeWeight: 10, strokeColor: '#FF5A00',
+        strokeOpacity: 0.18, strokeStyle: 'solid',
       })
+      const main = new window.kakao.maps.Polyline({
+        path, strokeWeight: 2.5, strokeColor: '#FF5A00',
+        strokeOpacity: 0.9, strokeStyle: 'solid',
+      })
+      glow.setMap(mapRef.current)
+      main.setMap(mapRef.current)
+      polylinesRef.current.push(glow, main)
+    })
+
+    // 경로 수에 따라 자동 줌아웃 — 여백 확보를 위해 relayout 후 setBounds
+    requestAnimationFrame(() => {
+      try {
+        mapRef.current.relayout()
+        mapRef.current.setBounds(bounds)
+      } catch {}
+    })
   }, [courses, mapReady])
 
   const lineCount = courses.filter(c => c.gpxPoints.length >= 2).length
