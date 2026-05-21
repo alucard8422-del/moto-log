@@ -136,8 +136,6 @@ export default function KoreaRouteMap({ courses, isLoading = false }: Props) {
     <div className="relative overflow-hidden rounded-3xl border border-white/5" style={{ height: 300 }}>
       <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
 
-      {/* 하단 그라데이션 */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-16 bg-gradient-to-t from-slate-950 to-transparent" />
       {/* 누적 동선 뱃지 */}
       <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 backdrop-blur-md">
         <span className="h-1.5 w-1.5 rounded-full bg-[#FF5A00]" />
