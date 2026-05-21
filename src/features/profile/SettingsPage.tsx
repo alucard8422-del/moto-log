@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Palette, Sun, Moon, Contrast, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useTheme, type Theme } from '../context/ThemeContext'
+import { useTheme, type Theme } from '../../context/ThemeContext'
 
 // ── 테마 선택 모달 ─────────────────────────────────────────────────────────
 const THEME_OPTIONS: Array<{

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import type { GarageData } from '../pages/garage/GarageEditModal'
+import type { GarageData } from '../features/garage/GarageEditModal'
 
 /* ── 프로필 조회 ── */
 export async function fetchProfile(): Promise<GarageData | null> {

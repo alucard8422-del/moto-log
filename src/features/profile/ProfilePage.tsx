@@ -5,19 +5,19 @@ import { useNavigate }                from 'react-router-dom'
 import { Settings, Gauge, LogOut, FlaskConical } from 'lucide-react'
 
 // ── profile/ 서브 컴포넌트 ────────────────────────────────────────────────
-import BadgeGrid                      from './profile/BadgeGrid'
-import NaviSettingsCard               from './profile/NaviSettingsCard'
-import SavedTab                       from './profile/SavedTab'
+import BadgeGrid                      from './BadgeGrid'
+import NaviSettingsCard               from './NaviSettingsCard'
+import SavedTab                       from './SavedTab'
 
 // ── 공용 컴포넌트·서비스 ──────────────────────────────────────────────────
-import BadgeAchievementModal from '../components/BadgeAchievementModal'
-import GarageEditModal, { type GarageData } from '../features/garage/GarageEditModal'
-import FuelLogTab                     from '../components/FuelLogTab'
-import FuelConfirmPopup               from '../components/FuelConfirmPopup'
-import { fetchProfile, upsertProfile } from '../lib/profileService'
-import { useFuel }                    from '../context/FuelContext'
-import { NAVI_STORAGE_KEY, type NavigationType } from '../types/ride'
-import { BADGES, type Tier }          from '../constants/BadgesData'
+import BadgeAchievementModal from '../../components/BadgeAchievementModal'
+import GarageEditModal, { type GarageData } from '../garage/GarageEditModal'
+import FuelLogTab                     from '../../components/FuelLogTab'
+import FuelConfirmPopup               from '../../components/FuelConfirmPopup'
+import { fetchProfile, upsertProfile } from '../../lib/profileService'
+import { useFuel }                    from '../../context/FuelContext'
+import { NAVI_STORAGE_KEY, type NavigationType } from '../../types/ride'
+import { BADGES, type Tier }          from '../../constants/BadgesData'
 
 type Tab = 'garage' | 'saved' | 'fuel'
 
