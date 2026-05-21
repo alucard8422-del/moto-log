@@ -214,7 +214,7 @@ export default function PlannerMap({
       if (!s) {
         s = document.createElement('script')
         s.id  = scriptId
-        s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}&autoload=false`
+        s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_APP_KEY}&autoload=false&libraries=services`
         document.head.appendChild(s)
       }
       s.addEventListener('load', () => window.kakao.maps.load(doCreate))

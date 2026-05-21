@@ -7,12 +7,13 @@ import { ChevronUp, ChevronDown, Trash2, X, GripVertical } from 'lucide-react'
 import type { LatLng } from '../routes/routeUtils'
 
 interface Props {
-  points:    LatLng[]
-  isOpen:    boolean
-  onClose:   () => void
-  onMoveUp:  (idx: number) => void
-  onMoveDown:(idx: number) => void
-  onDelete:  (idx: number) => void
+  points:      LatLng[]
+  pointNames:  string[]    // 역지오코딩 주소명
+  isOpen:      boolean
+  onClose:     () => void
+  onMoveUp:    (idx: number) => void
+  onMoveDown:  (idx: number) => void
+  onDelete:    (idx: number) => void
 }
 
 function waypointLabel(idx: number, total: number): string {
@@ -27,7 +28,7 @@ function waypointColor(idx: number, total: number): string {
   return '#94a3b8'                           // 회색 (경유)
 }
 
-export default function WaypointListSheet({ points, isOpen, onClose, onMoveUp, onMoveDown, onDelete }: Props) {
+export default function WaypointListSheet({ points, pointNames, isOpen, onClose, onMoveUp, onMoveDown, onDelete }: Props) {
   // ── 터치 드래그 reorder ───────────────────────────────────────────────
   const [dragIdx,  setDragIdx]  = useState<number | null>(null)
   const [overIdx,  setOverIdx]  = useState<number | null>(null)
@@ -139,8 +140,13 @@ export default function WaypointListSheet({ points, isOpen, onClose, onMoveUp, o
                         {idx + 1}
                       </div>
 
-                      {/* 라벨 */}
-                      <span className="flex-1 text-[12px] font-light text-white/70">{label}</span>
+                      {/* 라벨 + 주소 */}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold text-white/50">{label}</p>
+                        <p className="truncate text-[12px] font-light text-white/80">
+                          {pointNames[idx] || '주소 불러오는 중…'}
+                        </p>
+                      </div>
 
                       {/* 위/아래 버튼 */}
                       <div className="flex gap-0.5">

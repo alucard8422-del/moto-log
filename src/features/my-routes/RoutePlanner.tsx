@@ -11,7 +11,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useLocation }               from 'react-router-dom'
 import { motion, AnimatePresence }                from 'framer-motion'
-import { PenLine, Loader2 }                       from 'lucide-react'
+import { PenLine, Loader2, Search }                from 'lucide-react'
 
 import { saveCourse, loadCourses, updateCourse, shareToCommunity, buildGpxXml, type SavedCourse } from '../../lib/courseStorage'
 import { insertMyCourse, updateMyCourse } from '../../lib/courseService'
@@ -24,6 +24,7 @@ import PlannerHeader      from './planner/PlannerHeader'
 import DeleteBubble       from './planner/DeleteBubble'
 import ConfirmPanel       from './planner/ConfirmPanel'
 import WaypointListSheet  from './planner/WaypointListSheet'
+import PlaceSearchPanel   from './planner/PlaceSearchPanel'
 import type { DeleteTarget } from './planner/plannerUtils'
 
 export default function RoutePlanner() {
@@ -34,14 +35,19 @@ export default function RoutePlanner() {
   const importState = (location.state ?? {}) as {
     importedWaypoints?: LatLng[]
     userPos?:           LatLng
-    editCourseId?:      string   // 기존 경로계획 글 수정 모드
+    editCourseId?:      string
     editCourseTitle?:   string
   }
   const importedWaypoints = importState.importedWaypoints
   const importUserPos     = importState.userPos ?? null
   const isImportMode      = !!(importedWaypoints && importedWaypoints.length > 0)
-  const editCourseId      = importState.editCourseId ?? null
-  const editCourseTitle   = importState.editCourseTitle ?? ''
+
+  // ⚠️ useRef로 고정: pushState가 React Router location.state를 덮어써서
+  //    re-render 시 editCourseId가 null이 되는 버그 방지
+  const editCourseIdRef    = useRef(importState.editCourseId ?? null)
+  const editCourseTitleRef = useRef(importState.editCourseTitle ?? '')
+  const editCourseId       = editCourseIdRef.current
+  const editCourseTitle    = editCourseTitleRef.current
 
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const exitingRef = useRef(false)
@@ -100,6 +106,8 @@ export default function RoutePlanner() {
   const [roadviewPos,    setRoadviewPos]    = useState<{ lat: number; lng: number } | null>(null)
   const [deleteTarget,   setDeleteTarget]   = useState<DeleteTarget | null>(null)
   const [showWpList,     setShowWpList]     = useState(false)
+  const [showSearch,     setShowSearch]     = useState(false)
+  const [pointNames,     setPointNames]     = useState<string[]>([])
 
   const locked = stage === 'CONFIRM'
 
@@ -118,28 +126,47 @@ export default function RoutePlanner() {
   const dist    = totalDist(displayPath.length >= 2 ? displayPath : points)
   const canSave = locked && title.trim().length >= 1 && points.length >= 2 && !done && !routing
 
+  // ── 역지오코딩: 좌표 → 주소명 ──────────────────────────────────────────
+  const geocodeName = useCallback((lat: number, lng: number, idx: number) => {
+    if (!window.kakao?.maps?.services?.Geocoder) return
+    const geocoder = new window.kakao.maps.services.Geocoder()
+    geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
+      const OK = window.kakao?.maps?.services?.Status?.OK
+      const name = status === OK
+        ? (result[0]?.road_address?.address_name || result[0]?.address?.address_name || '')
+        : ''
+      setPointNames(prev => {
+        const next = [...prev]
+        next[idx] = name
+        return next
+      })
+    })
+  }, [])
+
   // ── 경유지 추가 (최대 20개) ───────────────────────────────────────────────
   const MAX_POINTS = 20
   const handleAddPoint = useCallback((lat: number, lng: number) => {
-    if (latestPointsRef.current.length >= MAX_POINTS) return   // 20개 초과 시 무시
+    if (latestPointsRef.current.length >= MAX_POINTS) return
     const newPoint: LatLng = { lat, lng }
     const prev = latestPointsRef.current
+    const newIdx = prev.length
     latestPointsRef.current = [...prev, newPoint]
     setPoints([...latestPointsRef.current])
+    geocodeName(lat, lng, newIdx)   // 역지오코딩
 
     if (prev.length > 0) {
       const fromPt = prev[prev.length - 1]
-      const segIdx = prev.length - 1   // segments 배열에서의 인덱스
+      const segIdx = prev.length - 1
       setRouting(true)
       fetchRoute(fromPt, newPoint)
         .then(seg => setSegments(segs => {
           const next = [...segs]
-          next[segIdx] = seg   // 순서 보장: 인덱스로 직접 삽입
+          next[segIdx] = seg
           return next
         }))
         .finally(() => setRouting(false))
     }
-  }, [])
+  }, [geocodeName])
 
   // ── 말풍선 ────────────────────────────────────────────────────────────────
   const handleMarkerTap     = useCallback((idx: number, sx: number, sy: number) =>
@@ -154,6 +181,7 @@ export default function RoutePlanner() {
     const next = prev.filter((_, j) => j !== idx)
     latestPointsRef.current = next
     setPoints([...next])
+    setPointNames(ns => ns.filter((_, j) => j !== idx))
 
     if (next.length >= 2 && idx > 0 && idx < prev.length - 1) {
       // 중간 포인트 삭제: 양쪽 구간을 합쳐서 재탐색
@@ -188,6 +216,7 @@ export default function RoutePlanner() {
     ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
     latestPointsRef.current = next
     setPoints([...next])
+    setPointNames(ns => { const a = [...ns]; [a[idx-1], a[idx]] = [a[idx], a[idx-1]]; return a })
     setDeleteTarget(null)
     recomputeAllSegments(next)
   }, [recomputeAllSegments])
@@ -199,15 +228,22 @@ export default function RoutePlanner() {
     ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
     latestPointsRef.current = next
     setPoints([...next])
+    setPointNames(ns => { const a = [...ns]; [a[idx], a[idx+1]] = [a[idx+1], a[idx]]; return a })
     setDeleteTarget(null)
     recomputeAllSegments(next)
   }, [recomputeAllSegments])
 
-  // ── 임포트 모드: 공유 경로 경유지 초기 로드 ──────────────────────────────
+  // ── 임포트 모드: 공유 경로 경유지 초기 로드 + 역지오코딩 ─────────────────
   useEffect(() => {
     if (!isImportMode || !importedWaypoints || importedWaypoints.length === 0) return
     latestPointsRef.current = importedWaypoints
     setPoints([...importedWaypoints])
+    // 역지오코딩은 Kakao SDK 로드 후 실행 (약간 딜레이)
+    const geocodeAll = () => {
+      importedWaypoints.forEach((pt, i) => geocodeName(pt.lat, pt.lng, i))
+    }
+    if (window.kakao?.maps?.services?.Geocoder) geocodeAll()
+    else setTimeout(geocodeAll, 1500)   // SDK 로드 대기
     if (importedWaypoints.length < 2) return
     setRouting(true)
     const pairs = importedWaypoints.slice(0, -1).map((from, i) =>
@@ -216,7 +252,7 @@ export default function RoutePlanner() {
     Promise.all(pairs)
       .then(segs => setSegments(segs))
       .finally(() => setRouting(false))
-  }, []) // eslint-disable-line
+  }, [geocodeName]) // eslint-disable-line
 
   // ── 임포트 모드: 경유지 선택 → 현재 위치에서 연결 ────────────────────────
   const handleConnectFromHere = useCallback((idx: number) => {
@@ -237,6 +273,23 @@ export default function RoutePlanner() {
       })
       .finally(() => setRouting(false))
   }, [importUserPos])
+
+  // ── 장소 검색으로 경유지 추가 (이름 이미 알고 있으므로 역지오코딩 생략) ─
+  const handleAddFromSearch = useCallback((lat: number, lng: number, name: string) => {
+    if (latestPointsRef.current.length >= MAX_POINTS) return
+    const newPoint: LatLng = { lat, lng }
+    const prev = latestPointsRef.current
+    const newIdx = prev.length
+    latestPointsRef.current = [...prev, newPoint]
+    setPoints([...latestPointsRef.current])
+    setPointNames(ns => { const a = [...ns]; a[newIdx] = name; return a })
+    if (prev.length > 0) {
+      setRouting(true)
+      fetchRoute(prev[prev.length - 1], newPoint)
+        .then(seg => setSegments(segs => { const n = [...segs]; n[prev.length - 1] = seg; return n }))
+        .finally(() => setRouting(false))
+    }
+  }, [])
 
   // ── 실행취소 · 전체삭제 ──────────────────────────────────────────────────
   const handleUndo = useCallback(() => {
@@ -334,8 +387,8 @@ export default function RoutePlanner() {
         onDismissBubble={handleDismissBubble}
         currentUserPos={importUserPos ?? undefined}
         initialFitPoints={
-          isImportMode && importUserPos
-            ? [importUserPos, ...(importedWaypoints ?? [])]
+          isImportMode && importedWaypoints?.length
+            ? (importUserPos ? [importUserPos, ...importedWaypoints] : importedWaypoints)
             : undefined
         }
       />
@@ -404,6 +457,15 @@ export default function RoutePlanner() {
             exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 340, damping: 28 }}
           >
+            {/* 장소 검색 버튼 */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="flex items-center gap-1.5 rounded-2xl border border-white/15 bg-slate-950/80 px-4 py-4 text-sm font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
+            >
+              <Search size={15} strokeWidth={1.8} className="text-white/60" />
+              검색
+            </button>
+
             {/* 경유지 목록 버튼 — 경유지가 1개 이상일 때 표시 */}
             {points.length >= 1 && (
               <button
@@ -438,11 +500,19 @@ export default function RoutePlanner() {
       {/* ── 경유지 목록 패널 ── */}
       <WaypointListSheet
         points={points}
+        pointNames={pointNames}
         isOpen={showWpList && !locked}
         onClose={() => setShowWpList(false)}
         onMoveUp={handleMoveUp}
         onMoveDown={handleMoveDown}
         onDelete={idx => { handleDelete(idx); if (points.length <= 1) setShowWpList(false) }}
+      />
+
+      {/* ── 장소 검색 패널 ── */}
+      <PlaceSearchPanel
+        isOpen={showSearch && !locked}
+        onClose={() => setShowSearch(false)}
+        onAdd={handleAddFromSearch}
       />
 
       {/* ── CONFIRM: 정보 입력 패널 ── */}
