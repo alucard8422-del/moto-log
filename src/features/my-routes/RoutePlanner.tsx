@@ -47,6 +47,15 @@ export default function RoutePlanner() {
     window.history.pushState({ routePlannerSentinel: true }, '')
     const onPop = () => {
       if (exitingRef.current) return
+      // 로드뷰 X 버튼으로 닫히면서 발생한 history.back() → 경고창 띄우지 않음
+      if ((window as any).__motoRoadviewClosing) {
+        ;(window as any).__motoRoadviewClosing = false
+        setTimeout(() => {
+          if (!exitingRef.current)
+            window.history.pushState({ routePlannerSentinel: true }, '')
+        }, 0)
+        return
+      }
       // Android 일부 브라우저에서 popstate 안에서 pushState 무시 → setTimeout 으로 우회
       setTimeout(() => {
         if (!exitingRef.current)

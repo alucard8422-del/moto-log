@@ -38,7 +38,9 @@ export default function RoadviewModal({ lat, lng, onClose }: Props) {
     return () => {
       window.removeEventListener('popstate', handlePop)
       // X 버튼으로 닫힌 경우 → 히스토리 항목 직접 제거
+      // 플래그를 먼저 세워서 RoutePlanner popstate 핸들러가 경고창을 띄우지 않도록 함
       if (!closedByBack) {
+        ;(window as any).__motoRoadviewClosing = true
         history.back()
       }
     }
