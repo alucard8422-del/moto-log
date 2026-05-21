@@ -270,40 +270,55 @@ function IdleController({ onStart, onStartDirect, onNaviSelect }: {
 }
 
 // ── Riding 컨트롤러 ──────────────────────────────────────────────────────
+// 기록 탭 ◎ 아이콘 중심 Y: 탭바 top(104) - py-4(16) - icon반지름(11) = 77px from screen bottom
+const RECORD_ICON_Y  = 77   // 기록 탭 아이콘 중심 (screen bottom 기준)
+const STOP_SIZE      = 48   // 정지 버튼 직경
+
 function RidingController({ onStop }: { onStop: () => void }) {
+  // 정지 버튼 bottom (touch div 내부 기준)
+  // = RECORD_ICON_Y - TAB_BAR_BOTTOM - STOP_SIZE/2
+  // = 77 - 20 - 24 = 33px
+  const stopBtnBottom = RECORD_ICON_Y - TAB_BAR_BOTTOM - STOP_SIZE / 2
+
   return (
     <div
       className="pointer-events-none fixed bottom-0 left-1/2 z-[35] -translate-x-1/2"
       style={{ width: 'calc(100% - 40px)', maxWidth: 360 }}
     >
-      {/* 정지 버튼 — ▲와 동일 위치/터치 영역 */}
+      {/* 터치 영역: 기록 탭 전체 영역 */}
       <div
         className="pointer-events-auto absolute cursor-pointer"
         style={{
-          bottom: TOUCH_BOTTOM,
+          bottom: TAB_BAR_BOTTOM,  // 20px
           left:   TOUCH_LEFT,
           width:  TOUCH_W,
-          height:    TOUCH_H,
-          display:        'flex',
-          alignItems:     'flex-end',
-          justifyContent: 'center',
-          paddingBottom:  TRI_BOTTOM_IN_TOUCH + TRI_H / 2 - 24,  // 빨간 서클 중심 = 삼각형 중심
+          height: TAB_BAR_H,       // 84px — 탭바 전체 높이
         }}
         onClick={onStop}
       >
-        <motion.div
-          className="flex items-center justify-center rounded-full"
+        {/* 위치 고정 래퍼 — Framer Motion animate 와 transform 충돌 방지 */}
+        <div
           style={{
-            width:     48,
-            height:    48,
-            background: '#EF4444',
-            boxShadow: '0 0 0 4px rgba(239,68,68,0.18), 0 4px 20px rgba(239,68,68,0.50)',
+            position:  'absolute',
+            bottom:    stopBtnBottom,
+            left:      '50%',
+            transform: 'translateX(-50%)',
+            width:     STOP_SIZE,
+            height:    STOP_SIZE,
           }}
-          animate={{ scale: [1, 1.06, 1] }}
-          transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
         >
-          <Square size={18} strokeWidth={0} fill="white" />
-        </motion.div>
+          <motion.div
+            className="flex h-full w-full items-center justify-center rounded-full"
+            style={{
+              background: '#EF4444',
+              boxShadow:  '0 0 0 4px rgba(239,68,68,0.18), 0 4px 20px rgba(239,68,68,0.50)',
+            }}
+            animate={{ scale: [1, 1.06, 1] }}
+            transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+          >
+            <Square size={18} strokeWidth={0} fill="white" />
+          </motion.div>
+        </div>
       </div>
     </div>
   )
