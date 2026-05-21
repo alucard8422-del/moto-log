@@ -22,8 +22,9 @@ export default function Layout() {
   const { pathname } = useLocation()
 
   const handleLogout = async () => {
-    // 스플래시를 다시 재생하도록 세션 플래그 초기화
+    // 스플래시 재생 + 다음 로그인 시 /courses 기본 진입을 위해 세션 초기화
     sessionStorage.removeItem('moto_splash')
+    sessionStorage.removeItem(LAST_TAB_KEY)
     await supabase.auth.signOut()
     // AuthListener가 SIGNED_OUT 이벤트로 '/'로 navigate 처리
   }

@@ -26,9 +26,9 @@ export default function AuthListener() {
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
         // 로그인 화면('/')에서만 앱으로 진입 — 앱 내 재검증 시 이탈 방지
+        // 항상 추천 코스('/courses')로 진입
         if (pathnameRef.current === '/') {
-          const lastTab = sessionStorage.getItem(LAST_TAB_KEY) || '/courses'
-          navigate(lastTab)
+          navigate('/courses')
         }
       }
       if (event === 'SIGNED_OUT') {
