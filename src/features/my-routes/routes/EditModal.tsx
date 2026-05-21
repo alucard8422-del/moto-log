@@ -2,7 +2,7 @@
 // 공유 시 CourseDetailModal에 그대로 표시되므로 동일한 구조로 작성
 
 import { useState, useEffect, useRef } from 'react'
-import { X, MapPin, Route, Clock, Image, CheckCircle, Trash2, MoreHorizontal } from 'lucide-react'
+import { MapPin, Route, Clock, Image, CheckCircle, Trash2, MoreHorizontal } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur } from './routeUtils'
 import type { SavedCourse } from '../../../lib/courseStorage'
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock'
@@ -168,22 +168,17 @@ export default function EditModal({ course, onSave, onClose }: Props) {
               >
                 <Image size={28} strokeWidth={1.2} />
                 <span className="text-xs font-light">대표 사진 추가</span>
+                <span className="text-[10px] font-light text-white/20">여러 장 등록 가능</span>
               </button>
             )}
 
             {/* 그라디언트 오버레이 */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent pointer-events-none" />
 
-            {/* 드래그 핸들 + 닫기 버튼 */}
-            <div ref={dragHandleRef} className="absolute inset-x-0 top-0 flex h-10 items-start justify-between px-4 pt-2">
-              <div className="mx-auto mt-1 h-1 w-10 rounded-full bg-white/20" />
+            {/* 드래그 핸들 */}
+            <div ref={dragHandleRef} className="absolute inset-x-0 top-0 flex h-10 items-start justify-center px-4 pt-2">
+              <div className="mt-1 h-1 w-10 rounded-full bg-white/20" />
             </div>
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-slate-950/60 text-white/50 backdrop-blur-sm active:opacity-60"
-            >
-              <X size={14} strokeWidth={1.5} />
-            </button>
           </div>
 
           {/* ── 스크롤 가능 본문 ── */}

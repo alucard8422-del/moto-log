@@ -1,6 +1,6 @@
 // RouteCard.tsx — 내 경로 > 주행 기록 카드
 import { useState } from 'react'
-import { Route, Clock, MapPin, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown, Play } from 'lucide-react'
+import { Route, Clock, MapPin, Pencil, Share2, CheckCircle, Trash2, Clapperboard, FileDown, Play, Navigation } from 'lucide-react'
 import { cityLabel, fmtDist, fmtDur, fmtDate } from './routeUtils'
 import DeleteModal from './DeleteModal'
 import type { SavedCourse } from '../../../lib/courseStorage'
@@ -94,16 +94,26 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
             ))}
           </div>
 
-          {/* 공유 뱃지 */}
-          {course.communityShared && (
-            <div
-              className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full px-2.5 py-1"
-              style={{ background: 'var(--brand-soft)', border: '1px solid color-mix(in srgb, var(--brand) 30%, transparent)' }}
-            >
-              <CheckCircle size={9} strokeWidth={2} className="text-brand" />
-              <span className="text-[9px] font-bold text-brand">공유됨</span>
-            </div>
-          )}
+          {/* 좌상단 뱃지 묶음 */}
+          <div className="absolute left-3 top-3 z-10 flex flex-col gap-1">
+            {course.communityShared && (
+              <div
+                className="flex items-center gap-1 rounded-full px-2.5 py-1"
+                style={{ background: 'var(--brand-soft)', border: '1px solid color-mix(in srgb, var(--brand) 30%, transparent)' }}
+              >
+                <CheckCircle size={9} strokeWidth={2} className="text-brand" />
+                <span className="text-[9px] font-bold text-brand">공유됨</span>
+              </div>
+            )}
+            {hasGpx && !isPlanned && (
+              <span
+                className="flex items-center gap-0.5 rounded-full px-2.5 py-1 text-[9px] font-bold backdrop-blur-sm"
+                style={{ background: 'rgba(99,102,241,0.82)', color: 'white' }}
+              >
+                <FileDown size={8} strokeWidth={2} />GPX
+              </span>
+            )}
+          </div>
 
           {/* 사진 있을 때 제목 오버레이 */}
           {course.coverPhoto && (
@@ -142,14 +152,6 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                 {fmtDur(course.durationMin)}
               </span>
               <span className="text-[11px] font-normal text-muted">{fmtDate(course.createdAt)}</span>
-              {hasGpx && !isPlanned && (
-                <span
-                  className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                  style={{ background: 'rgba(99,102,241,0.10)', color: '#6366F1' }}
-                >
-                  <FileDown size={8} strokeWidth={2} />GPX
-                </span>
-              )}
               {isPlanned && (
                 <span
                   className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
@@ -177,6 +179,14 @@ export default function RouteCard({ course, onDelete, onEdit, onShare, onVideoCr
                   className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-[11px] font-bold text-white active:opacity-70"
                 >
                   <Play size={10} strokeWidth={0} fill="white" />주행
+                </button>
+              )}
+              {isPlanned && (
+                <button
+                  onClick={e => { e.stopPropagation(); onDrive?.(course) }}
+                  className="flex items-center gap-1 rounded-xl bg-brand px-3 py-1.5 text-[11px] font-bold text-white active:opacity-70"
+                >
+                  <Navigation size={10} strokeWidth={2} />네비로 출발
                 </button>
               )}
             </div>
