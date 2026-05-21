@@ -1,6 +1,6 @@
 // DeleteModal.tsx — 경로 삭제 확인 모달
-import { useState, useEffect } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, X, Trash2 } from 'lucide-react'
+import { useModalBackButton } from '../../../hooks/useModalBackButton'
 
 interface Props {
   title: string
@@ -9,38 +9,48 @@ interface Props {
 }
 
 export default function DeleteModal({ title, onConfirm, onCancel }: Props) {
-  const [open, setOpen] = useState(false)
-  useEffect(() => { const t = setTimeout(() => setOpen(true), 16); return () => clearTimeout(t) }, [])
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
+  useModalBackButton(true, onCancel)
 
   return (
     <>
       <div
-        className={`fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
         onClick={onCancel}
       />
-      <div className={`fixed inset-0 z-[80] flex items-center justify-center px-6 transition-all duration-300 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-        <div className="w-full max-w-xs rounded-3xl border border-white/10 bg-[#161B26]/98 p-6">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/10">
-            <AlertTriangle size={22} strokeWidth={1.5} className="text-rose-400" />
-          </div>
-          <p className="mb-1 text-sm font-bold text-white">주행 기록 삭제</p>
-          <p className="mb-6 text-xs font-light text-white/40">
-            '{title}' 기록을 삭제합니다. 복구할 수 없어요.
-          </p>
-          <div className="flex gap-2">
-            <button onClick={onCancel}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-light text-white/50 active:opacity-60">
-              취소
-            </button>
-            <button onClick={onConfirm}
-              className="flex-1 rounded-2xl bg-rose-500/20 py-3 text-sm font-bold text-rose-400 ring-1 ring-rose-500/30 active:opacity-70">
-              삭제
-            </button>
-          </div>
+      <div
+        className="fixed inset-x-4 top-1/2 z-[201] -translate-y-1/2 rounded-3xl p-6"
+        style={{ background: '#111622', border: '1px solid rgba(255,255,255,0.10)', maxWidth: 360, margin: '0 auto' }}
+      >
+        <button
+          onClick={onCancel}
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full active:opacity-60"
+          style={{ background: 'rgba(255,255,255,0.06)' }}
+        >
+          <X size={15} strokeWidth={1.5} className="text-white/50" />
+        </button>
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'rgba(239,68,68,0.12)' }}>
+          <AlertTriangle size={22} strokeWidth={1.5} className="text-red-400" />
+        </div>
+        <p className="mb-1.5 text-[16px] font-bold text-white">주행 기록 삭제</p>
+        <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
+          '{title}' 기록을 삭제합니다.<br />삭제 후 복구할 수 없어요.
+        </p>
+        <div className="flex gap-2.5">
+          <button
+            onClick={onCancel}
+            className="flex flex-1 items-center justify-center rounded-2xl py-3.5 text-sm font-semibold text-white/60 active:opacity-70"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex flex-[1.2] items-center justify-center gap-1.5 rounded-2xl py-3.5 text-sm font-bold text-white active:opacity-80"
+            style={{ background: 'rgba(239,68,68,0.80)' }}
+          >
+            <Trash2 size={14} strokeWidth={2} />
+            삭제
+          </button>
         </div>
       </div>
     </>
