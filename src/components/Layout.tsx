@@ -1,11 +1,12 @@
 // Layout.tsx — 공통 헤더 + 탭바
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { CircleDot, Route, Compass, Warehouse, User, Navigation, LogOut, X, AlertTriangle } from 'lucide-react'
 import FuelCompleteSheet from './FuelCompleteSheet'
 import DriveSessionOverlay from './DriveSessionOverlay'
 import { supabase } from '../lib/supabaseClient'
 import { useRideRecord } from '../context/RideRecordContext'
+import { useModalBackButton } from '../hooks/useModalBackButton'
 
 const TAB_ITEMS = [
   { path: '/map',       icon: CircleDot, label: '기록'    },
@@ -24,60 +25,10 @@ export default function Layout() {
   const { status: rideStatus } = useRideRecord()
   const isRecording  = rideStatus === 'riding'
 
-  // ── 상태 ──────────────────────────────────────────────────────────────────
   const [showExitConfirm, setShowExitConfirm] = useState(false)
-  const [showExitToast,   setShowExitToast]   = useState(false)
 
-  const showExitConfirmRef = useRef(showExitConfirm)
-  const exitReadyRef       = useRef(false)   // 뒤로가기 두 번 대기 중
-  const exitTimerRef       = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-
-  useEffect(() => { showExitConfirmRef.current = showExitConfirm }, [showExitConfirm])
-
-  // ── 탭 페이지 진입 시 센티넬 re-push (탭 이동마다 항상 최신 엔트리 위에 유지) ──
-  useEffect(() => {
-    if (!TAB_PATHS.includes(pathname as typeof TAB_PATHS[number])) return
-    window.history.pushState({ motoRoot: true }, '')
-  }, [pathname])
-
-  // ── 뒤로가기 두 번 종료 로직 (마운트 시 1회만 등록) ──────────────────────
-  useEffect(() => {
-    const onPop = (e: PopStateEvent) => {
-      // 센티넬로 돌아온 경우 (모달 닫힘 후 등) → 종료 로직 건너뜀
-      if (e.state?.motoRoot) return
-
-      // ① 로그아웃 확인 모달이 열려 있으면 모달만 닫기
-      if (showExitConfirmRef.current) {
-        setShowExitConfirm(false)
-        window.history.pushState({ motoRoot: true }, '')
-        return
-      }
-
-      // ② 이미 토스트가 떠 있으면 → 진짜 종료 허용
-      if (exitReadyRef.current) {
-        clearTimeout(exitTimerRef.current)
-        exitReadyRef.current = false
-        setShowExitToast(false)
-        return
-      }
-
-      // ③ 첫 번째 뒤로가기 → 토스트 표시 + 센티넬 복원
-      window.history.pushState({ motoRoot: true }, '')
-      exitReadyRef.current = true
-      setShowExitToast(true)
-      clearTimeout(exitTimerRef.current)
-      exitTimerRef.current = setTimeout(() => {
-        exitReadyRef.current = false
-        setShowExitToast(false)
-      }, 2500)
-    }
-
-    window.addEventListener('popstate', onPop)
-    return () => {
-      window.removeEventListener('popstate', onPop)
-      clearTimeout(exitTimerRef.current)
-    }
-  }, []) // eslint-disable-line
+  // 기록 중 로그아웃 확인 모달 — 뒤로가기로 닫기
+  useModalBackButton(showExitConfirm, () => setShowExitConfirm(false))
 
   // ── 로그아웃 ───────────────────────────────────────────────────────────────
   const handleLogout = async () => {
@@ -168,7 +119,7 @@ export default function Layout() {
           {TAB_ITEMS.map(({ path, icon: Icon, label }) => {
             const isActive    = pathname === path
             const isRecordTab = path === '/map'
-            // 다른 메뉴에 있을 때 기록 탭에 ●REC 표시 (기록 메뉴에서는 ErgonomicController가 담당)
+            // 다른 메뉴에 있을 때 기록 탭에 ●REC 표시
             const showRec     = isRecordTab && isRecording && !isMapPage
 
             return (
@@ -177,7 +128,7 @@ export default function Layout() {
                 onClick={() => navigate(path)}
                 className="relative flex flex-1 flex-col items-center gap-1.5 py-4 transition-opacity active:opacity-60"
               >
-                {/* ●REC 배지 — 탭바 안쪽 기록 아이콘 상단 (다른 탭에서만) */}
+                {/* ●REC 배지 — CircleDot 아이콘 정중앙 (다른 탭에서만) */}
                 {showRec && (
                   <span
                     className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full px-1.5 py-[3px]"
@@ -217,24 +168,6 @@ export default function Layout() {
           })}
         </div>
       </nav>
-
-      {/* ── 뒤로가기 두 번 종료 토스트 — 화면 중앙 텍스트 ── */}
-      {showExitToast && (
-        <div
-          className="pointer-events-none fixed inset-0 z-[500] flex items-center justify-center"
-        >
-          <span
-            className="rounded-full px-5 py-2.5 text-[13px] font-medium text-white/80"
-            style={{
-              background:           'rgba(10,15,30,0.72)',
-              backdropFilter:       'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-            }}
-          >
-            한 번 더 뒤로가기하면 종료합니다
-          </span>
-        </div>
-      )}
 
       {/* ── 기록 중 로그아웃 확인 모달 ── */}
       {showExitConfirm && (
