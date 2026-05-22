@@ -27,9 +27,14 @@ export default function DeleteModal({ title, onConfirm, onCancel }: Props) {
             <Trash2 size={13} strokeWidth={1.5} className="text-red-400" />
             <span className="text-[10px] font-light uppercase tracking-widest text-white/30">Delete Record</span>
           </div>
-          <p className="mb-1.5 text-[16px] font-bold text-white">주행 기록 삭제</p>
-          <p className="mb-6 text-[13px] font-light leading-relaxed text-white/45">
-            '{title}' 기록을 삭제합니다.<br />삭제 후 복구할 수 없어요.
+          <p className="mb-2 text-[16px] font-bold text-white">주행 기록 삭제</p>
+          {/* 코스 이름 강조 박스 */}
+          <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2.5">
+            <p className="text-[10px] font-light text-white/30">삭제할 코스</p>
+            <p className="mt-0.5 text-[14px] font-bold text-white">{title}</p>
+          </div>
+          <p className="mb-6 text-[12px] font-light leading-relaxed text-white/35">
+            삭제 후 복구할 수 없어요.
           </p>
           <div className="flex gap-2.5">
             <button

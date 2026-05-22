@@ -469,9 +469,9 @@ export default function RoutePlanner() {
             {/* 장소 검색 버튼 — frosted glass */}
             <button
               onClick={() => setShowSearch(true)}
-              className="flex shrink-0 items-center gap-1 rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-lg backdrop-blur-xl active:bg-white/20"
+              className="flex shrink-0 items-center gap-1 rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-gray-900 shadow-lg backdrop-blur-xl active:bg-white/20"
             >
-              <Search size={13} strokeWidth={2} className="text-white/80" />
+              <Search size={13} strokeWidth={2} className="text-gray-700" />
               검색
             </button>
 
@@ -479,7 +479,7 @@ export default function RoutePlanner() {
             {points.length >= 1 && (
               <button
                 onClick={() => setShowWpList(v => !v)}
-                className="flex shrink-0 items-center gap-1 rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-lg backdrop-blur-xl active:bg-white/20"
+                className="flex shrink-0 items-center gap-1 rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-gray-900 shadow-lg backdrop-blur-xl active:bg-white/20"
               >
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#FF5A00] text-[9px] font-bold text-white">
                   {points.length}
