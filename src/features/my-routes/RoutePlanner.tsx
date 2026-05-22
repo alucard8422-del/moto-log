@@ -456,7 +456,7 @@ export default function RoutePlanner() {
         {!locked && (
           <motion.div
             key="draw-btns"
-            className="absolute inset-x-0 bottom-10 z-[1000] flex items-center justify-center gap-3 px-5"
+            className="absolute inset-x-0 bottom-10 z-[1000] flex items-center justify-center gap-2 px-4"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
@@ -465,9 +465,9 @@ export default function RoutePlanner() {
             {/* 장소 검색 버튼 */}
             <button
               onClick={() => setShowSearch(true)}
-              className="flex items-center gap-1.5 rounded-2xl border border-white/15 bg-slate-950/80 px-4 py-4 text-sm font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
+              className="flex shrink-0 items-center gap-1 rounded-2xl border border-white/15 bg-slate-950/80 px-3 py-3 text-xs font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
             >
-              <Search size={15} strokeWidth={1.8} className="text-white/60" />
+              <Search size={13} strokeWidth={1.8} className="text-white/60" />
               검색
             </button>
 
@@ -475,9 +475,9 @@ export default function RoutePlanner() {
             {points.length >= 1 && (
               <button
                 onClick={() => setShowWpList(v => !v)}
-                className="flex items-center gap-1.5 rounded-2xl border border-white/15 bg-slate-950/80 px-4 py-4 text-sm font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
+                className="flex shrink-0 items-center gap-1 rounded-2xl border border-white/15 bg-slate-950/80 px-3 py-3 text-xs font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#FF5A00] text-[10px] font-bold text-white">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#FF5A00] text-[9px] font-bold text-white">
                   {points.length}
                 </span>
                 목록
@@ -489,11 +489,11 @@ export default function RoutePlanner() {
               <button
                 onClick={handleConfirm}
                 disabled={routing}
-                className="flex items-center gap-2.5 rounded-2xl bg-[#FF5A00] px-8 py-4 text-sm font-bold text-white shadow-xl shadow-orange-900/40 active:opacity-80 disabled:opacity-60"
+                className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#FF5A00] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-orange-900/40 active:opacity-80 disabled:opacity-60"
               >
-                <PenLine size={16} strokeWidth={2} />
+                <PenLine size={13} strokeWidth={2} />
                 코스 확정
-                <span className="ml-1 rounded-full bg-slate-950/20 px-2 py-0.5 text-[10px] font-bold">
+                <span className="rounded-full bg-slate-950/20 px-1.5 py-0.5 text-[9px] font-bold">
                   {dist.toFixed(1)} km
                 </span>
               </button>
