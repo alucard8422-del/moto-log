@@ -1,20 +1,37 @@
 // PlaceSearchPanel.tsx — 카카오 장소검색으로 경유지 추가
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, MapPin, Plus, Loader2 } from 'lucide-react'
+import { Search, X, MapPin, Plus, Loader2, AlertCircle } from 'lucide-react'
 
 interface PlaceResult {
-  place_name: string
+  place_name:        string
   road_address_name: string
-  address_name: string
-  x: string  // 경도 (lng)
-  y: string  // 위도 (lat)
+  address_name:      string
+  x: string   // 경도 (lng)
+  y: string   // 위도 (lat)
 }
 
 interface Props {
-  isOpen:   boolean
-  onClose:  () => void
-  onAdd:    (lat: number, lng: number, name: string) => void
+  isOpen:  boolean
+  onClose: () => void
+  onAdd:   (lat: number, lng: number, name: string) => void
+}
+
+// 카카오 SDK services 로드 대기 (최대 5초)
+function waitForKakaoPlaces(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window.kakao?.maps?.services?.Places === 'function') {
+      resolve(); return
+    }
+    let tries = 0
+    const iv = setInterval(() => {
+      if (typeof window.kakao?.maps?.services?.Places === 'function') {
+        clearInterval(iv); resolve()
+      } else if (++tries > 25) {   // 25 × 200ms = 5초
+        clearInterval(iv); reject(new Error('Kakao Places not available'))
+      }
+    }, 200)
+  })
 }
 
 export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
@@ -22,24 +39,50 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
   const [results,  setResults]  = useState<PlaceResult[]>([])
   const [loading,  setLoading]  = useState(false)
   const [searched, setSearched] = useState(false)
+  const [error,    setError]    = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const doSearch = () => {
+  const doSearch = useCallback(async () => {
     const q = query.trim()
-    if (!q || !window.kakao?.maps?.services) return
+    if (!q) return
+
+    // 키보드 내리기
+    inputRef.current?.blur()
+
     setLoading(true)
     setSearched(false)
-    const ps = new window.kakao.maps.services.Places()
-    ps.keywordSearch(q, (data: PlaceResult[], status: string) => {
+    setError('')
+    setResults([])
+
+    try {
+      // SDK 로드 대기
+      await waitForKakaoPlaces()
+
+      await new Promise<void>((resolve, reject) => {
+        const ps = new window.kakao.maps.services.Places()
+        // 타임아웃 안전장치 (10초)
+        const timeout = setTimeout(() => reject(new Error('timeout')), 10_000)
+        ps.keywordSearch(q, (data: PlaceResult[], status: string) => {
+          clearTimeout(timeout)
+          setLoading(false)
+          setSearched(true)
+          if (status === 'OK') {
+            setResults(data.slice(0, 8))
+          } else if (status === 'ZERO_RESULT') {
+            setResults([])
+          } else {
+            reject(new Error(`status: ${status}`))
+          }
+          resolve()
+        })
+      })
+    } catch (e) {
       setLoading(false)
       setSearched(true)
-      if (status === window.kakao.maps.services.Status.OK) {
-        setResults(data.slice(0, 8))
-      } else {
-        setResults([])
-      }
-    })
-  }
+      setError('검색에 실패했어요. 잠시 후 다시 시도해주세요.')
+      console.warn('[PlaceSearch] 검색 오류:', e)
+    }
+  }, [query])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') doSearch()
@@ -47,10 +90,8 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
 
   const handleAdd = (r: PlaceResult) => {
     onAdd(parseFloat(r.y), parseFloat(r.x), r.place_name)
-    onClose()
-    setQuery('')
-    setResults([])
-    setSearched(false)
+    // 패널 닫지 않고 결과 유지 → 연속 추가 가능
+    // 추가된 항목 시각 피드백은 경유지 목록에서 확인
   }
 
   const handleClose = () => {
@@ -58,6 +99,7 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
     setQuery('')
     setResults([])
     setSearched(false)
+    setError('')
   }
 
   return (
@@ -100,7 +142,7 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
                     ref={inputRef}
                     autoFocus
                     value={query}
-                    onChange={e => setQuery(e.target.value)}
+                    onChange={e => { setQuery(e.target.value); setSearched(false); setResults([]) }}
                     onKeyDown={handleKeyDown}
                     placeholder="장소 이름 또는 주소 검색"
                     className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-9 pr-4 text-sm text-white placeholder:text-white/20 outline-none focus:border-[#FF5A00]/60"
@@ -119,8 +161,13 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
               </div>
 
               {/* 결과 목록 */}
-              <div className="max-h-72 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {results.length > 0 ? (
+              <div className="max-h-64 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {error ? (
+                  <div className="flex flex-col items-center gap-2 py-8">
+                    <AlertCircle size={20} strokeWidth={1.5} className="text-rose-400/60" />
+                    <p className="text-center text-[11px] font-light text-white/30">{error}</p>
+                  </div>
+                ) : results.length > 0 ? (
                   <div className="flex flex-col gap-1">
                     {results.map((r, i) => (
                       <button
@@ -142,10 +189,17 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
                         </div>
                       </button>
                     ))}
+                    <p className="pt-1 pb-2 text-center text-[10px] font-light text-white/20">
+                      탭하면 경유지에 추가됩니다
+                    </p>
                   </div>
                 ) : searched ? (
                   <p className="py-8 text-center text-[11px] font-light text-white/25">
-                    검색 결과가 없어요
+                    "{query}" 검색 결과가 없어요
+                  </p>
+                ) : loading ? (
+                  <p className="py-6 text-center text-[11px] font-light text-white/20">
+                    검색 중…
                   </p>
                 ) : (
                   <p className="py-6 text-center text-[11px] font-light text-white/20">
