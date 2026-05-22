@@ -109,9 +109,18 @@ tmap://route?startname=출발&startx={lng}&starty={lat}&goalname={이름}&goalx=
 3. RoutePlanner로 이동, 기존 경유지 전체 범위로 지도 표시
 4. 수정 후 "경유지 수정 완료" → 기존 코스 업데이트 (새 글 생성 안 됨)
 
+### 카카오 내비 — JS SDK 방식 (현재 적용)
+- `kakaonavi://` 딥링크는 카카오 비즈니스 파트너 심사 필요(유료) → **사용 불가**
+- 대신 `Kakao.Navi.start()` JS SDK 사용 (JavaScript 키, 별도 심사 없음)
+- `window.Kakao`(JS SDK, 대문자) ≠ `window.kakao`(Maps SDK, 소문자) — 별개 객체
+- SDK viaPoints 최대 3개 / 실패 시 `kakaomap://route` 폴백
+
 ### 주행 세션 (DriveSessionOverlay)
+- **기록(GPS) 켜져 있을 때만 작동** (recordStatus === 'riding')
 - 계획 경로를 구간 분할해서 순서대로 내비 실행
-- 내비 실행 후 **앱으로 돌아왔을 때** 구간 완료 처리 (4초 이내 복귀 = 내비 실패로 간주)
+- **구간 분할 방식**: 겹침 없음 — 10개 경유지+T맵(max5) → 1구간[1-5] 2구간[6-10]
+- 내비 실행 확인: `visibilitychange:hidden` (page hidden) 감지 → 세션 저장 → `naviActive`
+- 복귀 감지: `naviActive` 상태일 때만 GPS 체크 실행 (다른 앱 전환 오작동 방지)
 - 완료 문구 예시: "전체 경유지 10개 중 5개가 포함된 1구간을 완료했습니다"
 
 ---
