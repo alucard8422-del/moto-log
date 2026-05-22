@@ -41,7 +41,7 @@ export interface NaviOption {
 
 export const NAVI_OPTIONS: NaviOption[] = [
   { type: 'tmap',  label: 'T map',    badge: 'T', scheme: 'tmap://',       fallback: 'https://tmap.life' },
-  { type: 'kakao', label: '카카오내비', badge: 'K', scheme: 'kakaonavi://', fallback: 'https://map.kakao.com' },
+  { type: 'kakao', label: '카카오맵',  badge: 'K', scheme: 'kakaomap://',  fallback: 'https://map.kakao.com' },
   { type: 'atlan', label: '아틀란',    badge: 'A', scheme: 'atlan://',      fallback: 'https://atlan.com' },
 ]
 

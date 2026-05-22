@@ -88,17 +88,11 @@ export function buildSegmentDeepLink(
   }
 
   if (type === 'kakao') {
-    // 카카오내비 딥링크: appkey 인증 필수, ep=경도,위도 형식
-    const KAKAO_APP_KEY = '6ef7c9ef39fab621fd855288f71a08ac'  // 네이티브 앱 키
-    const safeGoalName = goalName?.trim() || '목적지'
-    let url = `kakaonavi://navigate`
-    url += `?appkey=${KAKAO_APP_KEY}`
-    url += `&sp=${start.lng},${start.lat}&spname=${enc('출발')}`
-    url += `&ep=${goal.lng},${goal.lat}&epname=${enc(safeGoalName)}`
-    vias.forEach((v, i) => {
-      url += `&via${i + 1}=${v.lng},${v.lat}&via${i + 1}name=${enc(`경유${i + 1}`)}`
-    })
-    console.log('[KakaoNavi] deeplink URL:', url)
+    // 카카오맵 딥링크: appkey 불필요, 좌표 순서 위도,경도 (lat,lng)
+    // kakaonavi://는 별도 API 신청·승인 필요 → kakaomap://으로 대체
+    let url = `kakaomap://route`
+    url += `?sp=${start.lat},${start.lng}&ep=${goal.lat},${goal.lng}&by=CAR`
+    console.log('[KakaoMap] deeplink URL:', url)
     return url
   }
 
