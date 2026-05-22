@@ -12,9 +12,10 @@ interface PlaceResult {
 }
 
 interface Props {
-  isOpen:  boolean
-  onClose: () => void
-  onAdd:   (lat: number, lng: number, name: string) => void
+  isOpen:    boolean
+  onClose:   () => void
+  onAdd:     (lat: number, lng: number, name: string) => void
+  onPreview: (lat: number, lng: number) => void   // 지도 이동만 (경유지 추가 X)
 }
 
 // 카카오 SDK services 로드 대기 (최대 5초)
@@ -34,7 +35,7 @@ function waitForKakaoPlaces(): Promise<void> {
   })
 }
 
-export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
+export default function PlaceSearchPanel({ isOpen, onClose, onAdd, onPreview }: Props) {
   const [query,    setQuery]    = useState('')
   const [results,  setResults]  = useState<PlaceResult[]>([])
   const [loading,  setLoading]  = useState(false)
@@ -88,10 +89,14 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
     if (e.key === 'Enter') doSearch()
   }
 
-  const handleAdd = (r: PlaceResult) => {
+  const handlePreview = (r: PlaceResult) => {
+    // 행 탭 → 지도 이동만 (경유지 추가 X)
+    onPreview(parseFloat(r.y), parseFloat(r.x))
+  }
+
+  const handleAdd = (e: React.MouseEvent, r: PlaceResult) => {
+    e.stopPropagation()   // 행 탭(onPreview) 이벤트 차단
     onAdd(parseFloat(r.y), parseFloat(r.x), r.place_name)
-    // 패널 닫지 않고 결과 유지 → 연속 추가 가능
-    // 추가된 항목 시각 피드백은 경유지 목록에서 확인
   }
 
   const handleClose = () => {
@@ -170,13 +175,13 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
                 ) : results.length > 0 ? (
                   <div className="flex flex-col gap-1">
                     {results.map((r, i) => (
-                      <button
+                      <div
                         key={i}
-                        onClick={() => handleAdd(r)}
-                        className="flex items-center gap-3 rounded-2xl px-3 py-3 text-left active:bg-white/10"
+                        onClick={() => handlePreview(r)}
+                        className="flex items-center gap-3 rounded-2xl px-3 py-3 active:bg-white/5 cursor-pointer"
                       >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FF5A00]/15">
-                          <MapPin size={14} strokeWidth={1.5} className="text-[#FF5A00]" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/8">
+                          <MapPin size={14} strokeWidth={1.5} className="text-white/40" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13px] font-semibold text-white">{r.place_name}</p>
@@ -184,10 +189,14 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd }: Props) {
                             {r.road_address_name || r.address_name}
                           </p>
                         </div>
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FF5A00]/15">
-                          <Plus size={13} strokeWidth={2} className="text-[#FF5A00]" />
-                        </div>
-                      </button>
+                        {/* + 버튼만 경유지 추가 */}
+                        <button
+                          onClick={e => handleAdd(e, r)}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FF5A00] active:opacity-70"
+                        >
+                          <Plus size={14} strokeWidth={2.5} className="text-white" />
+                        </button>
+                      </div>
                     ))}
                     <p className="pt-1 pb-2 text-center text-[10px] font-light text-white/20">
                       탭하면 경유지에 추가됩니다

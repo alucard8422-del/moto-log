@@ -516,6 +516,7 @@ export default function RoutePlanner() {
         isOpen={showSearch && !locked}
         onClose={() => setShowSearch(false)}
         onAdd={handleAddFromSearch}
+        onPreview={(lat, lng) => setMapPanTo({ lat, lng })}
       />
 
       {/* ── CONFIRM: 정보 입력 패널 ── */}
