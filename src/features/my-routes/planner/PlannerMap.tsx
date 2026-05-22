@@ -50,14 +50,15 @@ interface Props {
   onMarkerTap:      (idx: number, screenX: number, screenY: number) => void
   onLongPress:      (lat: number, lng: number) => void
   onDismissBubble:  () => void
-  currentUserPos?:  LatLng    // 현재 위치 표시 (파란 점)
+  currentUserPos?:   LatLng    // 현재 위치 표시 (파란 점)
   initialFitPoints?: LatLng[] // 진입 시 지도 범위 맞춤
+  panTo?:            LatLng   // 이 값이 바뀔 때마다 지도 중심 이동
 }
 
 export default function PlannerMap({
   points, routePath, locked, deleteTargetOpen,
   onAddPoint, onMarkerTap, onLongPress, onDismissBubble,
-  currentUserPos, initialFitPoints,
+  currentUserPos, initialFitPoints, panTo,
 }: Props) {
   const containerRef    = useRef<HTMLDivElement>(null)
   const mapRef          = useRef<any>(null)
@@ -252,6 +253,15 @@ export default function PlannerMap({
       mapRef.current.setBounds(bounds, 80, 80, 80, 80)
     } catch {}
   }, [mapReady]) // eslint-disable-line
+
+  // ── 장소 검색 결과 선택 시 지도 중심 이동 ─────────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !panTo || !window.kakao?.maps) return
+    try {
+      mapRef.current.setCenter(new window.kakao.maps.LatLng(panTo.lat, panTo.lng))
+      mapRef.current.setLevel(4)   // 적당한 줌 레벨 (동네 단위)
+    } catch {}
+  }, [panTo, mapReady])
 
   // ── 마커 갱신 (points 변경 시) ────────────────────────────────────────────
   useEffect(() => {

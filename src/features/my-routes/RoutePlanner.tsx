@@ -108,6 +108,7 @@ export default function RoutePlanner() {
   const [showWpList,     setShowWpList]     = useState(false)
   const [showSearch,     setShowSearch]     = useState(false)
   const [pointNames,     setPointNames]     = useState<string[]>([])
+  const [mapPanTo,       setMapPanTo]       = useState<LatLng | undefined>(undefined)
 
   const locked = stage === 'CONFIRM'
 
@@ -283,6 +284,7 @@ export default function RoutePlanner() {
     latestPointsRef.current = [...prev, newPoint]
     setPoints([...latestPointsRef.current])
     setPointNames(ns => { const a = [...ns]; a[newIdx] = name; return a })
+    setMapPanTo({ lat, lng })   // 지도 해당 위치로 이동
     if (prev.length > 0) {
       setRouting(true)
       fetchRoute(prev[prev.length - 1], newPoint)
@@ -386,6 +388,7 @@ export default function RoutePlanner() {
         onLongPress={handleLongPress}
         onDismissBubble={handleDismissBubble}
         currentUserPos={importUserPos ?? undefined}
+        panTo={mapPanTo}
         initialFitPoints={
           isImportMode && importedWaypoints?.length
             ? (importUserPos ? [importUserPos, ...importedWaypoints] : importedWaypoints)
