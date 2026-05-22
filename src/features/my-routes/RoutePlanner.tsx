@@ -462,20 +462,20 @@ export default function RoutePlanner() {
             exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 340, damping: 28 }}
           >
-            {/* 장소 검색 버튼 */}
+            {/* 장소 검색 버튼 — frosted glass */}
             <button
               onClick={() => setShowSearch(true)}
-              className="flex shrink-0 items-center gap-1 rounded-2xl border border-white/15 bg-slate-950/80 px-3 py-3 text-xs font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
+              className="flex shrink-0 items-center gap-1 rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-lg backdrop-blur-xl active:bg-white/20"
             >
-              <Search size={13} strokeWidth={1.8} className="text-white/60" />
+              <Search size={13} strokeWidth={2} className="text-white/80" />
               검색
             </button>
 
-            {/* 경유지 목록 버튼 — 경유지가 1개 이상일 때 표시 */}
+            {/* 경유지 목록 버튼 — frosted glass */}
             {points.length >= 1 && (
               <button
                 onClick={() => setShowWpList(v => !v)}
-                className="flex shrink-0 items-center gap-1 rounded-2xl border border-white/15 bg-slate-950/80 px-3 py-3 text-xs font-semibold text-white/70 shadow-xl backdrop-blur-md active:opacity-70"
+                className="flex shrink-0 items-center gap-1 rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-lg backdrop-blur-xl active:bg-white/20"
               >
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#FF5A00] text-[9px] font-bold text-white">
                   {points.length}
@@ -484,16 +484,16 @@ export default function RoutePlanner() {
               </button>
             )}
 
-            {/* 코스 확정 버튼 */}
+            {/* 코스 확정 버튼 — 오렌지 강조 */}
             {points.length >= 2 && (
               <button
                 onClick={handleConfirm}
                 disabled={routing}
-                className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#FF5A00] px-4 py-3 text-xs font-bold text-white shadow-xl shadow-orange-900/40 active:opacity-80 disabled:opacity-60"
+                className="flex shrink-0 items-center gap-1.5 rounded-2xl bg-[#FF5A00] px-4 py-3 text-xs font-bold text-white shadow-lg shadow-orange-900/50 active:opacity-80 disabled:opacity-60"
               >
                 <PenLine size={13} strokeWidth={2} />
                 코스 확정
-                <span className="rounded-full bg-slate-950/20 px-1.5 py-0.5 text-[9px] font-bold">
+                <span className="rounded-full bg-black/20 px-1.5 py-0.5 text-[9px] font-bold">
                   {dist.toFixed(1)} km
                 </span>
               </button>

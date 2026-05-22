@@ -36,7 +36,7 @@ export default function ConfirmPanel({
       exit={{ y: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <div className="mx-auto w-full max-w-sm overflow-hidden rounded-t-3xl shadow-2xl shadow-black/60">
+      <div className="mx-auto w-full max-w-sm overflow-hidden rounded-t-[2rem] shadow-2xl shadow-black/60">
 
         {/* 상단 오렌지 포인트 라인 */}
         <div className="h-[3px] w-full bg-gradient-to-r from-transparent via-[#FF5A00] to-transparent" />
