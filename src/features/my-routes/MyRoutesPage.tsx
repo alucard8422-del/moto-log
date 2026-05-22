@@ -22,7 +22,6 @@ import {
 import {
   fetchMyCoursesAuth, insertMyCourse, updateMyCourse, deleteMyCourse, uploadCourseImage,
 } from '../../lib/courseService'
-import { saveDriveSession } from '../../lib/driveSession'
 import { loadNaviPref, getCourseNavWaypoints, splitIntoSegments } from '../../lib/naviUtils'
 
 export default function MyRoutesPage() {
@@ -156,7 +155,7 @@ export default function MyRoutesPage() {
       naviType, segments, currentSegmentIdx: 0,
       startedAt: new Date().toISOString(),
     }
-    saveDriveSession(session)
+    // saveDriveSession은 DriveSessionOverlay에서 내비 앱이 실제 열릴 때 저장
     window.dispatchEvent(new CustomEvent('moto:startDrive', { detail: session }))
   }
 
