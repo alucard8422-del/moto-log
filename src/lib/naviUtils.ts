@@ -88,13 +88,15 @@ export function buildSegmentDeepLink(
   }
 
   if (type === 'kakao') {
-    // 카카오맵 딥링크: 좌표 순서 위도,경도 (lat,lng), via1~via3 경유지 지원
-    let url = `kakaomap://route`
-    url += `?sp=${start.lat},${start.lng}&ep=${goal.lat},${goal.lng}&by=CAR`
+    // 카카오내비 딥링크 — 초기 작동했던 원본 형식 (appkey 없음, sp 포함)
+    // 좌표 순서: 경도,위도 (lng,lat)
+    let url = `kakaonavi://navigate`
+    url += `?sp=${start.lng},${start.lat}&spname=${enc('출발')}`
+    url += `&ep=${goal.lng},${goal.lat}&epname=${enc(goalName || '목적지')}`
     vias.forEach((v, i) => {
-      url += `&via${i + 1}=${v.lat},${v.lng}`
+      url += `&via${i + 1}=${v.lng},${v.lat}&via${i + 1}name=${enc(`경유${i + 1}`)}`
     })
-    console.log('[KakaoMap] deeplink URL:', url)
+    console.log('[KakaoNavi] deeplink URL:', url)
     return url
   }
 
