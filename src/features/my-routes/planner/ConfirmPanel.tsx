@@ -107,7 +107,7 @@ export default function ConfirmPanel({
           {/* 한줄 팁 */}
           <div className="mb-5">
             <label className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-gray-500">
-              한줄 팁
+              메모
               <span className="text-[10px] font-normal text-gray-300">선택</span>
             </label>
             <input
