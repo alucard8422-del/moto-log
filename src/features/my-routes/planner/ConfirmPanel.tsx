@@ -6,7 +6,7 @@
 //  - 브랜드 오렌지(#FF5A00)는 흰 배경에서 최대 채도로 살아남
 
 import { motion } from 'framer-motion'
-import { CheckCircle2, RotateCcw, BookmarkPlus, Globe2, PenLine, MapPin, Route } from 'lucide-react'
+import { CheckCircle2, RotateCcw, BookmarkPlus, PenLine, MapPin, Route, X } from 'lucide-react'
 import type { LatLng } from '../routes/routeUtils'
 
 interface Props {
@@ -151,34 +151,29 @@ export default function ConfirmPanel({
 
           ) : (
             <div className="flex gap-2">
-              {/* 내 경로 저장 — 아웃라인 스타일 */}
+              {/* 취소 — 아웃라인 */}
+              <motion.button
+                onClick={onReEdit}
+                whileTap={{ scale: 0.97 }}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-gray-200 bg-white py-4 text-sm font-bold text-gray-400 active:bg-gray-50"
+              >
+                <X size={14} strokeWidth={2.5} />
+                취소
+              </motion.button>
+
+              {/* 내 경로에 저장하기 — 오렌지 강조 */}
               <motion.button
                 onClick={() => onSave(false)}
                 disabled={!canSave}
                 whileTap={canSave ? { scale: 0.97 } : {}}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-2xl py-4 text-sm font-bold transition-all ${
-                  canSave
-                    ? 'border border-gray-200 bg-white text-gray-700 active:bg-gray-50'
-                    : 'cursor-not-allowed border border-gray-100 bg-white text-gray-200'
-                }`}
-              >
-                <BookmarkPlus size={14} strokeWidth={2.5} />
-                내 경로
-              </motion.button>
-
-              {/* 커뮤니티 공유 — 오렌지 강조 */}
-              <motion.button
-                onClick={() => onSave(true)}
-                disabled={!canSave}
-                whileTap={canSave ? { scale: 0.97 } : {}}
-                className={`flex flex-[1.4] items-center justify-center gap-1.5 rounded-2xl py-4 text-sm font-bold transition-all ${
+                className={`flex flex-[1.6] items-center justify-center gap-1.5 rounded-2xl py-4 text-sm font-bold transition-all ${
                   canSave
                     ? 'bg-[#FF5A00] text-white shadow-md shadow-orange-200 active:opacity-90'
                     : 'cursor-not-allowed bg-gray-100 text-gray-300'
                 }`}
               >
-                <Globe2 size={14} strokeWidth={2.5} />
-                커뮤니티 공유
+                <BookmarkPlus size={14} strokeWidth={2.5} />
+                내 경로에 저장
               </motion.button>
             </div>
           )}
