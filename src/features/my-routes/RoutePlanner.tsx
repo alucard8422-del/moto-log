@@ -109,6 +109,7 @@ export default function RoutePlanner() {
   const [showSearch,     setShowSearch]     = useState(false)
   const [pointNames,     setPointNames]     = useState<string[]>([])
   const [mapPanTo,       setMapPanTo]       = useState<LatLng | undefined>(undefined)
+  const [previewPos,     setPreviewPos]     = useState<LatLng | undefined>(undefined)
 
   const locked = stage === 'CONFIRM'
 
@@ -389,6 +390,7 @@ export default function RoutePlanner() {
         onDismissBubble={handleDismissBubble}
         currentUserPos={importUserPos ?? undefined}
         panTo={mapPanTo}
+        previewPos={previewPos}
         initialFitPoints={
           isImportMode && importedWaypoints?.length
             ? (importUserPos ? [importUserPos, ...importedWaypoints] : importedWaypoints)
@@ -514,9 +516,9 @@ export default function RoutePlanner() {
       {/* ── 장소 검색 패널 ── */}
       <PlaceSearchPanel
         isOpen={showSearch && !locked}
-        onClose={() => setShowSearch(false)}
+        onClose={() => { setShowSearch(false); setPreviewPos(undefined) }}
         onAdd={handleAddFromSearch}
-        onPreview={(lat, lng) => setMapPanTo({ lat, lng })}
+        onPreview={(lat, lng) => { setMapPanTo({ lat, lng }); setPreviewPos({ lat, lng }) }}
       />
 
       {/* ── CONFIRM: 정보 입력 패널 ── */}

@@ -53,20 +53,51 @@ interface Props {
   currentUserPos?:   LatLng    // 현재 위치 표시 (파란 점)
   initialFitPoints?: LatLng[] // 진입 시 지도 범위 맞춤
   panTo?:            LatLng   // 이 값이 바뀔 때마다 지도 중심 이동
+  previewPos?:       LatLng   // 장소 검색 프리뷰 마커
+}
+
+// ── 검색 프리뷰 핀 마커 이미지 ────────────────────────────────────────────────
+function makePreviewPinUrl(): string {
+  const W = 32, H = 44
+  const c = document.createElement('canvas')
+  c.width = W; c.height = H
+  const ctx = c.getContext('2d')!
+  // 핀 몸통 (물방울 모양)
+  ctx.beginPath()
+  ctx.arc(W / 2, W / 2, W / 2 - 1, 0, Math.PI * 2)
+  ctx.fillStyle = '#FF5A00'
+  ctx.shadowColor = 'rgba(0,0,0,0.45)'
+  ctx.shadowBlur = 6
+  ctx.fill()
+  ctx.shadowBlur = 0
+  // 핀 꼬리
+  ctx.beginPath()
+  ctx.moveTo(W / 2 - 7, W / 2 + 8)
+  ctx.lineTo(W / 2, H - 2)
+  ctx.lineTo(W / 2 + 7, W / 2 + 8)
+  ctx.fillStyle = '#FF5A00'
+  ctx.fill()
+  // 중앙 흰 원
+  ctx.beginPath()
+  ctx.arc(W / 2, W / 2, 7, 0, Math.PI * 2)
+  ctx.fillStyle = 'white'
+  ctx.fill()
+  return c.toDataURL()
 }
 
 export default function PlannerMap({
   points, routePath, locked, deleteTargetOpen,
   onAddPoint, onMarkerTap, onLongPress, onDismissBubble,
-  currentUserPos, initialFitPoints, panTo,
+  currentUserPos, initialFitPoints, panTo, previewPos,
 }: Props) {
-  const containerRef    = useRef<HTMLDivElement>(null)
-  const mapRef          = useRef<any>(null)
-  const markersRef      = useRef<any[]>([])
-  const polylineGlowRef = useRef<any>(null)
-  const polylineMainRef = useRef<any>(null)
-  const userPosMarkerRef = useRef<any>(null)
-  const initDoneRef     = useRef(false)
+  const containerRef      = useRef<HTMLDivElement>(null)
+  const mapRef            = useRef<any>(null)
+  const markersRef        = useRef<any[]>([])
+  const polylineGlowRef   = useRef<any>(null)
+  const polylineMainRef   = useRef<any>(null)
+  const userPosMarkerRef  = useRef<any>(null)
+  const previewMarkerRef  = useRef<any>(null)
+  const initDoneRef       = useRef(false)
   const [mapReady, setMapReady] = useState(false)
 
   // 이벤트 클로저용 최신 값 refs
@@ -259,9 +290,31 @@ export default function PlannerMap({
     if (!mapReady || !mapRef.current || !panTo || !window.kakao?.maps) return
     try {
       mapRef.current.setCenter(new window.kakao.maps.LatLng(panTo.lat, panTo.lng))
-      mapRef.current.setLevel(4)   // 적당한 줌 레벨 (동네 단위)
+      mapRef.current.setLevel(4)
     } catch {}
   }, [panTo, mapReady])
+
+  // ── 장소 검색 프리뷰 마커 ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapReady || !window.kakao?.maps) return
+    // 기존 프리뷰 마커 제거
+    if (previewMarkerRef.current) {
+      previewMarkerRef.current.setMap(null)
+      previewMarkerRef.current = null
+    }
+    if (!previewPos) return
+    try {
+      const ll = new window.kakao.maps.LatLng(previewPos.lat, previewPos.lng)
+      const img = new window.kakao.maps.MarkerImage(
+        makePreviewPinUrl(),
+        new window.kakao.maps.Size(32, 44),
+        { offset: new window.kakao.maps.Point(16, 44) },
+      )
+      previewMarkerRef.current = new window.kakao.maps.Marker({
+        position: ll, image: img, map: mapRef.current, zIndex: 10,
+      })
+    } catch {}
+  }, [previewPos, mapReady])
 
   // ── 마커 갱신 (points 변경 시) ────────────────────────────────────────────
   useEffect(() => {
