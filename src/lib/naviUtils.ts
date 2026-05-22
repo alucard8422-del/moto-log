@@ -89,7 +89,7 @@ export function buildSegmentDeepLink(
 
   if (type === 'kakao') {
     // 카카오내비 딥링크: appkey 인증 필수, ep=경도,위도 형식
-    const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
+    const KAKAO_APP_KEY = '6ef7c9ef39fab621fd855288f71a08ac'  // 네이티브 앱 키
     const safeGoalName = goalName?.trim() || '목적지'
     let url = `kakaonavi://navigate`
     url += `?appkey=${KAKAO_APP_KEY}`

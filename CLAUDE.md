@@ -61,17 +61,22 @@ src/
 
 ## 핵심 API 키 & 외부 서비스
 
+### 카카오 앱 키 종류
+- **JavaScript 키**: `d2430786a3a92cc28ebf4f0a22993062` — Kakao Maps SDK, 카카오 로그인 JS SDK
+- **네이티브 앱 키**: `6ef7c9ef39fab621fd855288f71a08ac` — Kakao Navi 딥링크 (`kakaonavi://`)
+- **앱 ID**: `1458843`
+- **배포 도메인**: `https://moto-log-eta.vercel.app`
+
 ### 카카오 Maps SDK
-- **앱키**: `d2430786a3a92cc28ebf4f0a22993062`
 - SDK URL에 `&libraries=services` 필수 (Geocoder, Places 사용)
 - `window.kakao.maps.services.Geocoder` — 역지오코딩 (좌표 → 주소)
 - `window.kakao.maps.services.Places` — 장소 키워드 검색
 
 ### 카카오 내비 딥링크 형식
 ```
-kakaonavi://navigate?appkey={KEY}&ep={lng},{lat}&epname={이름}&via1={lng},{lat}&via1name={경유1}
+kakaonavi://navigate?appkey={네이티브앱키}&sp={lng},{lat}&spname=출발&ep={lng},{lat}&epname={이름}&via1={lng},{lat}&via1name={경유1}
 ```
-- `appkey` 필수 (없으면 인증 실패)
+- `appkey` = **네이티브 앱 키** 사용 (JavaScript 키 X → 인증 실패)
 - 좌표 순서: **경도(lng), 위도(lat)** (일반적인 lat,lng 순서 반대)
 - 경유지 최대 5개 (tmap도 5개, atlan 4개)
 
