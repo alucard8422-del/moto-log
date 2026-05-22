@@ -90,12 +90,15 @@ export function buildSegmentDeepLink(
   if (type === 'kakao') {
     // 카카오내비 딥링크: appkey 인증 필수, ep=경도,위도 형식
     const KAKAO_APP_KEY = 'd2430786a3a92cc28ebf4f0a22993062'
+    const safeGoalName = goalName?.trim() || '목적지'
     let url = `kakaonavi://navigate`
     url += `?appkey=${KAKAO_APP_KEY}`
-    url += `&ep=${goal.lng},${goal.lat}&epname=${enc(goalName)}`
+    url += `&sp=${start.lng},${start.lat}&spname=${enc('출발')}`
+    url += `&ep=${goal.lng},${goal.lat}&epname=${enc(safeGoalName)}`
     vias.forEach((v, i) => {
       url += `&via${i + 1}=${v.lng},${v.lat}&via${i + 1}name=${enc(`경유${i + 1}`)}`
     })
+    console.log('[KakaoNavi] deeplink URL:', url)
     return url
   }
 
