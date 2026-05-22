@@ -130,19 +130,23 @@ export default function RoutePlanner() {
 
   // ── 역지오코딩: 좌표 → 주소명 ──────────────────────────────────────────
   const geocodeName = useCallback((lat: number, lng: number, idx: number) => {
-    if (!window.kakao?.maps?.services?.Geocoder) return
-    const geocoder = new window.kakao.maps.services.Geocoder()
-    geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
-      const OK = window.kakao?.maps?.services?.Status?.OK
-      const name = status === OK
-        ? (result[0]?.road_address?.address_name || result[0]?.address?.address_name || '')
-        : ''
-      setPointNames(prev => {
-        const next = [...prev]
-        next[idx] = name
-        return next
+    const tryGeocode = (retries = 15) => {
+      if (!window.kakao?.maps?.services?.Geocoder) {
+        // SDK 아직 미로드 → 300ms 후 재시도 (최대 4.5초)
+        if (retries > 0) setTimeout(() => tryGeocode(retries - 1), 300)
+        else setPointNames(prev => { const n = [...prev]; n[idx] = '위치 확인 불가'; return n })
+        return
+      }
+      const geocoder = new window.kakao.maps.services.Geocoder()
+      geocoder.coord2Address(lng, lat, (result: any[], status: string) => {
+        const OK = window.kakao?.maps?.services?.Status?.OK
+        const name = status === OK
+          ? (result[0]?.road_address?.address_name || result[0]?.address?.address_name || '주소 없음')
+          : '주소 없음'
+        setPointNames(prev => { const n = [...prev]; n[idx] = name; return n })
       })
-    })
+    }
+    tryGeocode()
   }, [])
 
   // ── 경유지 추가 (최대 20개) ───────────────────────────────────────────────
