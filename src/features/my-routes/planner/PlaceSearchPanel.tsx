@@ -166,7 +166,7 @@ export default function PlaceSearchPanel({ isOpen, onClose, onAdd, onPreview }: 
               </div>
 
               {/* 결과 목록 */}
-              <div className="max-h-64 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="max-h-[168px] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {error ? (
                   <div className="flex flex-col items-center gap-2 py-8">
                     <AlertCircle size={20} strokeWidth={1.5} className="text-rose-400/60" />
