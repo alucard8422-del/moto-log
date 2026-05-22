@@ -1,21 +1,48 @@
 // MapPage.tsx — 기록 메뉴 메인 (UI + 네비 흐름만 담당)
 // GPS 기록 상태는 RideRecordContext에서 관리 → 탭 이동해도 기록 유지
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { MapPin, Navigation, X } from 'lucide-react'
-import { useGeolocation }            from './useGeolocation'
-import MapDisplay                    from './MapDisplay'
-import RideHUD                       from './RideHUD'
-import { fmtTime }                   from './RideHUD'
-import ErgonomicController           from './ErgonomicController'
-import NavigationCountdownPopup      from '../../components/NavigationCountdownPopup'
-import { loadNaviPref, launchNavi }  from '../../lib/naviUtils'
+import { useNavigate }                 from 'react-router-dom'
+import { MapPin, Navigation, X, Route, Loader2 } from 'lucide-react'
+import { useGeolocation }              from './useGeolocation'
+import MapDisplay                      from './MapDisplay'
+import RideHUD                         from './RideHUD'
+import { fmtTime }                     from './RideHUD'
+import ErgonomicController             from './ErgonomicController'
+import NavigationCountdownPopup        from '../../components/NavigationCountdownPopup'
+import { loadNaviPref, launchNavi }    from '../../lib/naviUtils'
 import {
   NAVI_OPTIONS, NAVI_STORAGE_KEY,
   type NavigationType,
 } from './types'
-import NaviSettings from './NaviSettings'
+import NaviSettings  from './NaviSettings'
 import { useRideRecord } from '../../context/RideRecordContext'
+import {
+  loadDriveSession, hasRemainingSegments,
+  getCurrentSegmentEndpoint, clearDriveSession,
+  type DriveSession,
+} from '../../lib/driveSession'
+
+// ── GPS 유틸 (DriveSession 이어달리기 체크용) ────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R    = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a    = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+function getCurrentGps(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('no geolocation')); return }
+    navigator.geolocation.getCurrentPosition(
+      p  => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      reject,
+      { timeout: 8000, maximumAge: 15000 },
+    )
+  })
+}
 
 export default function MapPage() {
   const navigate = useNavigate()
@@ -38,9 +65,13 @@ export default function MapPage() {
   const [showCountdown,          setShowCountdown]         = useState(false)
   const [showNaviSheet,          setShowNaviSheet]         = useState(false)
   const [naviPref,               setNaviPref]              = useState<NavigationType>(loadNaviPref)
-  // 이어달리기 팝업 (앱 재시작 후 체크포인트 감지)
+  // 체크포인트 이어달리기 (앱 재시작 후 GPS 기록 복구)
   const [showResumeSheet,        setShowResumeSheet]       = useState(false)
   const [showResumeCountdown,    setShowResumeCountdown]   = useState(false)
+  // 드라이브세션 이어달리기 (계획 경로 기록 재개)
+  const [showContinueSheet,      setShowContinueSheet]     = useState(false)
+  const [continueSession,        setContinueSession]       = useState<DriveSession | null>(null)
+  const [gpsChecking,            setGpsChecking]           = useState(false)
 
   const mapRef = useRef<any>(null)
 
@@ -69,8 +100,42 @@ export default function MapPage() {
     }
   }, [])
 
-  // ── 네비로 시작 → 카운트다운 팝업 ───────────────────────────────────
-  const handleStart = () => setShowCountdown(true)
+  // ── 네비로 시작 → 드라이브세션 체크 → 카운트다운 팝업 ────────────────
+  const handleStart = async () => {
+    // pendingCheckpoint 있으면 기존 체크포인트 복구 흐름 우선
+    if (pendingCheckpoint) { setShowResumeSheet(true); return }
+
+    const session = loadDriveSession()
+    if (!session || !hasRemainingSegments(session)) {
+      setShowCountdown(true)
+      return
+    }
+
+    // ── 드라이브세션 존재 → GPS로 경유지 근접 여부 확인 ─────────────────
+    setGpsChecking(true)
+    try {
+      const endpoint = getCurrentSegmentEndpoint(session)
+      if (!endpoint) { setGpsChecking(false); setShowCountdown(true); return }
+
+      const pos  = await getCurrentGps()
+      const dist = haversineKm(pos.lat, pos.lng, endpoint.lat, endpoint.lng)
+      setGpsChecking(false)
+
+      if (dist > 30) {
+        // 30km 이상 → 전혀 다른 곳: 세션 초기화 후 새 주행
+        clearDriveSession()
+        setShowCountdown(true)
+      } else {
+        // 30km 이내 → 경로 근처: 이어달리기 팝업
+        setContinueSession(session)
+        setShowContinueSheet(true)
+      }
+    } catch {
+      // GPS 실패 → 그냥 새 주행
+      setGpsChecking(false)
+      setShowCountdown(true)
+    }
+  }
 
   // ── 카운트다운 완료 → 내비 앱 실행 + GPS 기록 ───────────────────────
   const handleCountdownLaunch = () => {
@@ -87,6 +152,19 @@ export default function MapPage() {
   const handleNaviSave   = () => {
     localStorage.setItem(NAVI_STORAGE_KEY, naviPref)
     setShowNaviSheet(false)
+  }
+
+  // ── 드라이브세션 이어달리기 ──────────────────────────────────────────
+  const handleContinueRiding = () => {
+    setShowContinueSheet(false)
+    if (!continueSession) return
+    startRecording()
+    // DriveSessionOverlay가 카운트다운 + 내비 실행을 담당
+    window.dispatchEvent(new CustomEvent('moto:startDrive', { detail: continueSession }))
+  }
+  const handleContinueCancel = () => {
+    // 취소: 기록 시작 안 함, 드라이브세션 유지, idle 상태 유지
+    setShowContinueSheet(false)
   }
 
   // ── 카운트다운 취소 ──────────────────────────────────────────────────
@@ -183,7 +261,65 @@ export default function MapPage() {
         onCancel={handleResumeCountdownCancel}
       />
 
-      {/* ── 이어달리기 시트 ── */}
+      {/* ── GPS 체크 중 스피너 ── */}
+      {gpsChecking && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-3xl bg-[#111622]/90 px-8 py-7 shadow-xl">
+            <Loader2 size={28} strokeWidth={1.5} className="animate-spin text-[#FF5A00]" />
+            <p className="text-[13px] font-medium text-white/70">현재 위치 확인 중…</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── 드라이브세션 이어달리기 시트 ── */}
+      {showContinueSheet && continueSession && (
+        <>
+          <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm" onClick={handleContinueCancel} />
+          <div className="fixed inset-x-0 bottom-0 z-[80] flex justify-center">
+            <div className="w-full max-w-sm rounded-t-[2rem] bg-[#111622] px-6 pb-10 pt-6">
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/15" />
+
+              {/* 아이콘 + 제목 */}
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FF5A00]/15">
+                  <Route size={20} strokeWidth={1.5} className="text-[#FF5A00]" />
+                </div>
+                <div>
+                  <p className="text-[15px] font-bold text-white">설정한 경유지에 도착하지 않았습니다</p>
+                  <p className="mt-0.5 text-[11px] font-light text-white/40">계속 이어 달리겠습니까?</p>
+                </div>
+              </div>
+
+              {/* 경로 정보 */}
+              <div className="mb-5 rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-3">
+                <p className="text-[10px] font-light text-white/40">이어달릴 경로</p>
+                <p className="mt-0.5 text-sm font-bold text-white">{continueSession.courseTitle}</p>
+                <p className="mt-1 text-[11px] font-light text-white/40">
+                  {continueSession.currentSegmentIdx + 1}구간 / 전체 {continueSession.segments.length}구간
+                </p>
+              </div>
+
+              {/* 버튼 */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleContinueCancel}
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-light text-white/50 active:opacity-70"
+                >
+                  <X size={14} strokeWidth={1.5} /> 취소하기
+                </button>
+                <button
+                  onClick={handleContinueRiding}
+                  className="flex flex-[1.8] items-center justify-center gap-2 rounded-2xl bg-[#FF5A00] py-3.5 text-sm font-bold text-white active:opacity-80"
+                >
+                  <Navigation size={15} strokeWidth={2} /> 이어 달리기
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── 체크포인트 이어달리기 시트 ── */}
       {showResumeSheet && pendingCheckpoint && (
         <>
           {/* 딤 */}

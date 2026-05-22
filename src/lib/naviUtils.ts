@@ -139,7 +139,7 @@ export function splitIntoSegments(
     const end = Math.min(i + max, waypoints.length)
     segments.push(waypoints.slice(i, end))
     if (end >= waypoints.length) break
-    i = end - 1
+    i = end   // 겹침 없이 다음 구간 시작 — (1-5번) (6-10번) 깔끔히 분리
   }
   return segments
 }

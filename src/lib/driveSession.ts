@@ -56,6 +56,16 @@ export function hasRemainingSegments(session: DriveSession): boolean {
 }
 
 /**
+ * 현재 진행 중인 구간의 목적지 경유지.
+ * 기록 재시작 시 GPS와 비교해 이어달리기 여부를 판단하는 기준점.
+ */
+export function getCurrentSegmentEndpoint(session: DriveSession): NaviWaypoint | null {
+  const seg = session.segments[session.currentSegmentIdx]
+  if (!seg || seg.length === 0) return null
+  return seg[seg.length - 1]
+}
+
+/**
  * 주행 완료 시 SavedCourse를 Supabase 서버에 저장.
  * 로컬 저장(courseStorage) 이후 이 함수를 호출하면 서버에도 동기화된다.
  * 미로그인 또는 네트워크 오류 시 경고만 출력하고 로컬 기록은 유지된다.
