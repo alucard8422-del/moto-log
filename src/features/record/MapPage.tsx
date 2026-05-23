@@ -49,7 +49,7 @@ export default function MapPage() {
   const { position, errorCode: gpsError, loading: gpsLoading } = useGeolocation()
 
   const {
-    status, path, duration, distance, wakeLockActive,
+    status, path, duration, distance, currentSpeed, wakeLockActive,
     pendingCheckpoint,
     startRecording, stopRecording, resetStatus,
     resumeFromCheckpoint, discardCheckpoint,
@@ -219,7 +219,7 @@ export default function MapPage() {
 
       {/* [1층] 주행 중 HUD */}
       {status === 'riding' && (
-        <RideHUD duration={duration} distance={distance} wakeLockActive={wakeLockActive} />
+        <RideHUD duration={duration} distance={distance} speed={currentSpeed} wakeLockActive={wakeLockActive} />
       )}
 
       {/* [2층] 하단 컨트롤러 */}

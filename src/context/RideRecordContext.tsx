@@ -36,6 +36,7 @@ interface RideRecordCtx {
   path:                  Location[]
   duration:              number
   distance:              number
+  currentSpeed:          number                  // 현재 실시간 속도 (km/h)
   wakeLockActive:        boolean
   pendingCheckpoint:     CheckpointData | null   // 앱 재시작 후 복구 대기 중인 체크포인트
   startRecording:        () => void
@@ -59,6 +60,7 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
   const [path,              setPath]             = useState<Location[]>([])
   const [duration,          setDuration]         = useState(0)
   const [distance,          setDistance]         = useState(0)
+  const [currentSpeed,      setCurrentSpeed]     = useState(0)           // 실시간 속도 (km/h)
   const [wakeLockActive,    setWakeLockActive]   = useState(false)
 
   // 앱 재시작 시 복구 대기 중인 체크포인트 (mount 시 1회 읽기)
@@ -83,9 +85,21 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
     try {
       wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
       setWakeLockActive(true)
+
+      // release 이벤트: 브라우저가 강제 해제할 때 즉시 재취득 시도
+      // (멀티윈도우에서 visibilitychange 없이 해제되는 케이스 대응)
       ;(wakeLockRef.current as any).addEventListener('release', () => {
         wakeLockRef.current = null
         setWakeLockActive(false)
+        // 주행 중이고 페이지가 visible 상태면 즉시 재취득
+        if (rideWatchRef.current !== null && document.visibilityState === 'visible') {
+          // 짧은 딜레이 후 재시도 (브라우저가 release 처리 완료 후 request 받을 수 있도록)
+          setTimeout(() => {
+            if (rideWatchRef.current !== null && !wakeLockRef.current) {
+              acquireWakeLock()
+            }
+          }, 300)
+        }
       })
     } catch {
       setWakeLockActive(false)
@@ -99,15 +113,24 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
     setWakeLockActive(false)
   }
 
-  // ── 화면 복귀 시 Wake Lock 재취득 ─────────────────────────────────────
+  // ── Wake Lock 재취득: visibilitychange + focus (멀티윈도우 대응) ────────
+  // 멀티윈도우(분할화면)에서는 visibilitychange가 발생하지 않고
+  // focus 이벤트만 발생하므로 두 가지 모두 감지
   useEffect(() => {
-    const onVisibility = async () => {
-      if (document.visibilityState === 'visible' && rideWatchRef.current !== null) {
-        if (!wakeLockRef.current) await acquireWakeLock()
+    const tryReacquire = async () => {
+      if (rideWatchRef.current !== null && !wakeLockRef.current) {
+        await acquireWakeLock()
       }
     }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') tryReacquire()
+    }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', tryReacquire)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', tryReacquire)
+    }
   }, [])
 
   // ── 주행 타이머 ────────────────────────────────────────────────────────
@@ -151,9 +174,35 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
           speed:     pos.coords.speed     ?? undefined,
           heading:   pos.coords.heading   ?? undefined,
         }
+
+        // ── 실시간 속도 계산 ──────────────────────────────────────────────
+        // 1순위: GPS 하드웨어가 제공하는 속도(m/s → km/h)
+        // 2순위: 직전 포인트와의 거리/시간으로 순간속도 계산
         const prev = prevPosRef.current
+        if (pos.coords.speed != null && pos.coords.speed >= 0) {
+          setCurrentSpeed(pos.coords.speed * 3.6)
+        } else if (prev && prev.timestamp) {
+          const dtSec = (loc.timestamp - prev.timestamp) / 1000
+          if (dtSec > 0) {
+            const instSpeed = (haversine(prev, loc) / dtSec) * 3600  // km/h
+            setCurrentSpeed(instSpeed)
+          }
+        }
+
         if (prev) {
           const delta = haversine(prev, loc)
+
+          // ── 터널·GPS 점프 필터 ────────────────────────────────────────
+          // 직전 포인트 대비 속도가 물리적으로 불가능(300km/h 초과)하면
+          // 이 포인트를 버리고 prevPos도 업데이트하지 않음
+          // → 터널 이탈 후 첫 유효 포인트가 마지막 실제 위치와 비교됨
+          if (delta > 0.01 && prev.timestamp) {
+            const dtSec = (loc.timestamp - prev.timestamp) / 1000
+            if (dtSec > 0 && (delta / dtSec) * 3600 > 300) {
+              return   // GPS 점프 감지 → 포인트 버림
+            }
+          }
+
           if (delta > 0.005) {
             distanceRef.current += delta
             setDistance(distanceRef.current)
@@ -189,6 +238,7 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
     setPath([])
     setDistance(0)
     setDuration(0)
+    setCurrentSpeed(0)
     setStatus('riding')
 
     acquireWakeLock()
@@ -225,6 +275,7 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
 
   // ── GPS 기록 종료 + 저장 ───────────────────────────────────────────────
   const stopRecording = () => {
+    // ① GPS·WakeLock 종료는 저장 성공 여부와 무관하게 반드시 먼저 실행
     const frozenDuration = durationRef.current
     const frozenDistance = distanceRef.current
     const frozenPath     = pathRef.current
@@ -233,41 +284,47 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
       navigator.geolocation.clearWatch(rideWatchRef.current)
       rideWatchRef.current = null
     }
-
     releaseWakeLock()
     localStorage.removeItem(CHECKPOINT_KEY)
 
-    // 출발·도착 도시명 자동 계산
-    const startCity = frozenPath.length > 0
-      ? approxCity(frozenPath[0].lat, frozenPath[0].lng)
-      : undefined
-    const endCity = frozenPath.length > 0
-      ? approxCity(frozenPath[frozenPath.length - 1].lat, frozenPath[frozenPath.length - 1].lng)
-      : undefined
+    // ② 저장 시도 — 실패해도 ③(상태 변경)은 반드시 실행
+    try {
+      const endTime   = new Date()
+      const startCity = frozenPath.length > 0
+        ? approxCity(frozenPath[0].lat, frozenPath[0].lng)
+        : undefined
+      const endCity = frozenPath.length > 0
+        ? approxCity(frozenPath[frozenPath.length - 1].lat, frozenPath[frozenPath.length - 1].lng)
+        : undefined
 
-    const endTime   = new Date()
-    const gpxPoints = frozenPath.map(p => ({
-      lat: p.lat, lng: p.lng, timestamp: p.timestamp,
-      altitude: p.altitude, speed: p.speed, heading: p.heading,
-    }))
-    const rideRecord = {
-      id:          crypto.randomUUID(),
-      title:       `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
-      distanceKm:  parseFloat(frozenDistance.toFixed(2)),
-      durationMin: Math.round(frozenDuration / 60),
-      gpxPoints,
-      gpxXml:      buildGpxXml(gpxPoints),
-      createdAt:   endTime.toISOString(),
-      isShared:    false,
-      startCity,
-      endCity,
+      const gpxPoints = frozenPath.map(p => ({
+        lat: p.lat, lng: p.lng, timestamp: p.timestamp,
+        altitude: p.altitude, speed: p.speed, heading: p.heading,
+      }))
+      const rideRecord = {
+        id:          crypto.randomUUID(),
+        title:       `${endTime.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} 주행`,
+        distanceKm:  parseFloat(frozenDistance.toFixed(2)),
+        durationMin: Math.round(frozenDuration / 60),
+        gpxPoints,
+        gpxXml:      buildGpxXml(gpxPoints),
+        createdAt:   endTime.toISOString(),
+        isShared:    false,
+        startCity,
+        endCity,
+      }
+      saveCourse(rideRecord)
+      insertMyCourse(rideRecord).catch(e => console.warn('[RideRecord] 서버 저장 실패:', e))
+    } catch (e) {
+      // localStorage 용량 초과 등 저장 실패 — 로그만 남기고 진행
+      console.error('[RideRecord] 로컬 저장 실패 (경로 유실될 수 있음):', e)
+    } finally {
+      // ③ 저장 성공/실패 무관 — 상태는 반드시 finished로 전환
+      setDuration(frozenDuration)
+      setDistance(frozenDistance)
+      setCurrentSpeed(0)
+      setStatus('finished')
     }
-    saveCourse(rideRecord)
-    insertMyCourse(rideRecord).catch(e => console.warn('[RideRecord] 서버 저장 실패:', e))
-
-    setDuration(frozenDuration)
-    setDistance(frozenDistance)
-    setStatus('finished')
   }
 
   // ── 상태 초기화 (finished → idle) ─────────────────────────────────────
@@ -276,6 +333,7 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
     setPath([])
     setDuration(0)
     setDistance(0)
+    setCurrentSpeed(0)
   }
 
   // ── 언마운트 안전망 ────────────────────────────────────────────────────
@@ -288,7 +346,7 @@ export function RideRecordProvider({ children }: { children: React.ReactNode }) 
 
   return (
     <Ctx.Provider value={{
-      status, path, duration, distance, wakeLockActive,
+      status, path, duration, distance, currentSpeed, wakeLockActive,
       pendingCheckpoint,
       startRecording, stopRecording, resetStatus,
       resumeFromCheckpoint, discardCheckpoint,

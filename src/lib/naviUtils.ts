@@ -112,17 +112,53 @@ export function getCourseNavWaypoints(course: SavedCourse): NaviWaypoint[] {
   return sampleGpxToWaypoints(course.gpxPoints, 10)
 }
 
+// ── 하버사인 거리 (km) — 샘플링용 ──────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R    = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLng = (lng2 - lng1) * Math.PI / 180
+  const a    = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
+/**
+ * GPX 포인트 배열에서 내비 경유지를 균등 거리 기준으로 샘플링
+ *
+ * 기존 인덱스 기반 방식은 정체 구간(GPS 포인트 밀집)이 과대 표현되고
+ * 고속 구간(포인트 희박)이 건너뛰어지는 문제가 있었음.
+ * 거리 기반 샘플링으로 경로 전체에 균등하게 분산된 경유지를 추출.
+ */
 function sampleGpxToWaypoints(
   pts:    Array<{ lat: number; lng: number; timestamp: number }>,
   target: number,
 ): NaviWaypoint[] {
   if (pts.length === 0) return []
   if (pts.length <= target) return pts.map(p => ({ lat: p.lat, lng: p.lng }))
+
+  // 누적 거리 배열 계산
+  const cumDist: number[] = [0]
+  for (let i = 1; i < pts.length; i++) {
+    cumDist.push(cumDist[i - 1] + haversineKm(
+      pts[i - 1].lat, pts[i - 1].lng,
+      pts[i].lat,     pts[i].lng,
+    ))
+  }
+  const totalDist = cumDist[cumDist.length - 1]
+  if (totalDist === 0) return [{ lat: pts[0].lat, lng: pts[0].lng }]
+
+  // 균등 거리 간격으로 가장 가까운 포인트 선택
   const result: NaviWaypoint[] = []
-  const step = (pts.length - 1) / (target - 1)
   for (let i = 0; i < target; i++) {
-    const idx = Math.min(Math.round(i * step), pts.length - 1)
-    result.push({ lat: pts[idx].lat, lng: pts[idx].lng })
+    const targetDist = (i / (target - 1)) * totalDist
+    let closest = 0
+    let minDiff  = Infinity
+    for (let j = 0; j < pts.length; j++) {
+      const diff = Math.abs(cumDist[j] - targetDist)
+      if (diff < minDiff) { minDiff = diff; closest = j }
+    }
+    result.push({ lat: pts[closest].lat, lng: pts[closest].lng })
   }
   return result
 }

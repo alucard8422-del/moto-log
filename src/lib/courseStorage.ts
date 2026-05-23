@@ -67,7 +67,35 @@ export function loadCourses(): SavedCourse[] {
 export function saveCourse(course: SavedCourse): void {
   const all = loadCourses()
   all.unshift(course)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(all))
+
+  const trySet = (data: SavedCourse[]) =>
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+
+  const isQuota = (e: unknown) =>
+    e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+
+  try {
+    trySet(all)
+  } catch (e1) {
+    if (!isQuota(e1)) throw e1
+    // 1단계: 기존 코스의 gpxXml(용량 대부분 차지)만 제거 후 재시도 — 신규 코스는 보존
+    console.warn('[courseStorage] 저장 공간 부족 — 기존 gpxXml 제거 후 재시도')
+    const trimmed = [course, ...all.slice(1).map(c => ({ ...c, gpxXml: '' }))]
+    try {
+      trySet(trimmed)
+    } catch (e2) {
+      if (!isQuota(e2)) throw e2
+      // 2단계: 신규 코스만 단독 저장
+      console.warn('[courseStorage] 저장 공간 부족 — 신규 코스만 저장')
+      try {
+        trySet([course])
+      } catch (e3) {
+        // 3단계: gpxXml 없이 신규 코스만 저장 (최후 수단)
+        console.warn('[courseStorage] 저장 공간 부족 — gpxXml 제거 후 신규 코스만 저장')
+        trySet([{ ...course, gpxXml: '' }])
+      }
+    }
+  }
 }
 
 export function updateCourse(id: string, partial: Partial<SavedCourse>): void {

@@ -68,7 +68,9 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef, gp
   const currentPosRef     = useRef<Location | null>(null)
   const arrowElRef        = useRef<HTMLElement | null>(null)       // 나침반 회전 대상 DOM
   const compassHandlerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null)
-  const smoothedPosRef    = useRef<{ lat: number; lng: number } | null>(null)  // EMA 스무딩
+  const targetPosRef      = useRef<{ lat: number; lng: number } | null>(null)  // RAF 목표 위치
+  const animPosRef        = useRef<{ lat: number; lng: number } | null>(null)  // RAF 현재 보간 위치
+  const rafRef            = useRef<number | null>(null)
   const [roadviewPos, setRoadviewPos] = useState<{ lat: number; lng: number } | null>(null)
 
   // ── 1. 카카오맵 초기화 ───────────────────────────────────────────
@@ -109,9 +111,36 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef, gp
           const { lat, lng } = currentPosRef.current
           const ll = new window.kakao.maps.LatLng(lat, lng)
           overlay.setPosition(ll)
+          animPosRef.current   = { lat, lng }
+          targetPosRef.current = { lat, lng }
           map.setCenter(ll)
           hasCenteredRef.current = true
         }
+
+        // ── 마커 부드러운 이동: RAF 보간 루프 ─────────────────────────────
+        // GPS 업데이트(1~2초 간격)마다 target만 변경, RAF가 매 프레임 lerp 이동
+        const LERP = 0.14   // 60fps 기준 ~0.5초 내 99% 도달
+        const THRESHOLD = 1e-8  // 이 이하 차이면 이동 생략
+        const animateMarker = () => {
+          const tgt = targetPosRef.current
+          const cur = animPosRef.current
+          if (tgt && cur && arrowOverlayRef.current && window.kakao?.maps) {
+            const dLat = tgt.lat - cur.lat
+            const dLng = tgt.lng - cur.lng
+            if (Math.abs(dLat) > THRESHOLD || Math.abs(dLng) > THRESHOLD) {
+              const next = {
+                lat: cur.lat + dLat * LERP,
+                lng: cur.lng + dLng * LERP,
+              }
+              animPosRef.current = next
+              arrowOverlayRef.current.setPosition(
+                new window.kakao.maps.LatLng(next.lat, next.lng)
+              )
+            }
+          }
+          rafRef.current = requestAnimationFrame(animateMarker)
+        }
+        rafRef.current = requestAnimationFrame(animateMarker)
 
         // ── 롱프레스 → 로드뷰 ──────────────────────────────────────
         let downX = 0, downY = 0
@@ -168,6 +197,7 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef, gp
 
     return () => {
       cancelled = true
+      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
       mapInstanceRef.current = null
       arrowOverlayRef.current = null
     }
@@ -227,32 +257,30 @@ export default function MapDisplay({ path, currentPosition, isRiding, mapRef, gp
     mainLineRef.current.setMap(mapInstanceRef.current)
   }, [path])
 
-  // ── 4. GPS 위치 업데이트 → EMA 스무딩 → 화살표 이동 + 조건부 panTo ─
+  // ── 4. GPS 위치 업데이트 → RAF 목표 위치 설정 + 조건부 panTo ───────────
+  // 마커 실제 이동은 RAF 루프가 lerp 보간 처리 (버그3 수정)
+  // EMA 제거로 경로 선 끝과 마커가 동일 위치를 가리킴 (버그1 수정)
   useEffect(() => {
     currentPosRef.current = currentPosition
     if (!currentPosition || !window.kakao?.maps) return
 
-    // EMA 스무딩 (α=0.35) — GPS 떨림 시각 완화, 실제 경로 기록과 무관
-    const α = 0.35
-    const sp = smoothedPosRef.current
-    const smoothed = sp
-      ? { lat: α * currentPosition.lat + (1 - α) * sp.lat,
-          lng: α * currentPosition.lng + (1 - α) * sp.lng }
-      : { lat: currentPosition.lat, lng: currentPosition.lng }
-    smoothedPosRef.current = smoothed
+    const { lat, lng } = currentPosition
 
-    const latlng = new window.kakao.maps.LatLng(smoothed.lat, smoothed.lng)
-
-    // 화살표 오버레이 위치 갱신
-    if (arrowOverlayRef.current) {
-      arrowOverlayRef.current.setPosition(latlng)
+    // RAF 목표 위치 갱신 (부드러운 보간을 위해 setPosition 직접 호출 안 함)
+    targetPosRef.current = { lat, lng }
+    // 최초 위치(animPos 미설정)이면 즉시 스냅
+    if (!animPosRef.current) {
+      animPosRef.current = { lat, lng }
+      if (arrowOverlayRef.current) {
+        arrowOverlayRef.current.setPosition(new window.kakao.maps.LatLng(lat, lng))
+      }
     }
 
     if (!mapInstanceRef.current) return
 
     // 최초 1회 또는 주행 중 → 지도 따라가기
     if (!hasCenteredRef.current || isRiding) {
-      mapInstanceRef.current.panTo(latlng)
+      mapInstanceRef.current.panTo(new window.kakao.maps.LatLng(lat, lng))
       hasCenteredRef.current = true
     }
   }, [currentPosition, isRiding])

@@ -63,11 +63,11 @@ function HUDCard({ icon: Icon, value, unit, valW }: CardProps) {
 interface RideHUDProps {
   duration:      number   // 초
   distance:      number   // km
+  speed:         number   // km/h — 실시간 속도 (RideRecordContext.currentSpeed)
   wakeLockActive?: boolean
 }
 
-export default function RideHUD({ duration, distance, wakeLockActive }: RideHUDProps) {
-  const speed = duration > 0 ? distance / (duration / 3600) : 0
+export default function RideHUD({ duration, distance, speed, wakeLockActive }: RideHUDProps) {
 
   return (
     <div className="pointer-events-none fixed top-5 inset-x-0 z-50 flex flex-col items-center gap-2">
