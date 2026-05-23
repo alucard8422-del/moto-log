@@ -13,6 +13,7 @@ import GaragePage from './features/garage/GaragePage'
 import VideoCreatorPage from './features/my-routes/video/VideoCreatorPage'
 import VideoPreviewPage from './features/my-routes/video/VideoPreviewPage'
 import AuthListener from './components/AuthListener'
+import PWAUpdatePrompt from './components/PWAUpdatePrompt'
 import FuelCompletePage from './features/profile/FuelCompletePage'
 import { FuelProvider }       from './context/FuelContext'
 import { ThemeProvider }      from './context/ThemeContext'
@@ -39,6 +40,7 @@ export default function App() {
         <RideRecordProvider>
         <BrowserRouter>
           <AuthListener />
+          <PWAUpdatePrompt />
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/fuel-complete" element={<FuelCompletePage />} />

@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/react" />
 
 // 이미지 에셋 모듈 타입 선언 — PNG·JPG·SVG·WEBP import 가능하게 처리
 declare module '*.png'  { const src: string; export default src }
